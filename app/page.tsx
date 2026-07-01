@@ -44,7 +44,7 @@ const services = [
 export default function Home() {
   return (
     <main className="min-h-screen bg-white text-neutral-950">
-      <header className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+      <header className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
         <Image
           src="/images/logo.png"
           alt="M&J Metal"
@@ -63,7 +63,7 @@ export default function Home() {
 
         <a
           href="#contact"
-          className="inline-flex items-center justify-center rounded bg-orange-600 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-white hover:bg-orange-700 sm:px-5 sm:text-sm"
+          className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded bg-orange-600 px-3 py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-white hover:bg-orange-700 sm:px-5 sm:py-3 sm:text-sm"
         >
           Get a quote
         </a>
@@ -82,7 +82,7 @@ export default function Home() {
 
         <div className="absolute inset-0 bg-gradient-to-r from-white via-white/95 to-white/20" />
 
-        <div className="relative mx-auto max-w-7xl px-6 py-24 sm:py-32">
+        <div className="relative mx-auto max-w-7xl px-6 py-16 sm:py-24">
           <p className="mb-4 text-sm font-semibold uppercase tracking-[0.18em] text-orange-600">
             Bespoke Gates & Metalwork
           </p>
@@ -115,7 +115,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="services" className="mx-auto max-w-7xl px-6 py-14">
+      <section id="services" className="mx-auto max-w-7xl px-6 py-10 sm:py-14">
         <p className="font-black uppercase text-orange-600">What we do</p>
         <h2 className="mt-2 text-4xl font-black">Gates & Security Metalwork</h2>
 
@@ -151,7 +151,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="about" className="mx-auto max-w-7xl px-6 py-14 text-center">
+      <section id="about" className="mx-auto max-w-7xl px-6 py-10 sm:py-14 text-center">
         <p className="font-black uppercase text-orange-600">
           Why choose M&J Metal?
         </p>
@@ -279,14 +279,16 @@ projects.
       </section>
 
       <footer className="border-t border-neutral-200 bg-white px-6 py-10 text-neutral-800">
-        <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-3">
-<Image
-  src="/images/logo.png"
-  alt="M&J Metal"
-  width={220}
-  height={100}
-  className="h-auto w-44"
-/>
+        <div className="mx-auto grid max-w-7xl grid-cols-2 gap-8 md:grid-cols-3">
+<div className="col-span-2 md:col-span-1">
+  <Image
+    src="/images/logo.png"
+    alt="M&J Metal"
+    width={220}
+    height={100}
+    className="h-auto w-44"
+  />
+</div>
 
           <div>
             <h3 className="font-black uppercase">Services</h3>
