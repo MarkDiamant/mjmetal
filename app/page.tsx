@@ -151,22 +151,82 @@ businesses and commercial properties.
         </div>
       </section>
 
-      <section id="contact" className="bg-orange-600 px-6 py-12 text-white">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 md:flex-row">
+      <section id="about" className="mx-auto max-w-7xl px-6 py-20">
+        <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
           <div>
+            <p className="font-black uppercase text-orange-600">
+              About M&J Metal
+            </p>
+            <h2 className="mt-2 text-4xl font-black">
+              Gates, grilles and security metalwork built properly.
+            </h2>
+          </div>
+
+          <p className="text-lg leading-8 text-neutral-700">
+M&J Metal specialises in driveway gates, security gates, railings,
+bar grille doors, window grilles, retractable security gates,
+automation and access control systems. We also undertake bespoke
+metal fabrication, steel staircases and fire escapes, delivering
+high quality workmanship for both residential and commercial
+projects.
+          </p>
+        </div>
+      </section>
+
+      <section id="contact" className="bg-orange-600 px-6 py-16 text-white">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-10 max-w-2xl">
             <h2 className="text-3xl font-black uppercase">
-              Ready to start your project?
+              Speak to our team
             </h2>
             <p className="mt-2 text-white/90">
-              Get in touch today for a free, no obligation quote.
+              Get in touch today to discuss your project or request a quote.
             </p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="rounded-3xl bg-white p-6 text-neutral-950 shadow-sm">
+              <Image
+                src="/images/team/mark.png"
+                alt="Mark from M&J Metal"
+                width={500}
+                height={500}
+                className="h-64 w-full rounded-2xl object-cover"
+              />
+              <h3 className="mt-5 text-2xl font-black">Mark</h3>
+              <a
+                href="tel:07784468113"
+                className="mt-4 inline-block rounded bg-orange-600 px-6 py-3 text-sm font-black uppercase text-white hover:bg-orange-700"
+              >
+                Call Mark
+              </a>
+              <p className="mt-3 text-lg font-bold">07784 468113</p>
+            </div>
+
+            <div className="rounded-3xl bg-white p-6 text-neutral-950 shadow-sm">
+              <Image
+                src="/images/team/jonathan.jpeg"
+                alt="Jonathan from M&J Metal"
+                width={500}
+                height={500}
+                className="h-64 w-full rounded-2xl object-cover"
+              />
+              <h3 className="mt-5 text-2xl font-black">Jonathan</h3>
+              <a
+                href="tel:07834826608"
+                className="mt-4 inline-block rounded bg-orange-600 px-6 py-3 text-sm font-black uppercase text-white hover:bg-orange-700"
+              >
+                Call Jonathan
+              </a>
+              <p className="mt-3 text-lg font-bold">07834 826608</p>
+            </div>
           </div>
 
           <a
             href="mailto:info@mjmetal.co.uk"
-            className="rounded bg-white px-10 py-4 text-sm font-black uppercase text-orange-600"
+            className="mt-8 inline-block rounded bg-white px-10 py-4 text-sm font-black uppercase text-orange-600"
           >
-            Get a quote
+            Email for a quote
           </a>
         </div>
       </section>
