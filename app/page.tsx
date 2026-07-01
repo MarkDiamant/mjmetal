@@ -1,14 +1,42 @@
 import Image from "next/image";
 
 const services = [
-  "Driveway Gates",
-  "Security Gates",
-  "Gate Automation",
-  "Access Control Systems",
-  "Bar Grille Doors",
-  "Security Window Grilles",
-  "Retractable Security Gates",
-  "High Quality Railings",
+  {
+    title: "Driveway Gates",
+    text: "Strong, secure and professionally finished gates for residential properties.",
+  },
+  {
+    title: "Security Gates",
+    text: "Heavy-duty gates designed to improve safety and control access.",
+  },
+  {
+    title: "Gate Automation",
+    text: "Automated gate systems for convenience, security and everyday use.",
+  },
+  {
+    title: "Access Control Systems",
+    text: "Keypads, intercoms and access systems for homes and businesses.",
+  },
+  {
+    title: "Bar Grille Doors",
+    text: "Security grille doors built for strength, protection and durability.",
+  },
+  {
+    title: "Security Window Grilles",
+    text: "Bespoke window grilles made to measure for added protection.",
+  },
+  {
+    title: "Retractable Security Gates",
+    text: "Practical retractable gates for doors, windows and commercial spaces.",
+  },
+  {
+    title: "High Quality Railings",
+    text: "Clean, strong and stylish railings made to suit your property.",
+  },
+  {
+    title: "Bespoke Fabrication",
+    text: "Including steel staircases, fire escapes and custom metalwork projects.",
+  },
 ];
 
 export default function Home() {
@@ -53,7 +81,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-r from-white via-white/95 to-white/20" />
 
         <div className="relative mx-auto max-w-7xl px-6 py-24 sm:py-32">
-          <p className="mb-4 text-base font-black uppercase text-orange-600">
+          <p className="mb-4 text-sm font-semibold uppercase tracking-[0.18em] text-orange-600">
             Bespoke Gates & Metalwork
           </p>
 
@@ -90,18 +118,17 @@ export default function Home() {
         <h2 className="mt-2 text-4xl font-black">Gates & Security Metalwork</h2>
 
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {services.map((service) => (
-            <div
-              key={service}
-              className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm"
-            >
-              <h3 className="font-black uppercase">{service}</h3>
-              <p className="mt-3 text-sm leading-6 text-neutral-600">
-Strong, secure and professionally finished solutions for homes,
-businesses and commercial properties.
-              </p>
-            </div>
-          ))}
+{services.map((service) => (
+  <div
+    key={service.title}
+    className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm"
+  >
+    <h3 className="font-semibold text-neutral-950">{service.title}</h3>
+    <p className="mt-3 text-sm leading-6 text-neutral-600">
+      {service.text}
+    </p>
+  </div>
+))}
         </div>
       </section>
 
@@ -214,7 +241,7 @@ projects.
 
             <div className="rounded-3xl bg-white p-6 text-neutral-950 shadow-sm">
               <Image
-                src="/images/team/jonathan.jpeg"
+                src="/images/team/jonathan.png"
                 alt="Jonathan from M&J Metal"
                 width={500}
                 height={500}
