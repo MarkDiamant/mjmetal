@@ -1,5 +1,7 @@
 import Image from "next/image";
 
+const currentYear = new Date().getFullYear();
+
 const services = [
   {
     title: "Driveway Gates",
@@ -61,7 +63,7 @@ export default function Home() {
 
         <a
           href="#contact"
-          className="rounded bg-orange-600 px-5 py-3 text-sm font-black uppercase text-white hover:bg-orange-700"
+          className="inline-flex items-center justify-center rounded bg-orange-600 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-white hover:bg-orange-700 sm:px-5 sm:text-sm"
         >
           Get a quote
         </a>
@@ -113,7 +115,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="services" className="mx-auto max-w-7xl px-6 py-20">
+      <section id="services" className="mx-auto max-w-7xl px-6 py-14">
         <p className="font-black uppercase text-orange-600">What we do</p>
         <h2 className="mt-2 text-4xl font-black">Gates & Security Metalwork</h2>
 
@@ -132,7 +134,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="projects" className="bg-neutral-50 px-6 py-20">
+      <section id="projects" className="bg-neutral-50 px-6 py-14">
         <div className="mx-auto max-w-7xl">
           <p className="font-black uppercase text-orange-600">Our work</p>
           <h2 className="mt-2 text-4xl font-black">Recent Projects</h2>
@@ -149,7 +151,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="about" className="mx-auto max-w-7xl px-6 py-20 text-center">
+      <section id="about" className="mx-auto max-w-7xl px-6 py-14 text-center">
         <p className="font-black uppercase text-orange-600">
           Why choose M&J Metal?
         </p>
@@ -178,7 +180,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="about" className="mx-auto max-w-7xl px-6 py-20">
+      <section id="about" className="mx-auto max-w-7xl px-6 py-14">
         <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
           <div>
             <p className="font-black uppercase text-orange-600">
@@ -308,6 +310,9 @@ High Quality Railings
             </p>
           </div>
         </div>
+        <div className="mx-auto mt-10 max-w-7xl border-t border-neutral-200 pt-6 text-sm text-neutral-500">
+  © {currentYear} M&J Metal. All rights reserved.
+</div>
       </footer>
     </main>
   );
