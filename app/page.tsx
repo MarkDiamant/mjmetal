@@ -1,12 +1,14 @@
 import Image from "next/image";
 
 const services = [
-  "Gates",
-  "Railings",
-  "Steel Staircases",
-  "Fire Escapes",
-  "Fencing",
-  "Custom Fabrication",
+  "Driveway Gates",
+  "Security Gates",
+  "Gate Automation",
+  "Access Control Systems",
+  "Bar Grille Doors",
+  "Security Window Grilles",
+  "Retractable Security Gates",
+  "High Quality Railings",
 ];
 
 export default function Home() {
@@ -62,7 +64,7 @@ export default function Home() {
           </h1>
 
           <p className="mt-8 max-w-md text-lg leading-8 text-neutral-700">
-            Designed, fabricated and installed across London and the South East.
+            Driveway gates, security gates, railings, grilles, automation and access control across London and the South East.
           </p>
 
           <div className="mt-10 flex flex-wrap gap-4">
@@ -85,7 +87,7 @@ export default function Home() {
 
       <section id="services" className="mx-auto max-w-7xl px-6 py-20">
         <p className="font-black uppercase text-orange-600">What we do</p>
-        <h2 className="mt-2 text-4xl font-black">Our Metalwork Services</h2>
+        <h2 className="mt-2 text-4xl font-black">Gates & Security Metalwork</h2>
 
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {services.map((service) => (
@@ -95,8 +97,8 @@ export default function Home() {
             >
               <h3 className="font-black uppercase">{service}</h3>
               <p className="mt-3 text-sm leading-6 text-neutral-600">
-                High quality metalwork designed for strength, style and long
-                lasting performance.
+Strong, secure and professionally finished solutions for homes,
+businesses and commercial properties.
               </p>
             </div>
           ))}
@@ -182,12 +184,14 @@ export default function Home() {
           <div>
             <h3 className="font-black uppercase">Services</h3>
             <p className="mt-3 text-sm leading-7 text-neutral-600">
-              Gates<br />
-              Railings<br />
-              Steel Staircases<br />
-              Fire Escapes<br />
-              Fencing<br />
-              Custom Fabrication
+Driveway Gates<br />
+Security Gates<br />
+Gate Automation<br />
+Access Control Systems<br />
+Bar Grille Doors<br />
+Security Window Grilles<br />
+Retractable Security Gates<br />
+High Quality Railings
             </p>
           </div>
 
