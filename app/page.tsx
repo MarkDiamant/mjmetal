@@ -191,9 +191,12 @@ projects.
                 alt="Mark from M&J Metal"
                 width={500}
                 height={500}
-                className="h-64 w-full rounded-2xl object-cover"
+                className="w-full rounded-2xl border border-neutral-200 object-contain bg-neutral-100 p-3"
               />
               <h3 className="mt-5 text-2xl font-black">Mark</h3>
+<p className="mt-1 text-sm font-semibold uppercase tracking-wide text-orange-600">
+  Director
+</p>
               <a
                 href="tel:07784468113"
                 className="mt-4 inline-block rounded bg-orange-600 px-6 py-3 text-sm font-black uppercase text-white hover:bg-orange-700"
@@ -201,6 +204,12 @@ projects.
                 Call Mark
               </a>
               <p className="mt-3 text-lg font-bold">07784 468113</p>
+<a
+  href="mailto:mark@mjmetal.co.uk"
+  className="mt-2 block text-sm text-neutral-600 hover:text-orange-600"
+>
+  mark@mjmetal.co.uk
+</a>
             </div>
 
             <div className="rounded-3xl bg-white p-6 text-neutral-950 shadow-sm">
@@ -209,9 +218,12 @@ projects.
                 alt="Jonathan from M&J Metal"
                 width={500}
                 height={500}
-                className="h-64 w-full rounded-2xl object-cover"
+                className="w-full rounded-2xl border border-neutral-200 object-contain bg-neutral-100 p-3"
               />
               <h3 className="mt-5 text-2xl font-black">Jonathan</h3>
+<p className="mt-1 text-sm font-semibold uppercase tracking-wide text-orange-600">
+  Director
+</p>
               <a
                 href="tel:07834826608"
                 className="mt-4 inline-block rounded bg-orange-600 px-6 py-3 text-sm font-black uppercase text-white hover:bg-orange-700"
@@ -219,6 +231,12 @@ projects.
                 Call Jonathan
               </a>
               <p className="mt-3 text-lg font-bold">07834 826608</p>
+<a
+  href="mailto:jonathan@mjmetal.co.uk"
+  className="mt-2 block text-sm text-neutral-600 hover:text-orange-600"
+>
+  jonathan@mjmetal.co.uk
+</a>
             </div>
           </div>
 
