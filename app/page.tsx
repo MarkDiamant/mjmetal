@@ -14,7 +14,7 @@ export default function Home() {
     <main className="min-h-screen bg-white text-neutral-950">
       <header className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
         <Image
-          src="/images/M&J-Metal.png"
+          src="/images/hero-gate.png"
           alt="M&J Metal"
           width={180}
           height={80}
@@ -172,7 +172,7 @@ export default function Home() {
       <footer className="border-t border-neutral-200 bg-white px-6 py-10 text-neutral-800">
         <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-3">
           <Image
-            src="/images/M&J-Metal.png"
+            src="/images/hero-gate.png"
             alt="M&J Metal"
             width={150}
             height={70}
