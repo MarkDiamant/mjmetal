@@ -19,7 +19,7 @@ export default function Home() {
           width={180}
           height={80}
           priority
-          className="h-auto w-36 sm:w-44"
+          className="h-auto w-52 sm:w-64 lg:w-72"
         />
 
         <nav className="hidden items-center gap-10 text-sm font-bold uppercase md:flex">
