@@ -171,13 +171,13 @@ export default function Home() {
 
       <footer className="border-t border-neutral-200 bg-white px-6 py-10 text-neutral-800">
         <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-3">
-          <Image
-            src="/images/logo.png"
-            alt="M&J Metal"
-            width={150}
-            height={70}
-            className="h-auto w-32"
-          />
+<Image
+  src="/images/logo.png"
+  alt="M&J Metal"
+  width={220}
+  height={100}
+  className="h-auto w-44"
+/>
 
           <div>
             <h3 className="font-black uppercase">Services</h3>
