@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     const email = String(formData.get("email") || "");
     const message = String(formData.get("message") || "");
 
-    await resend.emails.send({
+    const { error } = await resend.emails.send({
       from: "M&J Metal <info@mjmetal.co.uk>",
       to: [
         "mark@mjmetal.co.uk",
@@ -30,9 +30,14 @@ export async function POST(request: Request) {
 
         <p>${message.replace(/\n/g, "<br/>")}</p>
       `,
-    });
+});
 
-    return Response.json({ success: true });
+if (error) {
+  console.error("RESEND ERROR:", error);
+  return Response.json({ success: false, error }, { status: 500 });
+}
+
+return Response.json({ success: true });
 
   } catch (error) {
     console.error(error);
