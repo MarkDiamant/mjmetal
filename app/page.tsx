@@ -1,4 +1,5 @@
 import Image from "next/image";
+import QuoteForm from "@/components/QuoteForm";
 
 const currentYear = new Date().getFullYear();
 
@@ -65,7 +66,6 @@ export default function Home() {
 
         <nav className="hidden items-center gap-10 text-sm font-bold uppercase md:flex">
           <a href="#services" className="hover:text-orange-600">Services</a>
-          <a href="#projects" className="hover:text-orange-600">Projects</a>
           <a href="#about" className="hover:text-orange-600">About</a>
           <a href="#contact" className="hover:text-orange-600">Contact</a>
         </nav>
@@ -151,23 +151,6 @@ export default function Home() {
     </div>
   </div>
 ))}
-        </div>
-      </section>
-
-      <section id="projects" className="bg-neutral-50 px-6 py-14">
-        <div className="mx-auto max-w-7xl">
-          <p className="font-black uppercase text-orange-600">Our work</p>
-          <h2 className="mt-2 text-4xl font-black">Recent Projects</h2>
-
-          <div className="mt-8 overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-sm">
-            <Image
-              src="/images/hero-gate.png"
-              alt="M&J Metal gate project"
-              width={1400}
-              height={700}
-              className="h-auto w-full object-cover"
-            />
-          </div>
         </div>
       </section>
 
@@ -289,12 +272,7 @@ projects.
             </div>
           </div>
 
-          <a
-            href="mailto:info@mjmetal.co.uk"
-            className="mt-8 inline-block rounded bg-white px-10 py-4 text-sm font-black uppercase text-orange-600"
-          >
-            Email for a quote
-          </a>
+<QuoteForm />
         </div>
       </section>
 
