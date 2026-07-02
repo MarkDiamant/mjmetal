@@ -6,38 +6,47 @@ const services = [
   {
     title: "Driveway Gates",
     text: "Strong, secure and professionally finished gates for residential properties.",
+    image: "/images/driveway-gate.png",
   },
   {
     title: "Security Gates",
     text: "Heavy-duty gates designed to improve safety and control access.",
+    image: "/images/security-gate.png",
   },
   {
     title: "Gate Automation",
     text: "Automated gate systems for convenience, security and everyday use.",
+    image: "/images/gate.png",
   },
   {
     title: "Access Control Systems",
     text: "Keypads, intercoms and access systems for homes and businesses.",
+    image: "/images/security-gate.png",
   },
   {
     title: "Bar Grille Doors",
     text: "Security grille doors built for strength, protection and durability.",
+    image: "/images/bar-grille-door.png",
   },
   {
     title: "Security Window Grilles",
     text: "Bespoke window grilles made to measure for added protection.",
+    image: "/images/security-window-grille.png",
   },
   {
     title: "Retractable Security Gates",
     text: "Practical retractable gates for doors, windows and commercial spaces.",
+    image: "/images/retractable-security-gate.png",
   },
   {
     title: "High Quality Railings",
     text: "Clean, strong and stylish railings made to suit your property.",
+    image: "/images/high-quality-railing.png",
   },
   {
     title: "Bespoke Fabrication",
     text: "Including steel staircases, fire escapes and custom metalwork projects.",
+    image: "/images/bespoke-fabrication.png",
   },
 ];
 
@@ -123,12 +132,23 @@ export default function Home() {
 {services.map((service) => (
   <div
     key={service.title}
-    className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm"
+    className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm"
   >
-    <h3 className="font-semibold text-neutral-950">{service.title}</h3>
-    <p className="mt-3 text-sm leading-6 text-neutral-600">
-      {service.text}
-    </p>
+    <div className="relative h-44 w-full">
+      <Image
+        src={service.image}
+        alt={service.title}
+        fill
+        className="object-cover"
+      />
+    </div>
+
+    <div className="p-6">
+      <h3 className="font-semibold text-neutral-950">{service.title}</h3>
+      <p className="mt-3 text-sm leading-6 text-neutral-600">
+        {service.text}
+      </p>
+    </div>
   </div>
 ))}
         </div>
