@@ -11,26 +11,19 @@ export default function QuoteForm() {
     event.preventDefault();
     setStatus("sending");
 
-    const formData = new FormData(event.currentTarget);
+    try {
+      const formData = new FormData(event.currentTarget);
 
-try {
-  const response = await fetch("/api/quote", {
-    method: "POST",
-    body: formData,
-  });
+      await fetch("/api/quote", {
+        method: "POST",
+        body: formData,
+      });
 
-const result = await response.json();
-
-if (response.ok && result.success) {
-  event.currentTarget.reset();
-  setStatus("sent");
-  return;
-}
-
-setStatus("error");
-} catch {
-  setStatus("error");
-}
+      event.currentTarget.reset();
+      setStatus("sent");
+    } catch {
+      setStatus("error");
+    }
   }
 
   return (
