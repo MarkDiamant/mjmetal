@@ -183,7 +183,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="about" className="mx-auto max-w-7xl px-6 py-14">
+      <section id="company" className="mx-auto max-w-7xl px-6 py-14">
         <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
           <div>
             <p className="font-black uppercase text-orange-600">
