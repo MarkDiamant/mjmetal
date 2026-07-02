@@ -8,11 +8,11 @@ const services = [
     text: "Strong, secure and professionally finished gates for residential properties.",
     image: "/images/driveway-gate.jpeg",
   },
-  {
-    title: "Security Gates",
-    text: "Heavy-duty gates designed to improve safety and control access.",
-    image: "/images/security-gate.jpeg",
-  },
+{
+  title: "Commercial Gates",
+  text: "Heavy-duty gates manufactured for commercial, industrial and multi-site premises.",
+  image: "/images/commercial.jpg",
+},
   {
     title: "Gate Automation",
     text: "Automated gate systems for convenience, security and everyday use.",
