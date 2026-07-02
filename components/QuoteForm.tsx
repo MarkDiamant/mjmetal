@@ -19,13 +19,15 @@ try {
     body: formData,
   });
 
-  if (response.ok) {
-    event.currentTarget.reset();
-    setStatus("sent");
-    return;
-  }
+const result = await response.json();
 
-  setStatus("error");
+if (response.ok && result.success) {
+  event.currentTarget.reset();
+  setStatus("sent");
+  return;
+}
+
+setStatus("error");
 } catch {
   setStatus("error");
 }
