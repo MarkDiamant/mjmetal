@@ -13,18 +13,22 @@ export default function QuoteForm() {
 
     const formData = new FormData(event.currentTarget);
 
-    const response = await fetch("/api/quote", {
-      method: "POST",
-      body: formData,
-    });
+try {
+  const response = await fetch("/api/quote", {
+    method: "POST",
+    body: formData,
+  });
 
-    if (response.ok) {
-      event.currentTarget.reset();
-      setStatus("sent");
-      return;
-    }
+  if (response.ok) {
+    event.currentTarget.reset();
+    setStatus("sent");
+    return;
+  }
 
-    setStatus("error");
+  setStatus("error");
+} catch {
+  setStatus("error");
+}
   }
 
   return (

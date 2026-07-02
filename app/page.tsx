@@ -304,10 +304,13 @@ High Quality Railings
 
           <div>
             <h3 className="font-black uppercase">Contact</h3>
-            <p className="mt-3 text-sm leading-7 text-neutral-600">
-              info@mjmetal.co.uk<br />
-              London, UK
-            </p>
+<p className="mt-3 text-sm leading-7 text-neutral-600">
+  info@mjmetal.co.uk<br />
+  Office 6, 1st Floor, Sutherland House<br />
+  70–78 West Hendon Broadway<br />
+  London, NW9 7BT<br />
+  United Kingdom
+</p>
           </div>
         </div>
         <div className="mx-auto mt-10 max-w-7xl border-t border-neutral-200 pt-6 text-sm text-neutral-500">
