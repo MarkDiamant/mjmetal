@@ -18,11 +18,11 @@ const services = [
     text: "Automated gate systems for convenience, security and everyday use.",
     image: "/images/gate.jpeg",
   },
-  {
-    title: "Access Control Systems",
-    text: "Keypads, intercoms and access systems for homes and businesses.",
-    image: "/images/security-gate.jpeg",
-  },
+{
+  title: "Side Passage Gates",
+  text: "Secure steel side gates designed to protect side access while complementing your property.",
+  image: "/images/side-passage.jpeg",
+},
   {
     title: "Bar Grille Doors",
     text: "Security grille doors built for strength, protection and durability.",
