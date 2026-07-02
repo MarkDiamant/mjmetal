@@ -21,7 +21,7 @@ const services = [
 {
   title: "Side Passage Gates",
   text: "Secure steel side gates designed to protect side access while complementing your property.",
-  image: "/images/side-passage.jpeg",
+  image: "/images/side-passage.jpg",
 },
   {
     title: "Bar Grille Doors",
