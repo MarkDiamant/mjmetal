@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     const message = String(formData.get("message") || "");
 
     await resend.emails.send({
-      from: "M&J Metal <quotes@mjmetal.co.uk>",
+      from: "M&J Metal <info@mjmetal.co.uk>",
       to: [
         "mark@mjmetal.co.uk",
         "jonathan@mjmetal.co.uk",
