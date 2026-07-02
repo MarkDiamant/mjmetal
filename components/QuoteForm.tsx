@@ -7,24 +7,38 @@ type Status = "idle" | "sending" | "sent" | "error";
 export default function QuoteForm() {
   const [status, setStatus] = useState<Status>("idle");
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setStatus("sending");
+async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  event.preventDefault();
 
-    try {
-      const formData = new FormData(event.currentTarget);
+  const form = event.currentTarget;
 
-      await fetch("/api/quote", {
-        method: "POST",
-        body: formData,
-      });
+  setStatus("sending");
 
-      event.currentTarget.reset();
-      setStatus("sent");
-    } catch {
-      setStatus("error");
+  try {
+    const formData = new FormData(form);
+
+    const response = await fetch("/api/quote", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Request failed: ${response.status}`);
     }
+
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error("API returned success=false");
+    }
+
+    form.reset();
+    setStatus("sent");
+  } catch (err) {
+    console.error("QUOTE FORM:", err);
+    setStatus("error");
   }
+}
 
   return (
     <form
