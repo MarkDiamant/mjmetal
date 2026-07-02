@@ -6,47 +6,47 @@ const services = [
   {
     title: "Driveway Gates",
     text: "Strong, secure and professionally finished gates for residential properties.",
-    image: "/images/driveway-gate.png",
+    image: "/images/driveway-gate.jpeg",
   },
   {
     title: "Security Gates",
     text: "Heavy-duty gates designed to improve safety and control access.",
-    image: "/images/security-gate.png",
+    image: "/images/security-gate.jpeg",
   },
   {
     title: "Gate Automation",
     text: "Automated gate systems for convenience, security and everyday use.",
-    image: "/images/gate.png",
+    image: "/images/gate.jpeg",
   },
   {
     title: "Access Control Systems",
     text: "Keypads, intercoms and access systems for homes and businesses.",
-    image: "/images/security-gate.png",
+    image: "/images/security-gate.jpeg",
   },
   {
     title: "Bar Grille Doors",
     text: "Security grille doors built for strength, protection and durability.",
-    image: "/images/bar-grille-door.png",
+    image: "/images/bar-grille-door.jpeg",
   },
   {
     title: "Security Window Grilles",
     text: "Bespoke window grilles made to measure for added protection.",
-    image: "/images/security-window-grille.png",
+    image: "/images/security-window-grille.jpeg",
   },
   {
     title: "Retractable Security Gates",
     text: "Practical retractable gates for doors, windows and commercial spaces.",
-    image: "/images/retractable-security-gate.png",
+    image: "/images/retractable-security-gate.jpeg",
   },
   {
     title: "High Quality Railings",
     text: "Clean, strong and stylish railings made to suit your property.",
-    image: "/images/high-quality-railing.png",
+    image: "/images/high-quality-railing.jpeg",
   },
   {
     title: "Bespoke Fabrication",
     text: "Including steel staircases, fire escapes and custom metalwork projects.",
-    image: "/images/bespoke-fabrication.png",
+    image: "/images/bespoke-fabrication.jpeg",
   },
 ];
 
