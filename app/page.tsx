@@ -314,7 +314,7 @@ High Quality Railings
           </div>
         </div>
         <div className="mx-auto mt-10 max-w-7xl border-t border-neutral-200 pt-6 text-sm text-neutral-500">
-  © {currentYear} M&J Metal. All rights reserved.
+  © {currentYear} M&J Metal Ltd. Company No. 17330239. All rights reserved.
 </div>
       </footer>
     </main>
