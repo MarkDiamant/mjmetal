@@ -313,8 +313,33 @@ High Quality Railings
 </p>
           </div>
         </div>
-        <div className="mx-auto mt-10 max-w-7xl border-t border-neutral-200 pt-6 text-sm text-neutral-500">
-  © {currentYear} M&J Metal Ltd. Company No. 17330239. All rights reserved.
+        <div className="mx-auto mt-10 max-w-7xl border-t border-neutral-200 pt-6 text-sm text-neutral-500 sm:flex sm:items-center sm:justify-between sm:gap-6">
+  <p>
+    © {currentYear} M&J Metal Ltd. Company No. 17330239. All rights reserved.
+  </p>
+
+  <a
+    href="https://diamantsolutions.co.uk"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="group mt-5 flex flex-col items-start gap-1 transition hover:opacity-80 sm:mt-0 sm:items-end"
+  >
+    <div className="flex items-center gap-2">
+      <span className="text-sm font-semibold text-neutral-500">
+        Built by
+      </span>
+
+      <img
+        src="/diamant-solutions-logo.svg"
+        alt="Diamant Solutions"
+        className="h-6 w-auto"
+      />
+    </div>
+
+    <span className="text-xs text-neutral-500">
+      Websites • Systems • Automation
+    </span>
+  </a>
 </div>
       </footer>
     </main>
