@@ -66,7 +66,7 @@ export default function Home() {
 
         <nav className="hidden items-center gap-10 text-sm font-bold uppercase md:flex">
           <a href="#services" className="hover:text-orange-600">Services</a>
-          <a href="#about" className="hover:text-orange-600">About</a>
+          <a href="#company" className="hover:text-orange-600">About</a>
           <a href="#contact" className="hover:text-orange-600">Contact</a>
         </nav>
 
