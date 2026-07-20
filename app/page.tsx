@@ -3,6 +3,9 @@ import QuoteForm from "@/components/QuoteForm";
 
 const currentYear = new Date().getFullYear();
 
+const whatsappUrl =
+  "https://wa.me/442032845045?text=Hi%20M%26J%20Metal%2C%20I'd%20like%20to%20discuss%20a%20project.";
+
 const services = [
   {
     title: "Driveway Gates",
@@ -106,21 +109,28 @@ export default function Home() {
             Driveway gates, security gates, railings, grilles, automation and access control across London and the South East.
           </p>
 
-          <div className="mt-10 flex flex-wrap gap-4">
-            <a
-              href="#contact"
-              className="rounded bg-orange-600 px-8 py-4 text-sm font-black uppercase text-white hover:bg-orange-700"
-            >
-              Get a quote
-            </a>
-
-            <a
-              href="#services"
-              className="rounded border-2 border-orange-600 px-8 py-4 text-sm font-black uppercase text-orange-600 hover:bg-orange-50"
-            >
-              Our services
-            </a>
-          </div>
+<div className="mt-10 flex flex-wrap gap-4">
+  <a
+    href="#contact"
+    className="rounded bg-orange-600 px-8 py-4 text-sm font-black uppercase text-white hover:bg-orange-700"
+  >
+    Get a quote
+  </a>
+  <a
+    href={whatsappUrl}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="rounded bg-green-600 px-8 py-4 text-sm font-black uppercase text-white hover:bg-green-700"
+  >
+    WhatsApp us
+  </a>
+  <a
+    href="#services"
+    className="rounded border-2 border-orange-600 px-8 py-4 text-sm font-black uppercase text-orange-600 hover:bg-orange-50"
+  >
+    Our services
+  </a>
+</div>
         </div>
       </section>
 
@@ -211,9 +221,20 @@ projects.
             <h2 className="text-3xl font-black uppercase">
               Speak to our team
             </h2>
+
             <p className="mt-2 text-white/90">
-              Get in touch today to discuss your project or request a quote.
+              Get in touch by WhatsApp, email or our enquiry form to discuss
+              your project or request a quote.
             </p>
+
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-6 inline-flex items-center rounded bg-green-600 px-6 py-3 text-sm font-black uppercase text-white hover:bg-green-700"
+            >
+              WhatsApp 020 3284 5045
+            </a>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2">
@@ -223,25 +244,32 @@ projects.
                 alt="Mark from M&J Metal"
                 width={500}
                 height={500}
-                className="w-full rounded-2xl border border-neutral-200 object-contain bg-neutral-100 p-3"
+                className="w-full rounded-2xl border border-neutral-200 bg-neutral-100 object-contain p-3"
               />
+
               <h3 className="mt-5 text-2xl font-black">Mark</h3>
-<p className="mt-1 text-sm font-semibold uppercase tracking-wide text-orange-600">
-  Director
-</p>
+
+              <p className="mt-1 text-sm font-semibold uppercase tracking-wide text-orange-600">
+                Director
+              </p>
+
               <a
-                href="tel:07784468113"
-                className="mt-4 inline-block rounded bg-orange-600 px-6 py-3 text-sm font-black uppercase text-white hover:bg-orange-700"
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 inline-block rounded bg-green-600 px-6 py-3 text-sm font-black uppercase text-white hover:bg-green-700"
               >
-                Call Mark
+                WhatsApp Us
               </a>
-              <p className="mt-3 text-lg font-bold">07784 468113</p>
-<a
-  href="mailto:mark@mjmetal.co.uk"
-  className="mt-2 block text-sm text-neutral-600 hover:text-orange-600"
->
-  mark@mjmetal.co.uk
-</a>
+
+              <p className="mt-3 text-lg font-bold">020 3284 5045</p>
+
+              <a
+                href="mailto:mark@mjmetal.co.uk"
+                className="mt-2 block text-sm text-neutral-600 hover:text-orange-600"
+              >
+                mark@mjmetal.co.uk
+              </a>
             </div>
 
             <div className="rounded-3xl bg-white p-6 text-neutral-950 shadow-sm">
@@ -250,97 +278,135 @@ projects.
                 alt="Jonathan from M&J Metal"
                 width={500}
                 height={500}
-                className="w-full rounded-2xl border border-neutral-200 object-contain bg-neutral-100 p-3"
+                className="w-full rounded-2xl border border-neutral-200 bg-neutral-100 object-contain p-3"
               />
+
               <h3 className="mt-5 text-2xl font-black">Jonathan</h3>
-<p className="mt-1 text-sm font-semibold uppercase tracking-wide text-orange-600">
-  Director
-</p>
+
+              <p className="mt-1 text-sm font-semibold uppercase tracking-wide text-orange-600">
+                Director
+              </p>
+
               <a
-                href="tel:07834826608"
-                className="mt-4 inline-block rounded bg-orange-600 px-6 py-3 text-sm font-black uppercase text-white hover:bg-orange-700"
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 inline-block rounded bg-green-600 px-6 py-3 text-sm font-black uppercase text-white hover:bg-green-700"
               >
-                Call Jonathan
+                WhatsApp Us
               </a>
-              <p className="mt-3 text-lg font-bold">07834 826608</p>
-<a
-  href="mailto:jonathan@mjmetal.co.uk"
-  className="mt-2 block text-sm text-neutral-600 hover:text-orange-600"
->
-  jonathan@mjmetal.co.uk
-</a>
+
+              <p className="mt-3 text-lg font-bold">020 3284 5045</p>
+
+              <a
+                href="mailto:jonathan@mjmetal.co.uk"
+                className="mt-2 block text-sm text-neutral-600 hover:text-orange-600"
+              >
+                jonathan@mjmetal.co.uk
+              </a>
             </div>
           </div>
 
-<QuoteForm />
+          <QuoteForm />
         </div>
       </section>
 
       <footer className="border-t border-neutral-200 bg-white px-6 py-10 text-neutral-800">
         <div className="mx-auto grid max-w-7xl grid-cols-2 gap-8 md:grid-cols-3">
-<div className="col-span-2 md:col-span-1">
-  <Image
-    src="/images/logo.png"
-    alt="M&J Metal"
-    width={220}
-    height={100}
-    className="h-auto w-44"
-  />
-</div>
+          <div className="col-span-2 md:col-span-1">
+            <Image
+              src="/images/logo.png"
+              alt="M&J Metal"
+              width={220}
+              height={100}
+              className="h-auto w-44"
+            />
+          </div>
 
           <div>
             <h3 className="font-black uppercase">Services</h3>
+
             <p className="mt-3 text-sm leading-7 text-neutral-600">
-Driveway Gates<br />
-Security Gates<br />
-Gate Automation<br />
-Access Control Systems<br />
-Bar Grille Doors<br />
-Security Window Grilles<br />
-Retractable Security Gates<br />
-High Quality Railings
+              Driveway Gates
+              <br />
+              Security Gates
+              <br />
+              Gate Automation
+              <br />
+              Access Control Systems
+              <br />
+              Bar Grille Doors
+              <br />
+              Security Window Grilles
+              <br />
+              Retractable Security Gates
+              <br />
+              High Quality Railings
             </p>
           </div>
 
           <div>
             <h3 className="font-black uppercase">Contact</h3>
-<p className="mt-3 text-sm leading-7 text-neutral-600">
-  info@mjmetal.co.uk<br />
-  Office 6, 1st Floor, Sutherland House<br />
-  70–78 West Hendon Broadway<br />
-  London, NW9 7BT<br />
-  United Kingdom
-</p>
+
+            <p className="mt-3 text-sm leading-7 text-neutral-600">
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold hover:text-orange-600"
+              >
+                WhatsApp: 020 3284 5045
+              </a>
+              <br />
+
+              <a
+                href="mailto:info@mjmetal.co.uk"
+                className="hover:text-orange-600"
+              >
+                info@mjmetal.co.uk
+              </a>
+              <br />
+
+              Office 6, 1st Floor, Sutherland House
+              <br />
+              70–78 West Hendon Broadway
+              <br />
+              London, NW9 7BT
+              <br />
+              United Kingdom
+            </p>
           </div>
         </div>
+
         <div className="mx-auto mt-10 max-w-7xl border-t border-neutral-200 pt-6 text-sm text-neutral-500 sm:flex sm:items-center sm:justify-between sm:gap-6">
-  <p>
-    © {currentYear} M&J Metal Ltd. Company No. 17330239. All rights reserved.
-  </p>
+          <p>
+            © {currentYear} M&J Metal Ltd. Company No. 17330239. All rights
+            reserved.
+          </p>
 
-  <a
-    href="https://diamantsolutions.co.uk"
-    target="_blank"
-    rel="noopener noreferrer"
-    className="group mt-5 flex flex-col items-start gap-1 transition hover:opacity-80 sm:mt-0 sm:items-end"
-  >
-    <div className="flex items-center gap-2">
-      <span className="text-sm font-semibold text-neutral-500">
-        Built by
-      </span>
+          <a
+            href="https://diamantsolutions.co.uk"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group mt-5 flex flex-col items-start gap-1 transition hover:opacity-80 sm:mt-0 sm:items-end"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-neutral-500">
+                Built by
+              </span>
 
-      <img
-        src="/diamant-solutions-logo.svg"
-        alt="Diamant Solutions"
-        className="h-6 w-auto"
-      />
-    </div>
+              <img
+                src="/diamant-solutions-logo.svg"
+                alt="Diamant Solutions"
+                className="h-6 w-auto"
+              />
+            </div>
 
-    <span className="text-xs text-neutral-500">
-      Websites • Systems • Automation
-    </span>
-  </a>
-</div>
+            <span className="text-xs text-neutral-500">
+              Websites • Systems • Automation
+            </span>
+          </a>
+        </div>
       </footer>
     </main>
   );
