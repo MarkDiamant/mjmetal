@@ -109,26 +109,21 @@ export default function Home() {
             Driveway gates, security gates, railings, grilles, automation and access control across London and the South East.
           </p>
 
-<div className="mt-10 flex flex-wrap gap-4">
+<div className="mt-10 flex flex-wrap gap-3">
   <a
     href="#contact"
-    className="rounded bg-orange-600 px-8 py-4 text-sm font-black uppercase text-white hover:bg-orange-700"
+    className="flex-1 rounded bg-orange-600 px-6 py-4 text-center text-sm font-black uppercase text-white hover:bg-orange-700 sm:flex-none sm:px-8"
   >
     Get a quote
   </a>
+
   <a
     href={whatsappUrl}
     target="_blank"
     rel="noopener noreferrer"
-    className="rounded bg-green-600 px-8 py-4 text-sm font-black uppercase text-white hover:bg-green-700"
+    className="flex-1 rounded bg-green-600 px-6 py-4 text-center text-sm font-black uppercase text-white hover:bg-green-700 sm:flex-none sm:px-8"
   >
-    WhatsApp us
-  </a>
-  <a
-    href="#services"
-    className="rounded border-2 border-orange-600 px-8 py-4 text-sm font-black uppercase text-orange-600 hover:bg-orange-50"
-  >
-    Our services
+    WhatsApp Us
   </a>
 </div>
         </div>
