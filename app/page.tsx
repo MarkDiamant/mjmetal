@@ -226,15 +226,6 @@ projects.
               Get in touch by WhatsApp, email or our enquiry form to discuss
               your project or request a quote.
             </p>
-
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-6 inline-flex items-center rounded bg-green-600 px-6 py-3 text-sm font-black uppercase text-white hover:bg-green-700"
-            >
-              WhatsApp 020 3284 5045
-            </a>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2">
@@ -254,19 +245,8 @@ projects.
               </p>
 
               <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-4 inline-block rounded bg-green-600 px-6 py-3 text-sm font-black uppercase text-white hover:bg-green-700"
-              >
-                WhatsApp Us
-              </a>
-
-              <p className="mt-3 text-lg font-bold">020 3284 5045</p>
-
-              <a
                 href="mailto:mark@mjmetal.co.uk"
-                className="mt-2 block text-sm text-neutral-600 hover:text-orange-600"
+                className="mt-4 block text-sm text-neutral-600 hover:text-orange-600"
               >
                 mark@mjmetal.co.uk
               </a>
@@ -288,23 +268,31 @@ projects.
               </p>
 
               <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-4 inline-block rounded bg-green-600 px-6 py-3 text-sm font-black uppercase text-white hover:bg-green-700"
-              >
-                WhatsApp Us
-              </a>
-
-              <p className="mt-3 text-lg font-bold">020 3284 5045</p>
-
-              <a
                 href="mailto:jonathan@mjmetal.co.uk"
-                className="mt-2 block text-sm text-neutral-600 hover:text-orange-600"
+                className="mt-4 block text-sm text-neutral-600 hover:text-orange-600"
               >
                 jonathan@mjmetal.co.uk
               </a>
             </div>
+          </div>
+
+          <div className="mt-10 rounded-3xl bg-white p-6 text-center text-neutral-950 shadow-sm">
+            <h3 className="text-2xl font-black uppercase">
+              Prefer WhatsApp?
+            </h3>
+
+            <p className="mt-2 text-neutral-600">
+              Message us directly to discuss your project or request a quote.
+            </p>
+
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-5 inline-flex items-center rounded bg-green-600 px-6 py-3 text-sm font-black uppercase text-white hover:bg-green-700"
+            >
+              WhatsApp 020 3284 5045
+            </a>
           </div>
 
           <QuoteForm />
