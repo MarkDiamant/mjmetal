@@ -52,7 +52,7 @@ export const STATUS_META: Record<JobStatus, { label: string; order: number; grou
   installation_scheduled: { label: "Installation scheduled", order: 800, group: "scheduled" },
   in_progress: { label: "In progress", order: 170, group: "active" },
   awaiting_final_payment: { label: "Completed - invoiced", order: 180, group: "active" },
-  completed: { label: "Completed", order: 900, group: "closed" },
+  completed: { label: "Completed - paid", order: 900, group: "closed" },
   declined: { label: "Declined / lost", order: 1000, group: "closed" },
   cancelled: { label: "Cancelled", order: 1010, group: "closed" },
 };
