@@ -16,19 +16,21 @@ export async function GET(request: Request) {
   const archived = url.searchParams.get("archived") === "1";
   const archiveFilter = archived ? "archived_at=not.is.null" : "archived_at=is.null";
 
-  const [jobsResponse, paymentsResponse, assignmentsResponse, subcontractorsResponse] = await Promise.all([
+  const [jobsResponse, paymentsResponse, assignmentsResponse, peopleResponse, costsResponse] = await Promise.all([
     supabaseRequest(`/rest/v1/mj_jobs?${archiveFilter}&select=*,mj_customers(*)&order=sequence_number.asc`, { method: "GET" }, session.token),
     supabaseRequest("/rest/v1/mj_payments?select=id,job_id,direction,payment_type,amount,payment_method,counterparty,paid_at,due_at,notes,created_at&order=created_at.desc", { method: "GET" }, session.token),
-    supabaseRequest("/rest/v1/mj_job_subcontractors?select=id,job_id,subcontractor_id,scope,agreed_cost,deposit_amount,paid_amount,status,scheduled_at,completed_at,materials_included&order=created_at.asc", { method: "GET" }, session.token),
-    supabaseRequest("/rest/v1/mj_subcontractors?active=eq.true&select=id,name,company,phone,email&order=name.asc", { method: "GET" }, session.token),
+    supabaseRequest("/rest/v1/mj_job_subcontractors?select=id,job_id,subcontractor_id,scope,agreed_cost,deposit_amount,paid_amount,status,scheduled_at,completed_at,materials_included,assignment_role&order=created_at.asc", { method: "GET" }, session.token),
+    supabaseRequest("/rest/v1/mj_subcontractors?active=eq.true&select=id,name,company,phone,email,capabilities,relationship_type&order=name.asc", { method: "GET" }, session.token),
+    supabaseRequest("/rest/v1/mj_job_costs?category=eq.Commission&select=id,job_id,category,supplier,estimated_amount,actual_amount,paid_amount,paid_at,due_at,notes,created_at&order=created_at.asc", { method: "GET" }, session.token),
   ]);
 
   if (!jobsResponse.ok) return NextResponse.json({ error: "Unable to load jobs" }, { status: 500 });
   const jobs = await jobsResponse.json() as Array<Record<string, any>>;
   const payments = paymentsResponse.ok ? await paymentsResponse.json() as Array<Record<string, any>> : [];
   const assignments = assignmentsResponse.ok ? await assignmentsResponse.json() as Array<Record<string, any>> : [];
-  const subcontractors = subcontractorsResponse.ok ? await subcontractorsResponse.json() as Array<Record<string, any>> : [];
-  const subcontractorById = new Map(subcontractors.map((s) => [s.id, s]));
+  const people = peopleResponse.ok ? await peopleResponse.json() as Array<Record<string, any>> : [];
+  const costs = costsResponse.ok ? await costsResponse.json() as Array<Record<string, any>> : [];
+  const personById = new Map(people.map((s) => [s.id, s]));
 
   const paymentsByJob = new Map<string, Array<Record<string, any>>>();
   const paidByJob = new Map<string, number>();
@@ -42,17 +44,27 @@ export async function GET(request: Request) {
   const assignmentsByJob = new Map<string, Array<Record<string, any>>>();
   for (const assignment of assignments) {
     if (!assignmentsByJob.has(assignment.job_id)) assignmentsByJob.set(assignment.job_id, []);
-    const subcontractor = subcontractorById.get(assignment.subcontractor_id) || {};
+    const person = personById.get(assignment.subcontractor_id) || {};
     const agreed = Number(assignment.agreed_cost || 0);
     const paid = Number(assignment.paid_amount || 0);
     assignmentsByJob.get(assignment.job_id)!.push({
       ...assignment,
-      subcontractorName: subcontractor.name || "Subcontractor",
-      subcontractorCompany: subcontractor.company || "",
+      personName: person.name || "Person",
+      personCompany: person.company || "",
+      relationshipType: person.relationship_type || "subcontractor",
+      assignmentRole: assignment.assignment_role || "subcontractor",
       agreedCost: agreed,
       paidAmount: paid,
       outstanding: Math.max(0, agreed - paid),
     });
+  }
+
+  const commissionsByJob = new Map<string, Array<Record<string, any>>>();
+  for (const cost of costs) {
+    if (!commissionsByJob.has(cost.job_id)) commissionsByJob.set(cost.job_id, []);
+    const agreed = Number(cost.actual_amount ?? cost.estimated_amount ?? 0);
+    const paid = Number(cost.paid_amount || 0);
+    commissionsByJob.get(cost.job_id)!.push({ ...cost, agreedAmount: agreed, paidAmount: paid, outstanding: Math.max(0, agreed - paid) });
   }
 
   const mapped = jobs.map((job) => {
@@ -65,8 +77,12 @@ export async function GET(request: Request) {
     const jobPayments = paymentsByJob.get(job.id) || [];
     const customerPayments = jobPayments.filter((p) => p.direction === "customer_in");
     const jobAssignments = assignmentsByJob.get(job.id) || [];
-    const subAgreed = jobAssignments.reduce((sum, a) => sum + Number(a.agreedCost || 0), 0);
-    const subPaid = jobAssignments.reduce((sum, a) => sum + Number(a.paidAmount || 0), 0);
+    const commissions = commissionsByJob.get(job.id) || [];
+    const subAgreed = jobAssignments.filter((a) => a.relationshipType !== "employee").reduce((sum, a) => sum + Number(a.agreedCost || 0), 0);
+    const subPaid = jobAssignments.filter((a) => a.relationshipType !== "employee").reduce((sum, a) => sum + Number(a.paidAmount || 0), 0);
+    const commissionAgreed = commissions.reduce((sum, c) => sum + Number(c.agreedAmount || 0), 0);
+    const commissionPaid = commissions.reduce((sum, c) => sum + Number(c.paidAmount || 0), 0);
+    const jobTypes = Array.isArray(job.job_types) && job.job_types.length ? job.job_types : [job.job_type].filter(Boolean);
 
     return {
       id: job.id,
@@ -89,6 +105,7 @@ export async function GET(request: Request) {
       phone: customer.phone || "",
       email: customer.email || "",
       jobType: job.job_type,
+      jobTypes,
       status: job.status,
       manager: job.manager,
       source: job.enquiry_source,
@@ -118,10 +135,14 @@ export async function GET(request: Request) {
       balanceOutstanding: Math.max(0, value - paid),
       amountPaid: paid,
       customerPayments,
-      subcontractorAssignments: jobAssignments,
+      workforceAssignments: jobAssignments,
       subcontractorAgreed: subAgreed,
       subcontractorPaid: subPaid,
       subcontractorOutstanding: Math.max(0, subAgreed - subPaid),
+      commissions,
+      commissionAgreed,
+      commissionPaid,
+      commissionOutstanding: Math.max(0, commissionAgreed - commissionPaid),
       materialsOrdered: job.materials_ordered,
       archivedAt: job.archived_at ?? undefined,
       createdAt: job.created_at,
@@ -129,7 +150,7 @@ export async function GET(request: Request) {
     };
   });
 
-  return NextResponse.json({ jobs: mapped, subcontractors, admin: session.admin });
+  return NextResponse.json({ jobs: mapped, people, admin: session.admin });
 }
 
 export async function POST(request: Request) {
@@ -168,13 +189,15 @@ export async function POST(request: Request) {
 
     const visitStatus = body.siteVisitRequired ? (body.siteVisitAt ? "booked" : "required") : "not_required";
     const status = body.siteVisitRequired ? (body.siteVisitAt ? "site_visit_booked" : "site_visit_required") : "new_enquiry";
+    const jobTypes = Array.isArray(body.jobTypes) && body.jobTypes.length ? body.jobTypes : [body.jobType].filter(Boolean);
     const payload: Record<string, unknown> = {
       customer_id: customerId,
       site_address_line_1: body.siteAddressLine1 || null,
       site_address_line_2: body.siteAddressLine2 || null,
       site_city: body.siteCity || null,
       site_postcode: body.sitePostcode || null,
-      job_type: body.jobType,
+      job_type: jobTypes[0] || body.jobType || "Other",
+      job_types: jobTypes,
       status,
       manager: body.manager,
       enquiry_source: body.source || "Other",
