@@ -6,6 +6,7 @@ export const JOB_TYPES: JobType[] = [
   "Commercial Gate",
   "Gate Automation",
   "Railings",
+  "Pool Mesh Cover",
   "Window Grille",
   "Bar Grille Door",
   "Retractable Security Gate",
