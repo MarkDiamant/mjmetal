@@ -28,6 +28,8 @@ type StoredConnection = {
   refresh_token_ciphertext: string;
   expires_at: string;
   scopes: string | null;
+  connected_at: string;
+  updated_at: string;
 };
 
 function cfg() {
