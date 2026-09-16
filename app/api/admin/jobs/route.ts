@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   const archived = url.searchParams.get("archived") === "1";
   const archiveFilter = archived ? "archived_at=not.is.null" : "archived_at=is.null";
   const [jobsResponse, paymentsResponse] = await Promise.all([
-    supabaseRequest(`/rest/v1/mj_jobs?${archiveFilter}&select=*,mj_customers(*)&order=updated_at.desc`, { method: "GET" }, session.token),
+    supabaseRequest(`/rest/v1/mj_jobs?${archiveFilter}&select=*,mj_customers(*)&order=sequence_number.asc`, { method: "GET" }, session.token),
     supabaseRequest("/rest/v1/mj_payments?select=job_id,direction,amount,paid_at,payment_type", { method: "GET" }, session.token),
   ]);
   if (!jobsResponse.ok) return NextResponse.json({ error: "Unable to load jobs" }, { status: 500 });
@@ -34,21 +34,60 @@ export async function GET(request: Request) {
     const quoted = job.quoted_amount === null ? undefined : Number(job.quoted_amount);
     const paid = paidByJob.get(job.id) ?? 0;
     const value = agreed ?? quoted ?? 0;
+    const placeholder = String(job.internal_notes || "").startsWith("Historical placeholder created for backfill.");
     return {
-      id: job.id, reference: job.reference, customerId: job.customer_id,
+      id: job.id,
+      reference: job.reference,
+      sequenceNumber: job.sequence_number,
+      customerId: job.customer_id,
+      firstName: customer.first_name || "",
+      lastName: customer.last_name || "",
       customerName: [customer.first_name, customer.last_name].filter(Boolean).join(" "),
+      customerAddressLine1: customer.address_line_1 || "",
+      customerAddressLine2: customer.address_line_2 || "",
+      customerCity: customer.city || "",
+      customerPostcode: customer.postcode || "",
+      siteAddressLine1: job.site_address_line_1 || "",
+      siteAddressLine2: job.site_address_line_2 || "",
+      siteCity: job.site_city || "",
+      sitePostcode: job.site_postcode || "",
       address: [job.site_address_line_1 || customer.address_line_1, job.site_address_line_2 || customer.address_line_2, job.site_city || customer.city].filter(Boolean).join(", "),
-      postcode: job.site_postcode || customer.postcode || "", phone: customer.phone || "", email: customer.email || "",
-      jobType: job.job_type, status: job.status, manager: job.manager, source: job.enquiry_source, enquiryAt: job.enquiry_at,
-      finishes: job.finishes ?? [], colour: job.colour ?? undefined, dimensions: job.dimensions ?? undefined, material: job.material ?? undefined,
-      customerRequirements: job.customer_requirements ?? undefined, internalNotes: job.internal_notes ?? undefined,
-      siteVisitRequired: job.site_visit_required, siteVisitAt: job.site_visit_at ?? undefined, siteVisitCompletedAt: job.site_visit_completed_at ?? undefined,
-      preliminaryEstimate: job.preliminary_estimate === null ? undefined : Number(job.preliminary_estimate), preliminaryEstimateSentAt: job.preliminary_estimate_sent_at ?? undefined,
-      quotedAmount: quoted, quoteSentAt: job.quote_sent_at ?? undefined, agreedAmount: agreed, paymentMethod: job.payment_method ?? undefined,
-      nextAction: job.next_action ?? undefined, nextActionAt: job.next_action_at ?? undefined, nextActionAssignee: job.next_action_assignee ?? undefined,
-      scheduledAt: job.scheduled_at ?? undefined, expectedCompletionAt: job.expected_completion_at ?? undefined, completedAt: job.completed_at ?? undefined,
-      balanceOutstanding: Math.max(0, value - paid), materialsOrdered: job.materials_ordered, archivedAt: job.archived_at ?? undefined,
-      createdAt: job.created_at, updatedAt: job.updated_at,
+      postcode: job.site_postcode || customer.postcode || "",
+      phone: customer.phone || "",
+      email: customer.email || "",
+      jobType: job.job_type,
+      status: job.status,
+      manager: job.manager,
+      source: job.enquiry_source,
+      enquiryAt: job.enquiry_at,
+      finishes: job.finishes ?? [],
+      colour: job.colour ?? undefined,
+      dimensions: job.dimensions ?? undefined,
+      material: job.material ?? undefined,
+      customerRequirements: job.customer_requirements ?? undefined,
+      internalNotes: job.internal_notes ?? undefined,
+      isPlaceholder: placeholder,
+      siteVisitRequired: job.site_visit_required,
+      siteVisitAt: job.site_visit_at ?? undefined,
+      siteVisitCompletedAt: job.site_visit_completed_at ?? undefined,
+      preliminaryEstimate: job.preliminary_estimate === null ? undefined : Number(job.preliminary_estimate),
+      preliminaryEstimateSentAt: job.preliminary_estimate_sent_at ?? undefined,
+      quotedAmount: quoted,
+      quoteSentAt: job.quote_sent_at ?? undefined,
+      agreedAmount: agreed,
+      paymentMethod: job.payment_method ?? undefined,
+      nextAction: job.next_action ?? undefined,
+      nextActionAt: job.next_action_at ?? undefined,
+      nextActionAssignee: job.next_action_assignee ?? undefined,
+      scheduledAt: job.scheduled_at ?? undefined,
+      expectedCompletionAt: job.expected_completion_at ?? undefined,
+      completedAt: job.completed_at ?? undefined,
+      balanceOutstanding: Math.max(0, value - paid),
+      amountPaid: paid,
+      materialsOrdered: job.materials_ordered,
+      archivedAt: job.archived_at ?? undefined,
+      createdAt: job.created_at,
+      updatedAt: job.updated_at,
     };
   });
   return NextResponse.json({ jobs: mapped, admin: session.admin });
@@ -83,24 +122,50 @@ export async function POST(request: Request) {
       }
       const customerResponse = await supabaseRequest("/rest/v1/mj_customers?select=id", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify({ first_name: body.firstName, last_name: body.lastName || null, phone: body.phone || null, email: body.email || null, address_line_1: body.addressLine1 || null, address_line_2: body.addressLine2 || null, city: body.city || null, postcode: body.postcode || null }) }, session.token);
       if (!customerResponse.ok) return NextResponse.json({ error: "Unable to create customer" }, { status: 500 });
-      const customers = await customerResponse.json() as Array<{ id: string }>; customerId = customers[0]?.id;
+      const customers = await customerResponse.json() as Array<{ id: string }>;
+      customerId = customers[0]?.id;
     }
     if (!customerId) return NextResponse.json({ error: "Customer could not be resolved" }, { status: 500 });
+
     const visitStatus = body.siteVisitRequired ? (body.siteVisitAt ? "booked" : "required") : "not_required";
     const status = body.siteVisitRequired ? (body.siteVisitAt ? "site_visit_booked" : "site_visit_required") : "new_enquiry";
     const payload: Record<string, unknown> = {
-      customer_id: customerId, site_address_line_1: body.siteAddressLine1 || null, site_address_line_2: body.siteAddressLine2 || null, site_city: body.siteCity || null, site_postcode: body.sitePostcode || null,
-      job_type: body.jobType, status, manager: body.manager, enquiry_source: body.source || "Other", enquiry_at: body.enquiryAt || new Date().toISOString(), finishes: Array.isArray(body.finishes) ? body.finishes : [],
-      colour: body.colour || null, dimensions: body.dimensions || null, material: body.material || null, customer_requirements: body.customerRequirements || null, internal_notes: body.internalNotes || null,
-      site_visit_required: Boolean(body.siteVisitRequired), site_visit_status: visitStatus, site_visit_at: body.siteVisitAt || null,
-      preliminary_estimate: asNumber(body.preliminaryEstimate), quoted_amount: asNumber(body.quotedAmount), payment_method: body.paymentMethod || null,
-      next_action: body.nextAction || null, next_action_at: body.nextActionAt || null, next_action_assignee: body.nextActionAssignee || body.manager || null,
+      customer_id: customerId,
+      site_address_line_1: body.siteAddressLine1 || null,
+      site_address_line_2: body.siteAddressLine2 || null,
+      site_city: body.siteCity || null,
+      site_postcode: body.sitePostcode || null,
+      job_type: body.jobType,
+      status,
+      manager: body.manager,
+      enquiry_source: body.source || "Other",
+      enquiry_at: body.enquiryAt || new Date().toISOString(),
+      finishes: Array.isArray(body.finishes) ? body.finishes : [],
+      colour: body.colour || null,
+      dimensions: body.dimensions || null,
+      material: body.material || null,
+      customer_requirements: body.customerRequirements || null,
+      internal_notes: body.internalNotes || null,
+      site_visit_required: Boolean(body.siteVisitRequired),
+      site_visit_status: visitStatus,
+      site_visit_at: body.siteVisitAt || null,
+      preliminary_estimate: asNumber(body.preliminaryEstimate),
+      quoted_amount: asNumber(body.quotedAmount),
+      payment_method: body.paymentMethod || null,
+      next_action: body.nextAction || null,
+      next_action_at: body.nextActionAt || null,
+      next_action_assignee: body.nextActionAssignee || body.manager || null,
     };
     if (historicalSequence !== null) payload.sequence_number = historicalSequence;
 
     const jobResponse = await supabaseRequest("/rest/v1/mj_jobs?select=id,reference", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(payload) }, session.token);
-    if (!jobResponse.ok) { const detail = await jobResponse.text(); return NextResponse.json({ error: "Unable to create job", detail }, { status: 500 }); }
+    if (!jobResponse.ok) {
+      const detail = await jobResponse.text();
+      return NextResponse.json({ error: "Unable to create job", detail }, { status: 500 });
+    }
     const jobs = await jobResponse.json() as Array<{ id: string; reference: string }>;
     return NextResponse.json({ job: jobs[0] }, { status: 201 });
-  } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to create job" }, { status: 500 }); }
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to create job" }, { status: 500 });
+  }
 }
