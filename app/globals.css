@@ -29,3 +29,17 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+button,
+a[href],
+select,
+label[for],
+input[type="checkbox"],
+input[type="radio"] {
+  cursor: pointer;
+}
+
+select {
+  padding-right: 2.75rem !important;
+  background-position: right 1rem center;
+}
