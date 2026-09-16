@@ -15,7 +15,7 @@ async function audit(token: string, actor: "MD" | "JB", jobId: string, action: s
   }, token);
 }
 
-export async function GET(_request: NextRequest, { params }: { params: Promise<{ reference: string }> }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ reference: string }> }) {
   const session = await requireAdminToken();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { reference } = await params;
@@ -23,6 +23,21 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     const jobRows = await jsonOrError(await supabaseRequest(`/rest/v1/mj_jobs?reference=eq.${encodeURIComponent(reference)}&select=*&limit=1`, {}, session.token));
     const job = jobRows[0];
     if (!job) return NextResponse.json({ error: "Job not found" }, { status: 404 });
+
+    const coreOnly = request.nextUrl.searchParams.get("mode") === "core";
+    if (coreOnly) {
+      const [customers, payments, costs, assignments] = await Promise.all([
+        jsonOrError(await supabaseRequest(`/rest/v1/mj_customers?id=eq.${job.customer_id}&select=*`, {}, session.token)),
+        jsonOrError(await supabaseRequest(`/rest/v1/mj_payments?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)),
+        jsonOrError(await supabaseRequest(`/rest/v1/mj_job_costs?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)),
+        jsonOrError(await supabaseRequest(`/rest/v1/mj_job_subcontractors?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)),
+      ]);
+      return NextResponse.json({
+        job, customer: customers[0] || null, payments, costs, assignments,
+        activities: [], quotes: [], files: [], subcontractors: [], materialOrders: [], suppliers: [], auditEvents: [],
+        currentAdmin: session.admin, _full: false,
+      });
+    }
 
     const [customers, activities, payments, costs, quotes, files, assignments, subcontractors, materialOrders, auditEvents, suppliers] = await Promise.all([
       jsonOrError(await supabaseRequest(`/rest/v1/mj_customers?id=eq.${job.customer_id}&select=*`, {}, session.token)),
@@ -48,19 +63,8 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     }));
 
     return NextResponse.json({
-      job,
-      customer: customers[0] || null,
-      activities,
-      payments,
-      costs,
-      quotes,
-      files: filesWithUrls,
-      assignments,
-      subcontractors,
-      materialOrders,
-      suppliers,
-      auditEvents,
-      currentAdmin: session.admin,
+      job, customer: customers[0] || null, activities, payments, costs, quotes, files: filesWithUrls,
+      assignments, subcontractors, materialOrders, suppliers, auditEvents, currentAdmin: session.admin, _full: true,
     });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Failed to load job" }, { status: 500 });
@@ -79,20 +83,25 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     if (body.customer && Object.keys(body.customer).length) {
       await jsonOrError(await supabaseRequest(`/rest/v1/mj_customers?id=eq.${job.customer_id}`, {
-        method: "PATCH",
-        headers: { Prefer: "return=representation" },
+        method: "PATCH", headers: { Prefer: "return=representation" },
         body: JSON.stringify({ ...body.customer, updated_at: new Date().toISOString() }),
       }, session.token));
       await audit(session.token, session.admin.initials, job.id, "updated", "customer", job.customer_id, body.customer);
     }
 
     if (body.job && Object.keys(body.job).length) {
+      const patch = { ...body.job } as Record<string, unknown>;
+      if (["declined", "cancelled", "completed"].includes(String(patch.status || ""))) {
+        patch.next_action = null;
+        patch.next_action_at = null;
+        patch.next_action_assignee = null;
+        if (patch.status === "completed" && !("completed_at" in patch)) patch.completed_at = new Date().toISOString();
+      }
       const updated = await jsonOrError(await supabaseRequest(`/rest/v1/mj_jobs?id=eq.${job.id}`, {
-        method: "PATCH",
-        headers: { Prefer: "return=representation" },
-        body: JSON.stringify({ ...body.job, updated_at: new Date().toISOString() }),
+        method: "PATCH", headers: { Prefer: "return=representation" },
+        body: JSON.stringify({ ...patch, updated_at: new Date().toISOString() }),
       }, session.token));
-      await audit(session.token, session.admin.initials, job.id, "updated", "job", job.id, body.job);
+      await audit(session.token, session.admin.initials, job.id, "updated", "job", job.id, patch);
       return NextResponse.json({ job: updated[0] });
     }
 
@@ -135,10 +144,22 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     if (body.type === "cost") {
+      const paidAmount = body.paid_amount ? Number(body.paid_amount) : 0;
       const created = await jsonOrError(await supabaseRequest("/rest/v1/mj_job_costs", {
         method: "POST", headers: { Prefer: "return=representation" },
-        body: JSON.stringify({ job_id: job.id, category: body.category, supplier: body.supplier || null, estimated_amount: body.estimated_amount ? Number(body.estimated_amount) : null, actual_amount: body.actual_amount ? Number(body.actual_amount) : null, notes: body.notes || null }),
+        body: JSON.stringify({
+          job_id: job.id, category: body.category, supplier: body.supplier || null,
+          estimated_amount: body.estimated_amount ? Number(body.estimated_amount) : null,
+          actual_amount: body.actual_amount ? Number(body.actual_amount) : null,
+          paid_amount: paidAmount, paid_at: body.paid_at || null, due_at: body.due_at || null, notes: body.notes || null,
+        }),
       }, session.token));
+      if (String(body.category).toLowerCase() === "commission" && paidAmount > 0) {
+        await supabaseRequest("/rest/v1/mj_payments", {
+          method: "POST", headers: { Prefer: "return=minimal" },
+          body: JSON.stringify({ job_id: job.id, direction: "commission_out", payment_type: "Commission", amount: paidAmount, payment_method: body.payment_method || "Bank transfer", counterparty: body.supplier || null, paid_at: body.paid_at || now, notes: `Commission cost ${created[0]?.id || ""}`.trim() }),
+        }, session.token);
+      }
       await audit(session.token, session.admin.initials, job.id, "created", "cost", created[0]?.id, body);
       return NextResponse.json({ item: created[0] });
     }
@@ -160,15 +181,24 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       if (!subcontractorId && body.name) {
         const createdSub = await jsonOrError(await supabaseRequest("/rest/v1/mj_subcontractors", {
           method: "POST", headers: { Prefer: "return=representation" },
-          body: JSON.stringify({ name: body.name, company: body.company || null, phone: body.phone || null, email: body.email || null, capabilities: body.capabilities || null, notes: body.notes || null }),
+          body: JSON.stringify({
+            name: body.name, company: body.company || null, phone: body.phone || null, email: body.email || null,
+            capabilities: body.capabilities || null, notes: body.notes || null, relationship_type: body.relationship_type || "subcontractor",
+          }),
         }, session.token));
         subcontractorId = createdSub[0]?.id;
       }
+      if (!subcontractorId) return NextResponse.json({ error: "Choose or add a person" }, { status: 400 });
       const created = await jsonOrError(await supabaseRequest("/rest/v1/mj_job_subcontractors", {
         method: "POST", headers: { Prefer: "return=representation" },
-        body: JSON.stringify({ job_id: job.id, subcontractor_id: subcontractorId, scope: body.scope || null, agreed_cost: body.agreed_cost ? Number(body.agreed_cost) : null, materials_included: Boolean(body.materials_included) }),
+        body: JSON.stringify({
+          job_id: job.id, subcontractor_id: subcontractorId, scope: body.scope || null,
+          agreed_cost: body.agreed_cost ? Number(body.agreed_cost) : null,
+          materials_included: Boolean(body.materials_included), assignment_role: body.assignment_role || "subcontractor",
+          scheduled_at: body.scheduled_at || null,
+        }),
       }, session.token));
-      await audit(session.token, session.admin.initials, job.id, "assigned", "subcontractor", created[0]?.id, body);
+      await audit(session.token, session.admin.initials, job.id, "assigned", "workforce", created[0]?.id, body);
       return NextResponse.json({ item: created[0] });
     }
 
