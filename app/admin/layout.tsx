@@ -22,7 +22,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {children}
       <footer className="border-t border-black/10 bg-white px-5 py-5 text-center text-xs text-black/50 print:hidden">
         <a href="https://diamantsolutions.co.uk" target="_blank" rel="noopener noreferrer" className="inline-flex flex-col items-center gap-1 transition hover:opacity-75">
-          <span className="inline-flex items-center gap-2 font-bold text-black/60">Built by <img src="/diamant-solutions-logo.svg" alt="Diamant Solutions" className="h-7 w-auto rounded bg-[#172536] px-2 py-1" /></span>
+          <span className="inline-flex items-center gap-2 font-bold text-black/60">Built by <img src="/diamant-solutions-logo.svg" alt="Diamant Solutions" className="h-7 w-auto" /></span>
           <span>Websites • CRM Systems • Direction</span>
         </a>
       </footer>
