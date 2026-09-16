@@ -15,17 +15,44 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const archived = url.searchParams.get("archived") === "1";
   const archiveFilter = archived ? "archived_at=not.is.null" : "archived_at=is.null";
-  const [jobsResponse, paymentsResponse] = await Promise.all([
+
+  const [jobsResponse, paymentsResponse, assignmentsResponse, subcontractorsResponse] = await Promise.all([
     supabaseRequest(`/rest/v1/mj_jobs?${archiveFilter}&select=*,mj_customers(*)&order=sequence_number.asc`, { method: "GET" }, session.token),
-    supabaseRequest("/rest/v1/mj_payments?select=job_id,direction,amount,paid_at,payment_type", { method: "GET" }, session.token),
+    supabaseRequest("/rest/v1/mj_payments?select=id,job_id,direction,payment_type,amount,payment_method,counterparty,paid_at,due_at,notes,created_at&order=created_at.desc", { method: "GET" }, session.token),
+    supabaseRequest("/rest/v1/mj_job_subcontractors?select=id,job_id,subcontractor_id,scope,agreed_cost,deposit_amount,paid_amount,status,scheduled_at,completed_at,materials_included&order=created_at.asc", { method: "GET" }, session.token),
+    supabaseRequest("/rest/v1/mj_subcontractors?active=eq.true&select=id,name,company,phone,email&order=name.asc", { method: "GET" }, session.token),
   ]);
+
   if (!jobsResponse.ok) return NextResponse.json({ error: "Unable to load jobs" }, { status: 500 });
   const jobs = await jobsResponse.json() as Array<Record<string, any>>;
   const payments = paymentsResponse.ok ? await paymentsResponse.json() as Array<Record<string, any>> : [];
+  const assignments = assignmentsResponse.ok ? await assignmentsResponse.json() as Array<Record<string, any>> : [];
+  const subcontractors = subcontractorsResponse.ok ? await subcontractorsResponse.json() as Array<Record<string, any>> : [];
+  const subcontractorById = new Map(subcontractors.map((s) => [s.id, s]));
+
+  const paymentsByJob = new Map<string, Array<Record<string, any>>>();
   const paidByJob = new Map<string, number>();
   for (const payment of payments) {
+    if (!paymentsByJob.has(payment.job_id)) paymentsByJob.set(payment.job_id, []);
+    paymentsByJob.get(payment.job_id)!.push(payment);
     const countsAsPaid = payment.direction === "customer_in" && (payment.paid_at || payment.payment_type === "historical_xero_paid");
     if (countsAsPaid) paidByJob.set(payment.job_id, (paidByJob.get(payment.job_id) ?? 0) + Number(payment.amount ?? 0));
+  }
+
+  const assignmentsByJob = new Map<string, Array<Record<string, any>>>();
+  for (const assignment of assignments) {
+    if (!assignmentsByJob.has(assignment.job_id)) assignmentsByJob.set(assignment.job_id, []);
+    const subcontractor = subcontractorById.get(assignment.subcontractor_id) || {};
+    const agreed = Number(assignment.agreed_cost || 0);
+    const paid = Number(assignment.paid_amount || 0);
+    assignmentsByJob.get(assignment.job_id)!.push({
+      ...assignment,
+      subcontractorName: subcontractor.name || "Subcontractor",
+      subcontractorCompany: subcontractor.company || "",
+      agreedCost: agreed,
+      paidAmount: paid,
+      outstanding: Math.max(0, agreed - paid),
+    });
   }
 
   const mapped = jobs.map((job) => {
@@ -35,6 +62,12 @@ export async function GET(request: Request) {
     const paid = paidByJob.get(job.id) ?? 0;
     const value = agreed ?? quoted ?? 0;
     const placeholder = String(job.internal_notes || "").startsWith("Historical placeholder created for backfill.");
+    const jobPayments = paymentsByJob.get(job.id) || [];
+    const customerPayments = jobPayments.filter((p) => p.direction === "customer_in");
+    const jobAssignments = assignmentsByJob.get(job.id) || [];
+    const subAgreed = jobAssignments.reduce((sum, a) => sum + Number(a.agreedCost || 0), 0);
+    const subPaid = jobAssignments.reduce((sum, a) => sum + Number(a.paidAmount || 0), 0);
+
     return {
       id: job.id,
       reference: job.reference,
@@ -84,13 +117,19 @@ export async function GET(request: Request) {
       completedAt: job.completed_at ?? undefined,
       balanceOutstanding: Math.max(0, value - paid),
       amountPaid: paid,
+      customerPayments,
+      subcontractorAssignments: jobAssignments,
+      subcontractorAgreed: subAgreed,
+      subcontractorPaid: subPaid,
+      subcontractorOutstanding: Math.max(0, subAgreed - subPaid),
       materialsOrdered: job.materials_ordered,
       archivedAt: job.archived_at ?? undefined,
       createdAt: job.created_at,
       updatedAt: job.updated_at,
     };
   });
-  return NextResponse.json({ jobs: mapped, admin: session.admin });
+
+  return NextResponse.json({ jobs: mapped, subcontractors, admin: session.admin });
 }
 
 export async function POST(request: Request) {
