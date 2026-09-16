@@ -83,6 +83,8 @@ export async function GET(request: Request) {
     const commissionAgreed = commissions.reduce((sum, c) => sum + Number(c.agreedAmount || 0), 0);
     const commissionPaid = commissions.reduce((sum, c) => sum + Number(c.paidAmount || 0), 0);
     const jobTypes = Array.isArray(job.job_types) && job.job_types.length ? job.job_types : [job.job_type].filter(Boolean);
+    const balanceActive = job.status === "awaiting_final_payment";
+    const balanceOutstanding = balanceActive ? Math.max(0, value - paid) : 0;
 
     return {
       id: job.id,
@@ -132,7 +134,8 @@ export async function GET(request: Request) {
       scheduledAt: job.scheduled_at ?? undefined,
       expectedCompletionAt: job.expected_completion_at ?? undefined,
       completedAt: job.completed_at ?? undefined,
-      balanceOutstanding: Math.max(0, value - paid),
+      balanceActive,
+      balanceOutstanding,
       amountPaid: paid,
       customerPayments,
       workforceAssignments: jobAssignments,
