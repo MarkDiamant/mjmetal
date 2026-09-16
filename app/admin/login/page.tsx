@@ -1,3 +1,5 @@
+"use client";
+
 export default function AdminLoginPage() {
   return (
     <main className="min-h-screen bg-[#f5f5f2] px-5 py-12 text-[#141414]">
