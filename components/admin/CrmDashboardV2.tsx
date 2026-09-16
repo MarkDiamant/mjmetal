@@ -1,16 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ALL_STATUSES, JOB_TYPES, STATUS_META } from "@/lib/crm/constants";
 import type { JobStatus, Manager } from "@/lib/crm/types";
 
-function money(value?: number) {
+function money(value?: number | string) {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(Number(value || 0));
 }
 function when(value?: string) {
   if (!value) return "Not set";
-  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value));
 }
 function localInput(value?: string) {
   if (!value) return "";
@@ -19,21 +19,30 @@ function localInput(value?: string) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 function iso(value?: string) { return value ? new Date(value).toISOString() : null; }
-function statusOrder(value: unknown) { return STATUS_META[value as JobStatus]?.order ?? 0; }
 function statusLabel(value: unknown) { return STATUS_META[value as JobStatus]?.label ?? String(value || ""); }
+function closed(value: string) { return ["completed", "declined", "cancelled"].includes(value); }
 
 const input = "h-10 w-full rounded-xl border border-black/15 bg-white px-3 text-sm outline-none transition focus:border-[#e66a24] focus:ring-2 focus:ring-[#e66a24]/10";
+const selectClass = `${input} pr-12`;
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return <label className="min-w-0"><span className="mb-1.5 block text-[11px] font-black uppercase tracking-[0.08em] text-black/45">{label}</span>{children}</label>;
+}
+function MoneyInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return <div className="relative"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-bold text-black/45">£</span><input type="number" min="0" step="0.01" value={value} onChange={(e) => onChange(e.target.value)} className={`${input} pl-7`} /></div>;
+}
 
 type QuickDraft = {
   firstName: string; lastName: string; phone: string; email: string;
   siteAddressLine1: string; siteAddressLine2: string; siteCity: string; sitePostcode: string;
-  jobType: string; status: string; manager: string; agreedAmount: string;
+  jobTypes: string[]; status: string; manager: string; agreedAmount: string;
   nextAction: string; nextActionAt: string; nextActionAssignee: string;
 };
 
 export default function CrmDashboardV2() {
   const router = useRouter();
   const [jobs, setJobs] = useState<any[]>([]);
+  const [people, setPeople] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
   const [admin, setAdmin] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -48,47 +57,33 @@ export default function CrmDashboardV2() {
   const [flash, setFlash] = useState("");
 
   const load = useCallback(async () => {
-    const [jr, dr] = await Promise.all([
-      fetch("/api/admin/jobs", { cache: "no-store" }),
-      fetch("/api/admin/dashboard", { cache: "no-store" }),
-    ]);
+    const [jr, dr] = await Promise.all([fetch("/api/admin/jobs", { cache: "no-store" }), fetch("/api/admin/dashboard", { cache: "no-store" })]);
     if (jr.status === 401 || dr.status === 401) { router.replace("/admin/login"); return; }
     const jb = await jr.json().catch(() => ({}));
     const db = await dr.json().catch(() => ({}));
     if (!jr.ok) { setError(jb.error || "Unable to load CRM"); setLoading(false); return; }
-    setJobs(jb.jobs || []);
-    setActivities(db.activities || []);
-    setAdmin(jb.admin || db.admin || null);
-    setLoading(false);
+    setJobs(jb.jobs || []); setPeople(jb.people || []); setActivities(db.activities || []); setAdmin(jb.admin || db.admin || null); setLoading(false);
   }, [router]);
 
   useEffect(() => { void load(); }, [load]);
 
-  const now = Date.now();
   const realJobs = useMemo(() => jobs.filter((j) => !j.isPlaceholder), [jobs]);
-  const counts = useMemo(() => ({
-    active: realJobs.filter((j) => !["completed", "declined", "cancelled"].includes(j.status)).length,
-    newEnquiries: realJobs.filter((j) => j.status === "new_enquiry").length,
-    siteVisits: realJobs.filter((j) => ["site_visit_required", "site_visit_booked"].includes(j.status)).length,
-    quotes: realJobs.filter((j) => ["estimate_preparing", "estimate_sent", "quote_preparing", "quote_sent", "awaiting_customer", "interested_not_ready", "customer_unsure"].includes(j.status)).length,
-    deposits: realJobs.filter((j) => j.status === "deposit_requested").length,
-    production: realJobs.filter((j) => ["deposit_paid", "materials_ordered", "fabrication", "in_progress"].includes(j.status)).length,
-    installs: realJobs.filter((j) => j.status === "installation_scheduled").length,
-    awaitingPayment: realJobs.filter((j) => j.status === "awaiting_final_payment").length,
-    completed: realJobs.filter((j) => j.status === "completed").length,
-    backfill: jobs.filter((j) => j.isPlaceholder).length,
-    due: realJobs.filter((j) => j.nextActionAt && new Date(j.nextActionAt).getTime() <= now).length,
-    outstanding: realJobs.reduce((s, j) => s + Number(j.balanceOutstanding || 0), 0),
-  }), [jobs, realJobs, now]);
-
-  const myDue = useMemo(() => realJobs
-    .filter((j) => j.nextActionAt && new Date(j.nextActionAt).getTime() <= now && (!j.nextActionAssignee || j.nextActionAssignee === admin?.initials))
-    .sort((a, b) => new Date(a.nextActionAt).getTime() - new Date(b.nextActionAt).getTime()), [realJobs, admin, now]);
+  const counts = useMemo(() => {
+    const pendingStatuses = new Set(["new_enquiry","awaiting_information","site_visit_required","site_visit_booked","estimate_preparing","estimate_sent","quote_preparing","quote_sent","awaiting_customer","interested_not_ready","customer_unsure"]);
+    const activeStatuses = new Set(["confirmed","deposit_requested","deposit_paid","materials_ordered","fabrication","installation_scheduled","in_progress","awaiting_final_payment"]);
+    return {
+      total: realJobs.length,
+      pending: realJobs.filter((j) => pendingStatuses.has(j.status)).length,
+      active: realJobs.filter((j) => activeStatuses.has(j.status)).length,
+      completed: realJobs.filter((j) => j.status === "completed").length,
+      lost: realJobs.filter((j) => ["declined","cancelled"].includes(j.status)).length,
+    };
+  }, [realJobs]);
 
   const filtered = useMemo(() => jobs
     .filter((j) => status === "all" || j.status === status)
     .filter((j) => manager === "all" || (!j.isPlaceholder && j.manager === manager))
-    .filter((j) => type === "all" || j.jobType === type)
+    .filter((j) => type === "all" || (j.jobTypes || [j.jobType]).includes(type))
     .filter((j) => `${j.reference} ${j.customerName} ${j.address} ${j.postcode || ""} ${j.phone || ""} ${j.email || ""}`.toLowerCase().includes(query.toLowerCase().trim()))
     .sort((a, b) => a.sequenceNumber - b.sequenceNumber), [jobs, status, manager, type, query]);
 
@@ -96,27 +91,15 @@ export default function CrmDashboardV2() {
     if (editingRef === j.reference) { setEditingRef(null); setDraft(null); return; }
     setEditingRef(j.reference);
     setDraft({
-      firstName: j.isPlaceholder ? "" : (j.firstName || ""),
-      lastName: j.isPlaceholder ? "" : (j.lastName || ""),
-      phone: j.phone || "",
-      email: j.email || "",
-      siteAddressLine1: j.siteAddressLine1 || "",
-      siteAddressLine2: j.siteAddressLine2 || "",
-      siteCity: j.siteCity || "",
-      sitePostcode: j.sitePostcode || "",
-      jobType: j.isPlaceholder ? "" : (j.jobType || ""),
-      status: j.isPlaceholder ? "awaiting_information" : j.status,
-      manager: j.isPlaceholder ? "" : (j.manager || ""),
-      agreedAmount: j.agreedAmount ?? j.quotedAmount ?? "",
-      nextAction: j.nextAction || "",
-      nextActionAt: localInput(j.nextActionAt),
-      nextActionAssignee: j.nextActionAssignee || "",
+      firstName: j.isPlaceholder ? "" : (j.firstName || ""), lastName: j.isPlaceholder ? "" : (j.lastName || ""), phone: j.phone || "", email: j.email || "",
+      siteAddressLine1: j.siteAddressLine1 || "", siteAddressLine2: j.siteAddressLine2 || "", siteCity: j.siteCity || "", sitePostcode: j.sitePostcode || "",
+      jobTypes: j.isPlaceholder ? [] : (j.jobTypes || [j.jobType].filter(Boolean)), status: j.isPlaceholder ? "awaiting_information" : j.status,
+      manager: j.isPlaceholder ? "" : (j.manager || ""), agreedAmount: String(j.agreedAmount ?? j.quotedAmount ?? ""),
+      nextAction: closed(j.status) ? "" : (j.nextAction || ""), nextActionAt: closed(j.status) ? "" : localInput(j.nextActionAt), nextActionAssignee: closed(j.status) ? "" : (j.nextActionAssignee || ""),
     });
   }
-
-  function set<K extends keyof QuickDraft>(key: K, value: QuickDraft[K]) {
-    setDraft((d) => d ? { ...d, [key]: value } : d);
-  }
+  function setDraftValue<K extends keyof QuickDraft>(key: K, value: QuickDraft[K]) { setDraft((d) => d ? { ...d, [key]: value } : d); }
+  function toggleJobType(value: string) { setDraft((d) => d ? { ...d, jobTypes: d.jobTypes.includes(value) ? d.jobTypes.filter((x) => x !== value) : [...d.jobTypes, value] } : d); }
 
   async function saveQuick(j: any, overrides: Record<string, unknown> = {}) {
     if (!draft && Object.keys(overrides).length === 0) return;
@@ -124,124 +107,95 @@ export default function CrmDashboardV2() {
     const customer: Record<string, unknown> = {};
     const job: Record<string, unknown> = { ...overrides };
     if (draft) {
-      customer.first_name = draft.firstName || (j.isPlaceholder ? "Details TBC" : null);
-      customer.last_name = draft.lastName || null;
-      customer.phone = draft.phone || null;
-      customer.email = draft.email || null;
-      job.site_address_line_1 = draft.siteAddressLine1 || null;
-      job.site_address_line_2 = draft.siteAddressLine2 || null;
-      job.site_city = draft.siteCity || null;
-      job.site_postcode = draft.sitePostcode || null;
-      if (draft.jobType) job.job_type = draft.jobType;
-      job.status = draft.status;
-      if (draft.manager) job.manager = draft.manager;
-      job.agreed_amount = draft.agreedAmount === "" ? null : Number(draft.agreedAmount);
-      job.next_action = draft.nextAction || null;
-      job.next_action_at = iso(draft.nextActionAt);
-      job.next_action_assignee = draft.nextActionAssignee || null;
-      if (j.isPlaceholder && (draft.firstName || draft.lastName || draft.siteAddressLine1 || draft.jobType || draft.agreedAmount)) job.internal_notes = null;
+      customer.first_name = draft.firstName || (j.isPlaceholder ? "Details TBC" : null); customer.last_name = draft.lastName || null; customer.phone = draft.phone || null; customer.email = draft.email || null;
+      job.site_address_line_1 = draft.siteAddressLine1 || null; job.site_address_line_2 = draft.siteAddressLine2 || null; job.site_city = draft.siteCity || null; job.site_postcode = draft.sitePostcode || null;
+      if (draft.jobTypes.length) { job.job_types = draft.jobTypes; job.job_type = draft.jobTypes[0]; }
+      job.status = draft.status; if (draft.manager) job.manager = draft.manager; job.agreed_amount = draft.agreedAmount === "" ? null : Number(draft.agreedAmount);
+      if (closed(draft.status)) { job.next_action = null; job.next_action_at = null; job.next_action_assignee = null; }
+      else { job.next_action = draft.nextAction || null; job.next_action_at = iso(draft.nextActionAt); job.next_action_assignee = draft.nextActionAssignee || null; }
+      if (j.isPlaceholder && (draft.firstName || draft.lastName || draft.siteAddressLine1 || draft.jobTypes.length || draft.agreedAmount)) job.internal_notes = null;
     }
-    const response = await fetch(`/api/admin/jobs/${encodeURIComponent(j.reference)}`, {
-      method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ customer, job }),
-    });
-    const body = await response.json().catch(() => ({}));
-    setSavingRef(null);
+    const response = await fetch(`/api/admin/jobs/${encodeURIComponent(j.reference)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ customer, job }) });
+    const body = await response.json().catch(() => ({})); setSavingRef(null);
     if (!response.ok) { setFlash(body.error || `Could not save ${j.reference}`); return; }
-    setFlash(`${j.reference} saved`);
-    await load();
-    setTimeout(() => setFlash(""), 1800);
+    setFlash(`${j.reference} saved`); await load(); setTimeout(() => setFlash(""), 1800);
+  }
+
+  async function postAction(reference: string, payload: Record<string, unknown>) {
+    setSavingRef(reference); setFlash("");
+    const response = await fetch(`/api/admin/jobs/${encodeURIComponent(reference)}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    const body = await response.json().catch(() => ({})); setSavingRef(null);
+    if (!response.ok) { setFlash(body.error || "Could not save"); return false; }
+    await load(); setFlash(`${reference} updated`); setTimeout(() => setFlash(""), 1800); return true;
+  }
+
+  async function recordSubPayment(reference: string, assignmentId: string, e: FormEvent<HTMLFormElement>) {
+    e.preventDefault(); const fd = new FormData(e.currentTarget); const amount = Number(fd.get("amount") || 0); if (!amount) return;
+    setSavingRef(reference);
+    const res = await fetch(`/api/admin/jobs/${encodeURIComponent(reference)}/subcontractors/${encodeURIComponent(assignmentId)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ add_payment: amount, paid_at: fd.get("paid_at") ? new Date(String(fd.get("paid_at"))).toISOString() : new Date().toISOString() }) });
+    setSavingRef(null); if (!res.ok) { setFlash("Could not record subcontractor payment"); return; } await load(); e.currentTarget.reset();
   }
 
   async function archiveJob(j: any) {
     if (!confirm(`Archive ${j.reference}?`)) return;
-    setSavingRef(j.reference);
-    const response = await fetch(`/api/admin/jobs/${encodeURIComponent(j.reference)}`, {
-      method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ job: { archived_at: new Date().toISOString() } }),
-    });
-    setSavingRef(null);
-    if (!response.ok) { setFlash(`Could not archive ${j.reference}`); return; }
+    await fetch(`/api/admin/jobs/${encodeURIComponent(j.reference)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ job: { archived_at: new Date().toISOString() } }) });
     setEditingRef(null); setDraft(null); await load();
   }
-
   async function logout() { await fetch("/api/admin/auth/logout", { method: "POST" }); router.replace("/admin/login"); router.refresh(); }
 
   const cards = [
-    ["Active jobs", counts.active, "Work currently open"],
-    ["New enquiries", counts.newEnquiries, "Fresh leads"],
-    ["Site visits", counts.siteVisits, "Required / booked"],
-    ["Quotes in play", counts.quotes, "Estimate to decision"],
-    ["Deposits due", counts.deposits, "Awaiting deposit"],
-    ["Production", counts.production, "Materials / fabrication"],
-    ["Installations", counts.installs, "Scheduled installs"],
-    ["Awaiting payment", counts.awaitingPayment, money(counts.outstanding) + " outstanding"],
-    ["Completed", counts.completed, "Finished jobs"],
-    ["Backfill TBC", counts.backfill, "Historical records to fill"],
+    ["Total enquiries", counts.total, "All real enquiries"], ["Still pending", counts.pending, "Not decided yet"], ["Active jobs", counts.active, "Won / in progress"], ["Completed", counts.completed, "Finished"], ["Didn't go ahead", counts.lost, "Declined / cancelled"],
   ] as const;
 
-  return <main className="min-h-screen bg-[#f4f4f1] text-[#141414]">
-    <header className="sticky top-0 z-20 border-b border-black/8 bg-white/95 backdrop-blur">
-      <div className="mx-auto flex max-w-[1780px] items-center justify-between gap-4 px-5 py-3.5 lg:px-7">
-        <div className="flex items-center gap-4"><img src="/images/logo.png" alt="M&J Metal" className="h-12 w-auto object-contain"/><div><h1 className="text-xl font-black tracking-tight sm:text-2xl">CRM & Job Management</h1><p className="text-xs text-black/45 sm:text-sm">Click any job row to quick edit</p></div></div>
-        <div className="flex items-center gap-2">{flash && <span className="hidden rounded-full bg-green-50 px-3 py-2 text-xs font-bold text-green-700 lg:inline">{flash}</span>}{admin?.display_name && <span className="hidden rounded-full bg-[#f3f3ef] px-3 py-2 text-sm font-semibold xl:inline">{admin.display_name}</span>}<a href="/admin/archive" className="hidden rounded-xl border border-black/12 px-3 py-2.5 text-sm font-bold md:block">Archive</a><a href="/admin/integrations" className="hidden rounded-xl border border-black/12 px-3 py-2.5 text-sm font-bold md:block">Integrations</a><button onClick={() => void logout()} className="hidden rounded-xl border border-black/12 px-3 py-2.5 text-sm font-bold md:block">Logout</button><a href="/admin/jobs/new" className="rounded-xl bg-[#e66a24] px-4 py-2.5 text-sm font-black text-white shadow-sm">+ New job</a></div>
-      </div>
-    </header>
+  return <main className="min-h-screen overflow-x-hidden bg-[#f4f4f1] text-[#141414]">
+    <header className="sticky top-0 z-20 border-b border-black/8 bg-white/95 backdrop-blur"><div className="mx-auto flex max-w-[1780px] items-center justify-between gap-4 px-4 py-3.5 lg:px-7"><div className="flex min-w-0 items-center gap-3"><img src="/images/logo.png" alt="M&J Metal" className="h-11 w-auto shrink-0 object-contain"/><div className="min-w-0"><h1 className="truncate text-xl font-black tracking-tight sm:text-2xl">CRM & Job Management</h1><p className="text-xs text-black/45">Click any row to quick edit</p></div></div><div className="flex shrink-0 items-center gap-2">{flash&&<span className="hidden rounded-full bg-green-50 px-3 py-2 text-xs font-bold text-green-700 lg:inline">{flash}</span>}<a href="/admin/archive" className="hidden rounded-xl border border-black/12 px-3 py-2 text-sm font-bold md:block">Archive</a><a href="/admin/integrations" className="hidden rounded-xl border border-black/12 px-3 py-2 text-sm font-bold md:block">Integrations</a><button onClick={()=>void logout()} className="hidden rounded-xl border border-black/12 px-3 py-2 text-sm font-bold md:block">Logout</button><a href="/admin/jobs/new" className="rounded-xl bg-[#e66a24] px-4 py-2.5 text-sm font-black text-white">+ New job</a></div></div></header>
 
-    <div className="mx-auto max-w-[1780px] px-4 py-5 lg:px-7">
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        {cards.map(([label, value, note]) => <div key={label} className="rounded-2xl border border-black/8 bg-white p-4 shadow-[0_6px_24px_rgba(0,0,0,0.035)]"><p className="text-[11px] font-black uppercase tracking-[0.08em] text-black/40">{label}</p><p className="mt-1.5 text-3xl font-black tracking-tight">{value}</p><p className="mt-1 text-xs text-black/40">{note}</p></div>)}
-      </section>
+    <div className="mx-auto max-w-[1780px] px-3 py-5 sm:px-4 lg:px-7">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">{cards.map(([label,value,note])=><div key={label} className="rounded-2xl border border-black/8 bg-white p-4 shadow-[0_6px_24px_rgba(0,0,0,0.035)]"><p className="text-[11px] font-black uppercase tracking-[0.08em] text-black/40">{label}</p><p className="mt-1.5 text-3xl font-black">{value}</p><p className="mt-1 text-xs text-black/40">{note}</p></div>)}</section>
 
-      <section className="mt-5 grid gap-5 2xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div>
-          <div className="rounded-2xl border border-black/8 bg-white p-3.5 shadow-[0_6px_24px_rgba(0,0,0,0.03)]"><div className="grid gap-3 lg:grid-cols-[minmax(280px,1fr)_230px_180px_220px]"><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search ref, customer, address, postcode, phone..." className="h-11 rounded-xl border border-black/12 bg-[#fafafa] px-3 text-sm outline-none focus:border-[#e66a24]"/><select value={status} onChange={(e) => setStatus(e.target.value as JobStatus | "all")} className="h-11 rounded-xl border border-black/12 bg-white px-3 text-sm"><option value="all">All statuses</option>{ALL_STATUSES.map((x) => <option key={x.value} value={x.value}>{x.label}</option>)}</select><select value={manager} onChange={(e) => setManager(e.target.value as Manager | "all")} className="h-11 rounded-xl border border-black/12 bg-white px-3 text-sm"><option value="all">All managers</option><option value="MD">Mark</option><option value="JB">Jonathan</option></select><select value={type} onChange={(e) => setType(e.target.value)} className="h-11 rounded-xl border border-black/12 bg-white px-3 text-sm"><option value="all">All job types</option>{JOB_TYPES.map((t) => <option key={t}>{t}</option>)}</select></div></div>
+      <div className="mt-5 grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_290px]">
+        <section className="min-w-0">
+          <div className="rounded-2xl border border-black/8 bg-white p-3.5"><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(240px,1fr)_210px_170px_210px]"><input value={query} onChange={(e)=>setQuery(e.target.value)} placeholder="Search ref, customer, address, postcode, phone..." className="h-11 min-w-0 rounded-xl border border-black/12 bg-[#fafafa] px-3 text-sm outline-none"/><select value={status} onChange={(e)=>setStatus(e.target.value as JobStatus|"all")} className={selectClass}><option value="all">All statuses</option>{ALL_STATUSES.map(x=><option key={x.value} value={x.value}>{x.label}</option>)}</select><select value={manager} onChange={(e)=>setManager(e.target.value as Manager|"all")} className={selectClass}><option value="all">All managers</option><option value="MD">Mark</option><option value="JB">Jonathan</option></select><select value={type} onChange={(e)=>setType(e.target.value)} className={selectClass}><option value="all">All job types</option>{JOB_TYPES.map(t=><option key={t}>{t}</option>)}</select></div></div>
+          {error&&<p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}
 
-          {error && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}
-          <div className="mt-4 overflow-hidden rounded-2xl border border-black/8 bg-white shadow-[0_6px_24px_rgba(0,0,0,0.03)]">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[1420px] table-fixed text-left">
-                <colgroup><col className="w-[85px]"/><col className="w-[245px]"/><col className="w-[205px]"/><col className="w-[185px]"/><col className="w-[120px]"/><col className="w-[115px]"/><col className="w-[115px]"/><col className="w-[260px]"/><col className="w-[115px]"/></colgroup>
-                <thead className="bg-[#efefeb] text-[11px] font-black uppercase tracking-[0.08em] text-black/45"><tr><th className="px-4 py-3">Ref</th><th className="px-4 py-3">Customer / site</th><th className="px-4 py-3">Job</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Manager</th><th className="px-4 py-3">Value</th><th className="px-4 py-3">Balance</th><th className="px-4 py-3">Next action</th><th className="px-4 py-3"></th></tr></thead>
-                <tbody>{filtered.map((j) => <JobRows key={j.id} job={j} now={now} editing={editingRef === j.reference} draft={editingRef === j.reference ? draft : null} saving={savingRef === j.reference} onOpen={() => openQuick(j)} onSet={set} onSave={() => void saveQuick(j)} onComplete={() => void saveQuick(j, { status: "completed", completed_at: new Date().toISOString(), next_action: null, next_action_at: null })} onArchive={() => void archiveJob(j)} />)}</tbody>
-              </table>
-            </div>
-            {loading && <p className="p-8 text-center text-black/45">Loading jobs...</p>}
-            {!loading && filtered.length === 0 && <p className="p-8 text-center text-black/45">No jobs match these filters.</p>}
+          <div className="mt-4 space-y-2">
+            {filtered.map((j)=> <div key={j.id} className={`overflow-hidden rounded-2xl border bg-white shadow-[0_5px_20px_rgba(0,0,0,0.025)] ${editingRef===j.reference?"border-[#e66a24]/35":"border-black/8"}`}>
+              <button type="button" onClick={()=>openQuick(j)} className="grid w-full min-w-0 gap-3 px-4 py-4 text-left hover:bg-[#fffaf6] md:grid-cols-[72px_minmax(140px,1.3fr)_minmax(130px,1fr)_160px_90px_120px_minmax(150px,1fr)] md:items-center">
+                <b className="text-[#e66a24]">{j.reference}</b>
+                <div className="min-w-0"><b className="block truncate">{j.isPlaceholder?"Details TBC":j.customerName}</b><span className="block truncate text-xs text-black/45">{j.address||j.postcode||"Address TBC"}</span></div>
+                <div className="min-w-0"><b className="block truncate">{j.isPlaceholder?"Job TBC":(j.jobTypes||[j.jobType]).join(" + ")}</b><span className="text-xs text-black/45">{j.isPlaceholder?"":"Click to edit"}</span></div>
+                <span className="whitespace-nowrap rounded-full bg-[#f1f1ed] px-3 py-1.5 text-center text-xs font-bold">{j.isPlaceholder?"Details TBC":statusLabel(j.status)}</span>
+                <b className="text-sm">{j.isPlaceholder?"TBC":j.manager==="MD"?"Mark":"Jonathan"}</b>
+                <div><b>{j.isPlaceholder?"TBC":money(j.agreedAmount??j.quotedAmount)}</b>{!j.isPlaceholder&&<span className="block text-xs text-[#e66a24]">Bal {money(j.balanceOutstanding)}</span>}</div>
+                <div className="min-w-0"><b className="block truncate">{j.isPlaceholder?"Fill historical record":closed(j.status)?"No further action":j.nextAction||"No next action"}</b>{!closed(j.status)&&j.nextActionAt&&<span className="text-xs text-black/45">{when(j.nextActionAt)}</span>}</div>
+              </button>
+
+              {editingRef===j.reference&&draft&&<div className="border-t border-[#e66a24]/20 bg-[#fffaf6] p-4 sm:p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[0.12em] text-[#e66a24]">Quick edit</p><h2 className="text-xl font-black">{j.reference}</h2></div><div className="flex flex-wrap gap-2"><button onClick={()=>void saveQuick(j,{status:"completed",completed_at:new Date().toISOString()})} className="rounded-xl border border-green-200 bg-green-50 px-4 py-2 text-sm font-black text-green-800">Mark complete</button><button onClick={()=>void archiveJob(j)} className="rounded-xl border border-black/15 bg-white px-4 py-2 text-sm font-bold">Archive</button><a href={`/admin/jobs/${j.reference}`} className="rounded-xl border border-black/15 bg-white px-4 py-2 text-sm font-bold">Open full job</a><button disabled={savingRef===j.reference} onClick={()=>void saveQuick(j)} className="rounded-xl bg-[#141414] px-5 py-2 text-sm font-black text-white disabled:opacity-50">{savingRef===j.reference?"Saving...":"Save changes"}</button></div></div>
+
+                <div className="mt-4 grid min-w-0 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+                  <section className="min-w-0 rounded-2xl bg-white p-4"><h3 className="mb-3 font-black">Customer & site</h3><div className="grid gap-3 sm:grid-cols-2"><Field label="First name"><input value={draft.firstName} onChange={e=>setDraftValue("firstName",e.target.value)} className={input}/></Field><Field label="Surname / company"><input value={draft.lastName} onChange={e=>setDraftValue("lastName",e.target.value)} className={input}/></Field><Field label="Phone"><input value={draft.phone} onChange={e=>setDraftValue("phone",e.target.value)} className={input}/></Field><Field label="Email"><input value={draft.email} onChange={e=>setDraftValue("email",e.target.value)} className={input}/></Field><Field label="Site address"><input value={draft.siteAddressLine1} onChange={e=>setDraftValue("siteAddressLine1",e.target.value)} className={input}/></Field><Field label="Postcode"><input value={draft.sitePostcode} onChange={e=>setDraftValue("sitePostcode",e.target.value)} className={input}/></Field></div></section>
+
+                  <section className="min-w-0 rounded-2xl bg-white p-4"><h3 className="mb-3 font-black">Job</h3><Field label="Work types, select all that apply"><div className="flex flex-wrap gap-2">{JOB_TYPES.map(t=><button type="button" key={t} onClick={()=>toggleJobType(t)} className={`rounded-full border px-3 py-1.5 text-xs font-bold ${draft.jobTypes.includes(t)?"border-[#e66a24] bg-[#fff0e5] text-[#b94f13]":"border-black/15 bg-white"}`}>{t}</button>)}</div></Field><div className="mt-3 grid gap-3 sm:grid-cols-2"><Field label="Status"><select value={draft.status} onChange={e=>{const v=e.target.value;setDraftValue("status",v);if(closed(v)){setDraftValue("nextAction","");setDraftValue("nextActionAt","");setDraftValue("nextActionAssignee","");}}} className={selectClass}>{ALL_STATUSES.map(x=><option key={x.value} value={x.value}>{x.label}</option>)}</select></Field><Field label="Managed by"><select value={draft.manager} onChange={e=>setDraftValue("manager",e.target.value)} className={selectClass}><option value="">TBC</option><option value="MD">Mark</option><option value="JB">Jonathan</option></select></Field><Field label="Agreed value"><MoneyInput value={draft.agreedAmount} onChange={(v)=>setDraftValue("agreedAmount",v)}/></Field></div></section>
+
+                  <section className="min-w-0 rounded-2xl bg-white p-4"><h3 className="mb-3 font-black">Next action</h3>{closed(draft.status)?<div className="rounded-xl bg-[#f1f1ed] p-4 text-sm font-bold text-black/45">No further action required for a {statusLabel(draft.status).toLowerCase()} job.</div>:<div className="grid gap-3"><Field label="Action"><input value={draft.nextAction} onChange={e=>setDraftValue("nextAction",e.target.value)} className={input}/></Field><div className="grid gap-3 sm:grid-cols-2"><Field label="Due"><input type="datetime-local" value={draft.nextActionAt} onChange={e=>setDraftValue("nextActionAt",e.target.value)} className={input}/></Field><Field label="Assigned to"><select value={draft.nextActionAssignee} onChange={e=>setDraftValue("nextActionAssignee",e.target.value)} className={selectClass}><option value="">Unassigned</option><option value="MD">Mark</option><option value="JB">Jonathan</option></select></Field></div></div>}</section>
+
+                  <section className="min-w-0 rounded-2xl bg-white p-4"><h3 className="font-black">Customer payments</h3><div className="mt-2 grid grid-cols-3 gap-2 text-sm"><div><span className="block text-xs text-black/45">Value</span><b>{money(j.agreedAmount??j.quotedAmount)}</b></div><div><span className="block text-xs text-black/45">Received</span><b>{money(j.amountPaid)}</b></div><div><span className="block text-xs text-black/45">Outstanding</span><b className="text-[#e66a24]">{money(j.balanceOutstanding)}</b></div></div><form onSubmit={async(e)=>{e.preventDefault();const fd=new FormData(e.currentTarget);const ok=await postAction(j.reference,{type:"payment",direction:"customer_in",payment_type:String(fd.get("payment_type")||"Payment"),amount:Number(fd.get("amount")||0),paid_at:fd.get("paid_at")?new Date(String(fd.get("paid_at"))).toISOString():new Date().toISOString(),payment_method:"Bank transfer"});if(ok)e.currentTarget.reset();}} className="mt-4 grid gap-2 sm:grid-cols-2"><Field label="Payment type"><select name="payment_type" className={selectClass}><option>Deposit</option><option>Part payment</option><option>Final payment</option><option>Payment</option></select></Field><Field label="Amount"><div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-black/45">£</span><input name="amount" type="number" min="0" step="0.01" required className={`${input} pl-7`}/></div></Field><Field label="Date received"><input name="paid_at" type="datetime-local" className={input}/></Field><div className="flex items-end"><button className="h-10 w-full rounded-xl bg-[#141414] px-3 text-sm font-black text-white">Record payment</button></div></form>{j.customerPayments?.length>0&&<div className="mt-3 space-y-1">{j.customerPayments.slice(0,4).map((p:any)=><div key={p.id} className="flex justify-between text-xs"><span>{p.payment_type} · {when(p.paid_at||p.created_at)}</span><b>{money(p.amount)}</b></div>)}</div>}</section>
+
+                  <section className="min-w-0 rounded-2xl bg-white p-4"><h3 className="font-black">Fabricators / installers / subcontractors</h3>{j.workforceAssignments?.length>0?<div className="mt-3 space-y-3">{j.workforceAssignments.map((a:any)=><div key={a.id} className="rounded-xl border border-black/10 p-3"><div className="flex flex-wrap justify-between gap-2"><div><b>{a.personName}</b><span className="ml-2 rounded-full bg-[#f1f1ed] px-2 py-1 text-[10px] font-bold uppercase">{String(a.assignmentRole||"subcontractor").replaceAll("_"," ")}</span><p className="text-xs text-black/45">{a.relationshipType==="employee"?"Employee":"Subcontractor"}</p></div>{a.relationshipType!=="employee"&&<div className="text-right text-xs"><b>{money(a.agreedCost)}</b><p className="text-[#e66a24]">{money(a.outstanding)} due</p></div>}</div>{a.relationshipType!=="employee"&&a.outstanding>0&&<form onSubmit={(e)=>void recordSubPayment(j.reference,a.id,e)} className="mt-2 grid gap-2 sm:grid-cols-[1fr_1fr_auto]"><input name="amount" type="number" min="0" step="0.01" placeholder="£ payment" className={input}/><input name="paid_at" type="datetime-local" className={input}/><button className="rounded-xl border border-black/15 bg-white px-3 text-xs font-black">Record paid</button></form>}</div>)}</div>:<p className="mt-2 text-sm text-black/45">Nobody assigned yet.</p>}
+                    <form onSubmit={async(e)=>{e.preventDefault();const fd=new FormData(e.currentTarget);const ok=await postAction(j.reference,{type:"subcontractor",subcontractor_id:String(fd.get("person_id")||"")||null,name:String(fd.get("new_name")||"")||null,relationship_type:String(fd.get("relationship_type")||"subcontractor"),assignment_role:String(fd.get("assignment_role")||"subcontractor"),agreed_cost:Number(fd.get("agreed_cost")||0)||null,scope:String(fd.get("scope")||"")||null});if(ok)e.currentTarget.reset();}} className="mt-4 grid gap-2 sm:grid-cols-2"><Field label="Existing person"><select name="person_id" className={selectClass}><option value="">Add new person</option>{people.map((p)=><option key={p.id} value={p.id}>{p.name}{p.company?` · ${p.company}`:""} · {p.relationship_type==="employee"?"Employee":"Subcontractor"}</option>)}</select></Field><Field label="New person name"><input name="new_name" className={input}/></Field><Field label="Relationship"><select name="relationship_type" className={selectClass}><option value="subcontractor">Subcontractor</option><option value="employee">Employee</option></select></Field><Field label="Role"><select name="assignment_role" className={selectClass}><option value="fabricator">Fabricator</option><option value="installer">Installer</option><option value="fabricator_installer">Fabricator + installer</option><option value="other">Other</option></select></Field><Field label="Agreed subcontract cost"><div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-black/45">£</span><input name="agreed_cost" type="number" min="0" step="0.01" className={`${input} pl-7`}/></div></Field><Field label="Scope"><input name="scope" className={input}/></Field><div className="sm:col-span-2"><button className="h-10 rounded-xl bg-[#141414] px-4 text-sm font-black text-white">Assign person</button></div></form>
+                  </section>
+
+                  <section className="min-w-0 rounded-2xl bg-white p-4"><h3 className="font-black">Commission</h3><div className="mt-2 grid grid-cols-3 gap-2 text-sm"><div><span className="block text-xs text-black/45">Agreed</span><b>{money(j.commissionAgreed)}</b></div><div><span className="block text-xs text-black/45">Paid</span><b>{money(j.commissionPaid)}</b></div><div><span className="block text-xs text-black/45">Outstanding</span><b className="text-[#e66a24]">{money(j.commissionOutstanding)}</b></div></div><form onSubmit={async(e)=>{e.preventDefault();const fd=new FormData(e.currentTarget);const agreed=Number(fd.get("amount")||0);const paid=Number(fd.get("paid_amount")||0);const ok=await postAction(j.reference,{type:"cost",category:"Commission",supplier:String(fd.get("recipient")||""),actual_amount:agreed,paid_amount:paid,paid_at:paid&&fd.get("paid_at")?new Date(String(fd.get("paid_at"))).toISOString():paid?new Date().toISOString():null,due_at:fd.get("due_at")?new Date(String(fd.get("due_at"))).toISOString():null});if(ok)e.currentTarget.reset();}} className="mt-4 grid gap-2 sm:grid-cols-2"><Field label="Pay commission to"><input name="recipient" required className={input}/></Field><Field label="Commission amount"><div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-black/45">£</span><input name="amount" type="number" min="0" step="0.01" required className={`${input} pl-7`}/></div></Field><Field label="Already paid"><div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-black/45">£</span><input name="paid_amount" type="number" min="0" step="0.01" className={`${input} pl-7`}/></div></Field><Field label="Paid date"><input name="paid_at" type="datetime-local" className={input}/></Field><Field label="Due date"><input name="due_at" type="datetime-local" className={input}/></Field><div className="flex items-end"><button className="h-10 w-full rounded-xl bg-[#141414] px-3 text-sm font-black text-white">Add commission</button></div></form>{j.commissions?.length>0&&<div className="mt-3 space-y-1">{j.commissions.map((c:any)=><div key={c.id} className="flex justify-between text-xs"><span>{c.supplier||"Commission"}</span><b>{money(c.agreedAmount)} · {money(c.outstanding)} due</b></div>)}</div>}</section>
+                </div>
+              </div>}
+            </div>)}
+            {loading&&<p className="rounded-2xl bg-white p-8 text-center text-black/45">Loading jobs...</p>}{!loading&&filtered.length===0&&<p className="rounded-2xl bg-white p-8 text-center text-black/45">No jobs match these filters.</p>}
           </div>
-        </div>
+        </section>
 
-        <aside className="space-y-5">
-          <section className="rounded-2xl border border-black/8 bg-white p-5 shadow-[0_6px_24px_rgba(0,0,0,0.03)]"><div className="flex items-center justify-between"><div><h2 className="text-lg font-black">Actions due</h2><p className="text-xs text-black/40">For you</p></div><span className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-black text-red-700">{myDue.length}</span></div><div className="mt-4 space-y-2">{myDue.slice(0, 8).map((j) => <button key={j.id} onClick={() => openQuick(j)} className="block w-full rounded-xl bg-[#f5f5f2] p-3 text-left transition hover:bg-[#fff3eb]"><div className="flex justify-between gap-3"><b>{j.reference}</b><span className="text-xs text-red-700">{when(j.nextActionAt)}</span></div><p className="mt-1 text-sm font-semibold">{j.nextAction}</p><p className="text-xs text-black/45">{j.customerName}</p></button>)}{myDue.length === 0 && <p className="text-sm text-black/45">Nothing overdue for you.</p>}</div></section>
-          <section className="rounded-2xl border border-black/8 bg-white p-5 shadow-[0_6px_24px_rgba(0,0,0,0.03)]"><h2 className="text-lg font-black">Recent activity</h2><div className="mt-4 space-y-3">{activities.map((a: any) => <a key={a.id} href={a.mj_jobs?.reference ? `/admin/jobs/${a.mj_jobs.reference}` : "/admin"} className="block border-b border-black/8 pb-3 last:border-0"><div className="flex justify-between gap-3"><b className="text-sm">{a.summary}</b><span className="whitespace-nowrap text-xs text-black/40">{when(a.occurred_at)}</span></div><p className="mt-1 text-xs text-black/45">{a.mj_jobs?.reference || "CRM"}{a.actor ? ` • ${a.actor === "MD" ? "Mark" : "Jonathan"}` : ""}</p></a>)}{activities.length === 0 && <p className="text-sm text-black/45">No activity yet.</p>}</div></section>
-        </aside>
-      </section>
+        <aside className="min-w-0 space-y-4"><section className="rounded-2xl border border-black/8 bg-white p-4"><h2 className="font-black">Recent activity</h2><div className="mt-3 space-y-3">{activities.slice(0,8).map((a:any)=><a key={a.id} href={a.mj_jobs?.reference?`/admin/jobs/${a.mj_jobs.reference}`:"/admin"} className="block border-b border-black/8 pb-3 last:border-0"><b className="block text-sm">{a.summary}</b><span className="text-xs text-black/45">{a.mj_jobs?.reference||"CRM"} · {when(a.occurred_at)}</span></a>)}{activities.length===0&&<p className="text-sm text-black/45">No activity yet.</p>}</div></section></aside>
+      </div>
     </div>
   </main>;
 }
-
-function JobRows({ job: j, now, editing, draft, saving, onOpen, onSet, onSave, onComplete, onArchive }: any) {
-  return <>
-    <tr onClick={onOpen} className={`cursor-pointer border-t border-black/7 align-middle transition ${editing ? "bg-[#fff7f1]" : "hover:bg-[#fafaf7]"}`}>
-      <td className="px-4 py-4 font-black text-[#e66a24]">{j.reference}</td>
-      <td className="px-4 py-4"><b className="block truncate">{j.isPlaceholder ? "Details TBC" : j.customerName}</b><p className="mt-1 truncate text-xs text-black/45">{j.address || "Address TBC"}{j.postcode ? `, ${j.postcode}` : ""}</p></td>
-      <td className="px-4 py-4"><b className="block truncate">{j.isPlaceholder ? "Job TBC" : j.jobType}</b><p className="mt-1 truncate text-xs text-black/40">{(j.finishes || []).join(" + ") || (j.isPlaceholder ? "Historical backfill" : "Finish TBC")}</p></td>
-      <td className="px-4 py-4"><span className={`inline-flex max-w-full whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-black ${j.status === "completed" ? "bg-green-50 text-green-700" : j.status === "awaiting_final_payment" ? "bg-amber-50 text-amber-800" : j.isPlaceholder ? "bg-slate-100 text-slate-600" : "bg-[#f3f3ef]"}`}>{j.isPlaceholder ? "Details TBC" : statusLabel(j.status)}</span></td>
-      <td className="px-4 py-4 font-bold">{j.isPlaceholder ? <span className="text-black/35">TBC</span> : j.manager === "MD" ? "Mark" : "Jonathan"}</td>
-      <td className="px-4 py-4 font-bold">{j.isPlaceholder && !j.agreedAmount ? <span className="text-black/30">TBC</span> : money(j.agreedAmount ?? j.quotedAmount)}</td>
-      <td className="px-4 py-4 font-bold">{j.balanceOutstanding > 0 ? <span className="text-amber-700">{money(j.balanceOutstanding)}</span> : j.isPlaceholder ? <span className="text-black/30">TBC</span> : money(0)}</td>
-      <td className="px-4 py-4"><b className={`block truncate ${j.nextActionAt && new Date(j.nextActionAt).getTime() <= now ? "text-red-700" : ""}`}>{j.nextAction || (j.isPlaceholder ? "Fill historical record" : "No next action")}</b><p className="mt-1 truncate text-xs text-black/40">{j.nextActionAt ? when(j.nextActionAt) : ""}{j.nextActionAssignee ? ` • ${j.nextActionAssignee === "MD" ? "Mark" : "Jonathan"}` : ""}</p></td>
-      <td className="px-4 py-4"><button onClick={(e) => { e.stopPropagation(); onOpen(); }} className="rounded-lg border border-black/12 bg-white px-3 py-2 text-sm font-bold">{editing ? "Close" : "Quick edit"}</button></td>
-    </tr>
-    {editing && draft && <tr className="border-t border-[#e66a24]/20 bg-[#fffaf6]"><td colSpan={9} className="p-4"><div onClick={(e) => e.stopPropagation()} className="rounded-2xl border border-[#e66a24]/20 bg-white p-5 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[0.1em] text-[#e66a24]">Quick edit</p><h3 className="text-lg font-black">{j.reference}</h3></div><div className="flex flex-wrap gap-2"><button type="button" onClick={onComplete} disabled={saving} className="rounded-xl border border-green-200 bg-green-50 px-4 py-2 text-sm font-black text-green-800">Mark complete</button><button type="button" onClick={onArchive} disabled={saving} className="rounded-xl border border-black/12 px-4 py-2 text-sm font-bold">Archive</button><a href={`/admin/jobs/${j.reference}`} className="rounded-xl border border-black/12 px-4 py-2 text-sm font-bold">Open full job</a><button type="button" onClick={onSave} disabled={saving} className="rounded-xl bg-[#141414] px-5 py-2 text-sm font-black text-white disabled:opacity-50">{saving ? "Saving..." : "Save changes"}</button></div></div>
-      <div className="mt-5 grid gap-5 xl:grid-cols-4">
-        <QuickSection title="Customer"><Q label="First name"><input value={draft.firstName} onChange={(e) => onSet("firstName", e.target.value)} className={input}/></Q><Q label="Surname / company"><input value={draft.lastName} onChange={(e) => onSet("lastName", e.target.value)} className={input}/></Q><Q label="Phone"><input value={draft.phone} onChange={(e) => onSet("phone", e.target.value)} className={input}/></Q><Q label="Email"><input type="email" value={draft.email} onChange={(e) => onSet("email", e.target.value)} className={input}/></Q></QuickSection>
-        <QuickSection title="Site"><Q label="Address"><input value={draft.siteAddressLine1} onChange={(e) => onSet("siteAddressLine1", e.target.value)} className={input}/></Q><Q label="Address line 2"><input value={draft.siteAddressLine2} onChange={(e) => onSet("siteAddressLine2", e.target.value)} className={input}/></Q><Q label="City"><input value={draft.siteCity} onChange={(e) => onSet("siteCity", e.target.value)} className={input}/></Q><Q label="Postcode"><input value={draft.sitePostcode} onChange={(e) => onSet("sitePostcode", e.target.value)} className={input}/></Q></QuickSection>
-        <QuickSection title="Job"><Q label="Job type"><select value={draft.jobType} onChange={(e) => onSet("jobType", e.target.value)} className={input}><option value="">TBC</option>{JOB_TYPES.map((x) => <option key={x}>{x}</option>)}</select></Q><Q label="Status"><select value={draft.status} onChange={(e) => onSet("status", e.target.value)} className={input}>{ALL_STATUSES.map((x) => <option key={x.value} value={x.value}>{x.label}</option>)}</select></Q><Q label="Manager"><select value={draft.manager} onChange={(e) => onSet("manager", e.target.value)} className={input}><option value="">TBC</option><option value="MD">Mark</option><option value="JB">Jonathan</option></select></Q><Q label="Agreed value"><input type="number" min="0" step="0.01" value={draft.agreedAmount} onChange={(e) => onSet("agreedAmount", e.target.value)} className={input}/></Q></QuickSection>
-        <QuickSection title="Next action"><Q label="Action"><input value={draft.nextAction} onChange={(e) => onSet("nextAction", e.target.value)} className={input}/></Q><Q label="Due"><input type="datetime-local" value={draft.nextActionAt} onChange={(e) => onSet("nextActionAt", e.target.value)} className={input}/></Q><Q label="Assigned to"><select value={draft.nextActionAssignee} onChange={(e) => onSet("nextActionAssignee", e.target.value)} className={input}><option value="">Unassigned</option><option value="MD">Mark</option><option value="JB">Jonathan</option></select></Q><div className="rounded-xl bg-[#f5f5f2] p-3 text-xs leading-5 text-black/55"><b className="text-black/75">Tip:</b> change the status here for normal workflow updates. Use Mark complete when the job is genuinely finished.</div></QuickSection>
-      </div>
-    </div></td></tr>}
-  </>;
-}
-
-function QuickSection({ title, children }: { title: string; children: React.ReactNode }) { return <section className="rounded-xl bg-[#f7f7f4] p-4"><h4 className="mb-3 text-sm font-black">{title}</h4><div className="space-y-3">{children}</div></section>; }
-function Q({ label, children }: { label: string; children: React.ReactNode }) { return <label><span className="mb-1 block text-[10px] font-black uppercase tracking-[0.07em] text-black/40">{label}</span>{children}</label>; }
