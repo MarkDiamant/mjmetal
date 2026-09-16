@@ -23,16 +23,27 @@ export async function getAccessToken() {
   return (await cookies()).get(ACCESS_COOKIE)?.value ?? null;
 }
 
+function decodeJwtPayload(token: string) {
+  try {
+    const part = token.split(".")[1];
+    if (!part) return null;
+    const padded = part.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(part.length / 4) * 4, "=");
+    return JSON.parse(Buffer.from(padded, "base64").toString("utf8")) as { sub?: string; email?: string; exp?: number };
+  } catch {
+    return null;
+  }
+}
+
 export async function requireAdminToken() {
   const token = await getAccessToken();
   if (!token) return null;
 
-  const userResponse = await supabaseRequest("/auth/v1/user", { method: "GET" }, token);
-  if (!userResponse.ok) return null;
-  const user = await userResponse.json() as { id: string; email?: string };
+  const payload = decodeJwtPayload(token);
+  if (!payload?.sub) return null;
+  if (payload.exp && payload.exp * 1000 <= Date.now()) return null;
 
   const adminResponse = await supabaseRequest(
-    `/rest/v1/mj_admin_users?user_id=eq.${encodeURIComponent(user.id)}&select=display_name,initials&limit=1`,
+    `/rest/v1/mj_admin_users?user_id=eq.${encodeURIComponent(payload.sub)}&select=display_name,initials&limit=1`,
     { method: "GET" },
     token,
   );
@@ -40,7 +51,7 @@ export async function requireAdminToken() {
   const admins = await adminResponse.json() as Array<{ display_name: string; initials: "MD" | "JB" }>;
   if (!admins[0]) return null;
 
-  return { token, user, admin: admins[0] };
+  return { token, user: { id: payload.sub, email: payload.email }, admin: admins[0] };
 }
 
 export async function setSessionCookies(accessToken: string, refreshToken: string, expiresIn: number) {
