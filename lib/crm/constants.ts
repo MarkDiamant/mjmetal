@@ -52,7 +52,8 @@ export const STATUS_META: Record<JobStatus, { label: string; order: number; grou
   in_progress: { label: "In progress", order: 170, group: "active" },
   awaiting_final_payment: { label: "Awaiting final payment", order: 180, group: "active" },
   completed: { label: "Completed", order: 900, group: "closed" },
-  declined: { label: "Declined", order: 1000, group: "closed" },
+  declined: { label: "Declined / lost", order: 1000, group: "closed" },
+  cancelled: { label: "Cancelled", order: 1010, group: "closed" },
 };
 
 export const ALL_STATUSES = Object.entries(STATUS_META)
