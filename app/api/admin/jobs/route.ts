@@ -79,6 +79,7 @@ export async function GET(request: Request) {
     const agreed = job.agreed_amount === null ? undefined : Number(job.agreed_amount);
     const quoted = job.quoted_amount === null ? undefined : Number(job.quoted_amount);
     const paid = paidByJob.get(job.id) ?? 0;
+    const writtenOff = Number(job.written_off_amount || 0);
     const value = agreed ?? quoted ?? 0;
     const placeholder = String(job.internal_notes || "").startsWith("Historical placeholder created for backfill.");
     const jobPayments = paymentsByJob.get(job.id) || [];
@@ -91,9 +92,10 @@ export async function GET(request: Request) {
     const commissionPaid = commissions.reduce((sum, c) => sum + Number(c.paidAmount || 0), 0);
     const jobTypes = Array.isArray(job.job_types) && job.job_types.length ? job.job_types : [job.job_type].filter(Boolean);
     const stopped = ["declined", "cancelled"].includes(String(job.status));
-    const completedWithFinance = job.status === "completed" && (paid > 0 || invoicedJobIds.has(String(job.id)));
+    const completedWithFinance = job.status === "completed" && (paid > 0 || writtenOff > 0 || invoicedJobIds.has(String(job.id)));
     const balanceActive = !stopped && (job.status === "awaiting_final_payment" || completedWithFinance);
-    const balanceOutstanding = balanceActive ? Math.max(0, value - paid) : 0;
+    const balanceOutstanding = balanceActive ? Math.max(0, value - paid - writtenOff) : 0;
+    const collectionRequired = job.status === "completed" && balanceOutstanding > 0;
 
     return {
       id: job.id,
@@ -137,15 +139,19 @@ export async function GET(request: Request) {
       quoteSentAt: job.quote_sent_at ?? undefined,
       agreedAmount: agreed,
       paymentMethod: job.payment_method ?? undefined,
-      nextAction: job.next_action ?? undefined,
-      nextActionAt: job.next_action_at ?? undefined,
-      nextActionAssignee: job.next_action_assignee ?? undefined,
+      nextAction: collectionRequired ? `Collect outstanding ${new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(balanceOutstanding)} or write off` : job.next_action ?? undefined,
+      nextActionAt: collectionRequired ? undefined : job.next_action_at ?? undefined,
+      nextActionAssignee: collectionRequired ? job.manager : job.next_action_assignee ?? undefined,
       scheduledAt: job.scheduled_at ?? undefined,
       expectedCompletionAt: job.expected_completion_at ?? undefined,
       completedAt: job.completed_at ?? undefined,
       balanceActive,
       balanceOutstanding,
       amountPaid: paid,
+      writtenOffAmount: writtenOff,
+      writtenOffAt: job.written_off_at ?? undefined,
+      writeOffReason: job.write_off_reason ?? undefined,
+      collectionRequired,
       customerPayments,
       workforceAssignments: jobAssignments,
       subcontractorAgreed: subAgreed,
