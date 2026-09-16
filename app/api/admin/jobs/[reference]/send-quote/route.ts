@@ -4,6 +4,7 @@ import { requireAdminToken, supabaseRequest } from "@/lib/crm/supabase-server";
 import { buildQuotePdf } from "@/lib/crm/simple-pdf";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+const COMPANY_ADDRESS = "Office 6, 1st Floor, Sutherland House, 70-78 West Hendon Broadway, London, NW9 7BT";
 
 function esc(value: unknown) {
   return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
@@ -59,6 +60,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ref
     amount: Number(quote.amount || 0),
     deposit: quote.deposit_amount === null ? null : Number(quote.deposit_amount),
     leadTime: quote.lead_time,
+    companyAddress: COMPANY_ADDRESS,
   });
 
   const fileName = `${job.reference}-V${quote.version}-quotation.pdf`;
@@ -90,7 +92,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ref
         <h3>Scope of works</h3><p>${scopeHtml}</p>
         ${exclusionsHtml ? `<h3>Notes / exclusions</h3><p>${exclusionsHtml}</p>` : ""}
         <div style="background:#f5f5f2;padding:18px;border-radius:12px;margin:24px 0"><div style="font-size:13px;color:#666">Total quotation</div><div style="font-size:28px;font-weight:700">${money(quote.amount)}</div>${quote.deposit_amount ? `<div><strong>Deposit:</strong> ${money(quote.deposit_amount)}</div>` : ""}${quote.lead_time ? `<div><strong>Estimated lead time:</strong> ${esc(quote.lead_time)}</div>` : ""}${quote.valid_until ? `<div><strong>Valid until:</strong> ${new Date(`${quote.valid_until}T12:00:00`).toLocaleDateString("en-GB")}</div>` : ""}</div>
-        <p>If you would like to proceed or have any questions, simply reply to this email.</p><p>Kind regards,<br><strong>M&amp;J Metal</strong><br>info@mjmetal.co.uk<br>mjmetal.co.uk</p>
+        <p>If you would like to proceed or have any questions, simply reply to this email.</p><p>Kind regards,<br><strong>M&amp;J Metal</strong><br>info@mjmetal.co.uk<br>${esc(COMPANY_ADDRESS)}<br>mjmetal.co.uk</p>
       </div>`,
   });
   if (error) return NextResponse.json({ error: error.message || "Unable to send quote" }, { status: 500 });
