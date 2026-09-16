@@ -7,13 +7,25 @@ function asNumber(value: unknown) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-export async function GET() {
+function normalisePhone(value: unknown) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function normaliseEmail(value: unknown) {
+  return String(value || "").trim().toLowerCase();
+}
+
+export async function GET(request: Request) {
   const session = await requireAdminToken();
   if (!session) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
 
+  const url = new URL(request.url);
+  const archived = url.searchParams.get("archived") === "1";
+  const archiveFilter = archived ? "archived_at=not.is.null" : "archived_at=is.null";
+
   const [jobsResponse, paymentsResponse] = await Promise.all([
     supabaseRequest(
-      "/rest/v1/mj_jobs?select=*,mj_customers(*)&order=updated_at.desc",
+      `/rest/v1/mj_jobs?${archiveFilter}&select=*,mj_customers(*)&order=updated_at.desc`,
       { method: "GET" },
       session.token,
     ),
@@ -77,6 +89,7 @@ export async function GET() {
       completedAt: job.completed_at ?? undefined,
       balanceOutstanding: Math.max(0, value - paid),
       materialsOrdered: job.materials_ordered,
+      archivedAt: job.archived_at ?? undefined,
       createdAt: job.created_at,
       updatedAt: job.updated_at,
     };
@@ -95,6 +108,36 @@ export async function POST(request: Request) {
 
     if (!customerId) {
       if (!body.firstName) return NextResponse.json({ error: "Customer first name is required" }, { status: 400 });
+
+      const email = normaliseEmail(body.email);
+      const phone = normalisePhone(body.phone);
+      if (email || phone) {
+        const existingResponse = await supabaseRequest(
+          "/rest/v1/mj_customers?select=id,first_name,last_name,email,phone,postcode&order=updated_at.desc",
+          { method: "GET" },
+          session.token,
+        );
+        if (existingResponse.ok) {
+          const existing = await existingResponse.json() as Array<Record<string, any>>;
+          const duplicates = existing.filter((customer) =>
+            (email && normaliseEmail(customer.email) === email) ||
+            (phone && normalisePhone(customer.phone) === phone),
+          );
+          if (duplicates.length) {
+            return NextResponse.json({
+              error: "Possible existing customer found. Select the existing customer instead of creating a duplicate.",
+              duplicates: duplicates.map((customer) => ({
+                id: customer.id,
+                name: [customer.first_name, customer.last_name].filter(Boolean).join(" "),
+                email: customer.email,
+                phone: customer.phone,
+                postcode: customer.postcode,
+              })),
+            }, { status: 409 });
+          }
+        }
+      }
+
       const customerResponse = await supabaseRequest("/rest/v1/mj_customers?select=id", {
         method: "POST",
         headers: { Prefer: "return=representation" },
@@ -116,16 +159,17 @@ export async function POST(request: Request) {
 
     if (!customerId) return NextResponse.json({ error: "Customer could not be resolved" }, { status: 500 });
 
-    const status = body.siteVisitRequired ? "site_visit_required" : "new_enquiry";
+    const visitStatus = body.siteVisitRequired ? (body.siteVisitAt ? "booked" : "required") : "not_required";
+    const status = body.siteVisitRequired ? (body.siteVisitAt ? "site_visit_booked" : "site_visit_required") : "new_enquiry";
     const jobResponse = await supabaseRequest("/rest/v1/mj_jobs?select=id,reference", {
       method: "POST",
       headers: { Prefer: "return=representation" },
       body: JSON.stringify({
         customer_id: customerId,
-        site_address_line_1: body.siteAddressLine1 || body.addressLine1 || null,
-        site_address_line_2: body.siteAddressLine2 || body.addressLine2 || null,
-        site_city: body.siteCity || body.city || null,
-        site_postcode: body.sitePostcode || body.postcode || null,
+        site_address_line_1: body.siteAddressLine1 || null,
+        site_address_line_2: body.siteAddressLine2 || null,
+        site_city: body.siteCity || null,
+        site_postcode: body.sitePostcode || null,
         job_type: body.jobType,
         status,
         manager: body.manager,
@@ -138,6 +182,7 @@ export async function POST(request: Request) {
         customer_requirements: body.customerRequirements || null,
         internal_notes: body.internalNotes || null,
         site_visit_required: Boolean(body.siteVisitRequired),
+        site_visit_status: visitStatus,
         site_visit_at: body.siteVisitAt || null,
         preliminary_estimate: asNumber(body.preliminaryEstimate),
         quoted_amount: asNumber(body.quotedAmount),
@@ -154,7 +199,7 @@ export async function POST(request: Request) {
 
     const jobs = await jobResponse.json() as Array<{ id: string; reference: string }>;
     return NextResponse.json({ job: jobs[0] }, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: "Unable to create job" }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to create job" }, { status: 500 });
   }
 }
