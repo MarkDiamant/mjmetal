@@ -43,3 +43,11 @@ select {
   padding-right: 2.75rem !important;
   background-position: right 1rem center;
 }
+
+/* CRM job rows: always show the full next action instead of truncating it. */
+main button[class*="md:grid-cols"] > div:last-child > b.truncate {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  line-height: 1.25rem;
+}
