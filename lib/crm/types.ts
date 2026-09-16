@@ -21,7 +21,8 @@ export type JobStatus =
   | "in_progress"
   | "awaiting_final_payment"
   | "completed"
-  | "declined";
+  | "declined"
+  | "cancelled";
 
 export type JobType =
   | "Driveway Gate"
