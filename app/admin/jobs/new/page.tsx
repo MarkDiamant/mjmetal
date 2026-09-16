@@ -1,5 +1,5 @@
-import NewJobForm from "@/components/admin/NewJobForm";
+import NewJobFormV2 from "@/components/admin/NewJobFormV2";
 
 export default function NewJobPage() {
-  return <NewJobForm />;
+  return <NewJobFormV2 />;
 }
