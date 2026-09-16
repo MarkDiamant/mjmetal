@@ -386,7 +386,7 @@ projects.
             </div>
 
             <span className="text-xs text-neutral-500">
-              Websites • Systems • Automation
+              Websites • CRM Systems • Direction
             </span>
           </a>
         </div>
