@@ -60,10 +60,11 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     const fileName = `${job.reference}-V${quote.version}-quotation.pdf`;
     const storagePath = `${job.id}/quotes/${fileName}`;
     const encodedPath = storagePath.split("/").map(encodeURIComponent).join("/");
+    const pdfBody = new Blob([new Uint8Array(pdf)], { type: "application/pdf" });
     const upload = await supabaseRequest(`/storage/v1/object/mj-job-files/${encodedPath}`, {
       method: "POST",
       headers: { "Content-Type": "application/pdf", "x-upsert": "true" },
-      body: pdf,
+      body: pdfBody,
     }, session.token);
     if (!upload.ok) {
       const detail = await upload.json().catch(() => null);
