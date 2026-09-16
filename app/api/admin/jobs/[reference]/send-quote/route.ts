@@ -64,7 +64,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ ref
   const fileName = `${job.reference}-V${quote.version}-quotation.pdf`;
   const storagePath = `${job.id}/quotes/${fileName}`;
   const encodedPath = storagePath.split("/").map(encodeURIComponent).join("/");
-  const upload = await supabaseRequest(`/storage/v1/object/mj-job-files/${encodedPath}`, { method: "POST", headers: { "Content-Type": "application/pdf", "x-upsert": "true" }, body: pdf }, session.token);
+  const pdfBody = new Blob([new Uint8Array(pdf)], { type: "application/pdf" });
+  const upload = await supabaseRequest(`/storage/v1/object/mj-job-files/${encodedPath}`, { method: "POST", headers: { "Content-Type": "application/pdf", "x-upsert": "true" }, body: pdfBody }, session.token);
   if (!upload.ok) return NextResponse.json({ error: "Could not generate/store quotation PDF" }, { status: 500 });
 
   const existingMetaResponse = await supabaseRequest(`/rest/v1/mj_files?job_id=eq.${job.id}&storage_path=eq.${encodeURIComponent(storagePath)}&select=id&limit=1`, {}, session.token);
