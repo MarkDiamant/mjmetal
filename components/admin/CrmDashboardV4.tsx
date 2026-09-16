@@ -20,10 +20,31 @@ function dateLabel(value?: string) {
   }).format(new Date(value));
 }
 
+function dateTimeLabel(value?: string) {
+  if (!value) return "Not set";
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(value));
+}
+
 type JobSummary = {
   reference: string;
   status?: string;
+  agreedAmount?: number | string | null;
+  quotedAmount?: number | string | null;
+  preliminaryEstimate?: number | string | null;
   subcontractorOutstanding?: number;
+};
+
+type DashboardActivity = {
+  occurred_at?: string;
+  summary?: string;
+  mj_jobs?: { reference?: string } | null;
 };
 
 type SubPayment = {
@@ -39,6 +60,8 @@ function DashboardEnhancer() {
   useEffect(() => {
     let cancelled = false;
     let running = false;
+    let dashboardActivities: DashboardActivity[] = [];
+    let lastDashboardFetch = 0;
 
     const applyRowHighlights = (jobs: JobSummary[]) => {
       const rowButtons = Array.from(
@@ -71,6 +94,58 @@ function DashboardEnhancer() {
           delete card.dataset.workflowHighlight;
         }
       }
+    };
+
+    const applyMoneyOverview = (jobs: JobSummary[]) => {
+      const heading = Array.from(document.querySelectorAll<HTMLHeadingElement>("h2")).find(
+        (node) => node.textContent?.trim() === "Money overview",
+      );
+      const section = heading?.closest<HTMLElement>("section");
+      if (!section) return;
+
+      const grid = section.querySelector<HTMLElement>(".mt-3.grid");
+      if (!grid) return;
+
+      const lostValue = jobs
+        .filter((job) => ["declined", "cancelled"].includes(String(job.status || "")))
+        .reduce(
+          (sum, job) =>
+            sum + Number(job.agreedAmount ?? job.quotedAmount ?? job.preliminaryEstimate ?? 0),
+          0,
+        );
+
+      let card = grid.querySelector<HTMLElement>("[data-lost-job-value]");
+      if (!card) {
+        card = document.createElement("div");
+        card.dataset.lostJobValue = "1";
+        card.className = "rounded-xl bg-red-50 p-3";
+        card.innerHTML =
+          '<p class="text-[10px] font-black uppercase tracking-[0.08em] text-black/40">Lost job value</p><p data-lost-job-value-amount class="mt-1 text-xl font-black text-red-700"></p>';
+        grid.appendChild(card);
+      }
+
+      const amount = card.querySelector<HTMLElement>("[data-lost-job-value-amount]");
+      if (amount) amount.textContent = money(lostValue);
+    };
+
+    const applyActivityTimes = (activities: DashboardActivity[]) => {
+      const heading = Array.from(document.querySelectorAll<HTMLHeadingElement>("h2")).find(
+        (node) => node.textContent?.trim() === "Recent activity",
+      );
+      const section = heading?.closest<HTMLElement>("section");
+      if (!section) return;
+
+      const links = Array.from(section.querySelectorAll<HTMLAnchorElement>("a.block"));
+      const visible = activities.slice(0, links.length);
+      links.forEach((link, index) => {
+        const activity = visible[index];
+        if (!activity) return;
+        const meta = link.querySelector<HTMLElement>("span.text-xs");
+        if (!meta) return;
+        const reference = activity.mj_jobs?.reference || "CRM";
+        const text = `${reference} · ${dateTimeLabel(activity.occurred_at)}`;
+        if (meta.textContent !== text) meta.textContent = text;
+      });
     };
 
     const applyDueLines = (jobs: JobSummary[]) => {
@@ -246,7 +321,19 @@ function DashboardEnhancer() {
         const body = await response.json();
         const jobs = (body.jobs || []) as JobSummary[];
         applyRowHighlights(jobs);
+        applyMoneyOverview(jobs);
         applyDueLines(jobs);
+
+        const now = Date.now();
+        if (!dashboardActivities.length || now - lastDashboardFetch > 5000) {
+          const dashboardResponse = await fetch("/api/admin/dashboard", { cache: "no-store" });
+          if (dashboardResponse.ok && !cancelled) {
+            const dashboardBody = await dashboardResponse.json();
+            dashboardActivities = (dashboardBody.activities || []) as DashboardActivity[];
+            lastDashboardFetch = now;
+          }
+        }
+        applyActivityTimes(dashboardActivities);
 
         const headings = Array.from(document.querySelectorAll<HTMLHeadingElement>("h2"));
         for (const heading of headings) {
