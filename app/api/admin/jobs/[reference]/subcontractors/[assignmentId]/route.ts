@@ -15,6 +15,15 @@ async function resolveAssignment(reference: string, assignmentId: string, token:
   return { job, assignment: assignments[0] || null };
 }
 
+async function recalculatePaidAmount(jobId: string, assignmentId: string, token: string) {
+  const rows = await jsonOrError(await supabaseRequest(`/rest/v1/mj_payments?job_id=eq.${jobId}&direction=eq.subcontractor_out&notes=eq.${encodeURIComponent(`Assignment ${assignmentId}`)}&select=amount`, {}, token));
+  const paid = rows.reduce((sum: number, row: any) => sum + Number(row.amount || 0), 0);
+  await jsonOrError(await supabaseRequest(`/rest/v1/mj_job_subcontractors?id=eq.${encodeURIComponent(assignmentId)}`, {
+    method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify({ paid_amount: paid }),
+  }, token));
+  return paid;
+}
+
 export async function PATCH(request: Request, { params }: { params: Promise<{ reference: string; assignmentId: string }> }) {
   const session = await requireAdminToken();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -31,18 +40,22 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ re
     }
 
     const addPayment = Number(body.add_payment || 0);
-    if (addPayment > 0 && !("paid_amount" in patch)) patch.paid_amount = Number(assignment.paid_amount || 0) + addPayment;
-
-    const rows = await jsonOrError(await supabaseRequest(`/rest/v1/mj_job_subcontractors?id=eq.${encodeURIComponent(assignmentId)}`, {
-      method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify(patch),
-    }, session.token));
-
     if (addPayment > 0) {
-      await supabaseRequest("/rest/v1/mj_payments", {
-        method: "POST", headers: { Prefer: "return=minimal" },
-        body: JSON.stringify({ job_id: job.id, direction: "subcontractor_out", payment_type: body.payment_type || "Subcontractor payment", amount: addPayment, payment_method: body.payment_method || "Bank transfer", counterparty: body.counterparty || null, paid_at: body.paid_at || new Date().toISOString(), notes: `Assignment ${assignmentId}` }),
-      }, session.token);
+      const paidAt = body.paid_at || new Date().toISOString();
+      const note = `Assignment ${assignmentId}`;
+      const recent = await jsonOrError(await supabaseRequest(`/rest/v1/mj_payments?job_id=eq.${job.id}&direction=eq.subcontractor_out&notes=eq.${encodeURIComponent(note)}&amount=eq.${addPayment}&paid_at=eq.${encodeURIComponent(paidAt)}&select=id&limit=1`, {}, session.token));
+      if (recent.length) return NextResponse.json({ error: "That subcontractor payment is already recorded." }, { status: 409 });
+
+      await jsonOrError(await supabaseRequest("/rest/v1/mj_payments", {
+        method: "POST", headers: { Prefer: "return=representation" },
+        body: JSON.stringify({ job_id: job.id, direction: "subcontractor_out", payment_type: body.payment_type || "Subcontractor payment", amount: addPayment, payment_method: body.payment_method || "Bank transfer", counterparty: body.counterparty || null, paid_at: paidAt, notes: note }),
+      }, session.token));
+      patch.paid_amount = await recalculatePaidAmount(job.id, assignmentId, session.token);
     }
+
+    const rows = Object.keys(patch).length ? await jsonOrError(await supabaseRequest(`/rest/v1/mj_job_subcontractors?id=eq.${encodeURIComponent(assignmentId)}`, {
+      method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify(patch),
+    }, session.token)) : [assignment];
 
     await supabaseRequest("/rest/v1/mj_audit_events", {
       method: "POST", headers: { Prefer: "return=minimal" },
@@ -74,6 +87,6 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Could not remove assignment" }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Could not remove subcontractor" }, { status: 500 });
   }
 }
