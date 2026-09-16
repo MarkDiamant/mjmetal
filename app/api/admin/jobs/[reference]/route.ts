@@ -189,12 +189,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         subcontractorId = createdSub[0]?.id;
       }
       if (!subcontractorId) return NextResponse.json({ error: "Choose or add a person" }, { status: 400 });
+
+      const role = body.assignment_role || "subcontractor";
+      const existingAssignments = await jsonOrError(await supabaseRequest(`/rest/v1/mj_job_subcontractors?job_id=eq.${job.id}&subcontractor_id=eq.${encodeURIComponent(subcontractorId)}&assignment_role=eq.${encodeURIComponent(role)}&select=id&limit=1`, {}, session.token));
+      if (existingAssignments.length) return NextResponse.json({ error: "That person is already assigned to this job in that role." }, { status: 409 });
+
       const created = await jsonOrError(await supabaseRequest("/rest/v1/mj_job_subcontractors", {
         method: "POST", headers: { Prefer: "return=representation" },
         body: JSON.stringify({
           job_id: job.id, subcontractor_id: subcontractorId, scope: body.scope || null,
           agreed_cost: body.agreed_cost ? Number(body.agreed_cost) : null,
-          materials_included: Boolean(body.materials_included), assignment_role: body.assignment_role || "subcontractor",
+          materials_included: Boolean(body.materials_included), assignment_role: role,
           scheduled_at: body.scheduled_at || null,
         }),
       }, session.token));
