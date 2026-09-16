@@ -42,8 +42,11 @@ type JobSummary = {
 };
 
 type DashboardActivity = {
+  id?: string;
+  actor?: string;
   occurred_at?: string;
   summary?: string;
+  details?: string | null;
   mj_jobs?: { reference?: string } | null;
 };
 
@@ -62,6 +65,7 @@ function DashboardEnhancer() {
     let running = false;
     let dashboardActivities: DashboardActivity[] = [];
     let lastDashboardFetch = 0;
+    let activityExpanded = false;
 
     const applyRowHighlights = (jobs: JobSummary[]) => {
       const rowButtons = Array.from(
@@ -135,7 +139,8 @@ function DashboardEnhancer() {
       const section = heading?.closest<HTMLElement>("section");
       if (!section) return;
 
-      const links = Array.from(section.querySelectorAll<HTMLAnchorElement>("a.block"));
+      const links = Array.from(section.querySelectorAll<HTMLAnchorElement>("a.block"))
+        .filter((link) => !link.dataset.expandedActivity);
       const visible = activities.slice(0, links.length);
       links.forEach((link, index) => {
         const activity = visible[index];
@@ -146,6 +151,65 @@ function DashboardEnhancer() {
         const text = `${reference} · ${dateTimeLabel(activity.occurred_at)}`;
         if (meta.textContent !== text) meta.textContent = text;
       });
+
+      const extra = activities.slice(links.length);
+      let toggle = section.querySelector<HTMLButtonElement>("[data-activity-toggle]");
+      let history = section.querySelector<HTMLElement>("[data-activity-history]");
+
+      if (!extra.length) {
+        toggle?.remove();
+        history?.remove();
+        return;
+      }
+
+      if (!toggle) {
+        toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.dataset.activityToggle = "1";
+        toggle.className = "mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-black/10 bg-white px-3 py-2 text-xs font-black hover:bg-black/[0.03]";
+        toggle.onclick = () => {
+          activityExpanded = !activityExpanded;
+          const panel = section.querySelector<HTMLElement>("[data-activity-history]");
+          if (panel) panel.style.display = activityExpanded ? "block" : "none";
+          if (toggle) toggle.textContent = activityExpanded ? "Show less ↑" : `Show more (${extra.length}) ↓`;
+        };
+        section.appendChild(toggle);
+      }
+      toggle.textContent = activityExpanded ? "Show less ↑" : `Show more (${extra.length}) ↓`;
+
+      if (!history) {
+        history = document.createElement("div");
+        history.dataset.activityHistory = "1";
+        history.className = "mt-2 max-h-[430px] overflow-y-auto rounded-xl border border-black/10 bg-white";
+        section.appendChild(history);
+      }
+      history.style.display = activityExpanded ? "block" : "none";
+
+      const signature = extra.map((item) => `${item.id || ""}:${item.occurred_at || ""}`).join("|");
+      if (history.dataset.signature === signature) return;
+      history.dataset.signature = signature;
+      history.replaceChildren();
+
+      for (const activity of extra) {
+        const reference = activity.mj_jobs?.reference || "CRM";
+        const link = document.createElement("a");
+        link.dataset.expandedActivity = "1";
+        link.href = activity.mj_jobs?.reference
+          ? `/admin/jobs/${encodeURIComponent(activity.mj_jobs.reference)}`
+          : "/admin";
+        link.className = "block border-b border-black/8 px-3 py-3 last:border-b-0 hover:bg-[#fffaf6]";
+
+        const summary = document.createElement("b");
+        summary.className = "block text-xs leading-5";
+        summary.textContent = activity.summary || "CRM activity";
+
+        const meta = document.createElement("span");
+        meta.className = "mt-0.5 block text-xs text-black/45";
+        meta.textContent = `${reference} · ${dateTimeLabel(activity.occurred_at)}`;
+
+        link.append(summary, meta);
+        history.appendChild(link);
+      }
     };
 
     const applyDueLines = (jobs: JobSummary[]) => {
