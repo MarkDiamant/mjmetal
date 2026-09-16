@@ -1,118 +1,161 @@
 "use client";
 
-import { useState } from "react";
-import { ALL_STATUSES, FINISH_TYPES } from "@/lib/crm/constants";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { ALL_STATUSES, FINISH_TYPES, JOB_TYPES } from "@/lib/crm/constants";
 
 const tabs = ["Overview", "Activity", "Quote", "Costs & Payments", "Files", "Subcontractors"] as const;
 type Tab = (typeof tabs)[number];
+type Bundle = any;
+
+function money(value: number | string | null | undefined) {
+  const n = Number(value || 0);
+  return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(n);
+}
+function localInput(value?: string | null) {
+  if (!value) return "";
+  const d = new Date(value);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function iso(value: FormDataEntryValue | null) {
+  const s = String(value || "").trim();
+  return s ? new Date(s).toISOString() : null;
+}
+function text(fd: FormData, key: string) { const v = String(fd.get(key) || "").trim(); return v || null; }
+function num(fd: FormData, key: string) { const v = String(fd.get(key) || "").trim(); return v ? Number(v) : null; }
 
 export default function JobDetail({ reference }: { reference: string }) {
   const [tab, setTab] = useState<Tab>("Overview");
+  const [data, setData] = useState<Bundle | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true); setError("");
+    const res = await fetch(`/api/admin/jobs/${encodeURIComponent(reference)}`, { cache: "no-store" });
+    if (res.status === 401) { window.location.href = "/admin/login"; return; }
+    const body = await res.json();
+    if (!res.ok) setError(body.error || "Could not load job"); else setData(body);
+    setLoading(false);
+  }, [reference]);
+  useEffect(() => { void load(); }, [load]);
+
+  async function patch(payload: any) {
+    setMessage("Saving...");
+    const res = await fetch(`/api/admin/jobs/${encodeURIComponent(reference)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error || "Save failed");
+    setMessage("Saved"); await load(); setTimeout(() => setMessage(""), 1500);
+  }
+  async function action(payload: any) {
+    setMessage("Saving...");
+    const res = await fetch(`/api/admin/jobs/${encodeURIComponent(reference)}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error || "Save failed");
+    setMessage("Saved"); await load(); setTimeout(() => setMessage(""), 1500);
+    return body;
+  }
+
+  if (loading && !data) return <main className="min-h-screen bg-[#f5f5f2] p-10 text-center">Loading {reference}...</main>;
+  if (error || !data) return <main className="min-h-screen bg-[#f5f5f2] p-10"><div className="mx-auto max-w-xl rounded-2xl bg-white p-6"><h1 className="text-xl font-black">{reference}</h1><p className="mt-3 text-red-700">{error || "Job not found"}</p><a href="/admin" className="mt-5 inline-block font-bold text-[#e66a24]">Back to CRM</a></div></main>;
+
+  const j = data.job, c = data.customer || {};
+  const received = data.payments.filter((p: any) => p.direction === "customer_in" && p.paid_at).reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
+  const agreed = Number(j.agreed_amount ?? j.quoted_amount ?? 0);
+  const balance = Math.max(0, agreed - received);
+  const actualCosts = data.costs.reduce((s: number, x: any) => s + Number(x.actual_amount ?? x.estimated_amount ?? 0), 0);
+  const subcontractCosts = data.assignments.reduce((s: number, x: any) => s + Number(x.agreed_cost || 0), 0);
+  const grossProfit = agreed - actualCosts - subcontractCosts;
+  const fullName = [c.first_name, c.last_name].filter(Boolean).join(" ") || "Customer";
 
   return (
     <main className="min-h-screen bg-[#f5f5f2] text-[#141414]">
       <header className="border-b border-black/10 bg-white">
         <div className="mx-auto flex max-w-[1500px] flex-wrap items-center justify-between gap-4 px-5 py-4 lg:px-8">
-          <div className="flex items-center gap-4">
-            <a href="/admin" className="rounded-lg border border-black/15 px-3 py-2 text-sm font-bold">Back</a>
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#e66a24]">{reference}</p>
-              <h1 className="text-2xl font-black">Example Customer · Fencing</h1>
-              <p className="mt-1 text-sm text-black/50">North West London · Managed by Jonathan</p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button className="rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-bold">Log activity</button>
-            <button className="rounded-xl bg-[#e66a24] px-4 py-2.5 text-sm font-black text-white">Create quote</button>
-          </div>
+          <div className="flex items-center gap-4"><a href="/admin" className="rounded-lg border border-black/15 px-3 py-2 text-sm font-bold">Back</a><div><p className="text-xs font-black uppercase tracking-[0.18em] text-[#e66a24]">{j.reference}</p><h1 className="text-2xl font-black">{fullName} · {j.job_type}</h1><p className="mt-1 text-sm text-black/50">{[j.site_address_line_1 || c.address_line_1, j.site_postcode || c.postcode].filter(Boolean).join(" · ")} · Managed by {j.manager === "MD" ? "Mark" : "Jonathan"}</p></div></div>
+          <div className="flex items-center gap-2">{message && <span className="text-sm font-bold text-black/50">{message}</span>}<button onClick={() => setTab("Activity")} className="rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-bold">Log activity</button><button onClick={() => setTab("Quote")} className="rounded-xl bg-[#e66a24] px-4 py-2.5 text-sm font-black text-white">Create quote</button></div>
         </div>
       </header>
 
       <div className="mx-auto max-w-[1500px] px-5 py-6 lg:px-8">
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Summary label="Status"><select className="w-full bg-transparent font-black outline-none">{ALL_STATUSES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></Summary>
-          <Summary label="Agreed value"><span className="text-2xl font-black">£TBC</span></Summary>
-          <Summary label="Balance"><span className="text-2xl font-black">£TBC</span></Summary>
-          <Summary label="Next action"><span className="font-black">Complete installation</span><span className="mt-1 block text-xs text-black/50">17 Sep, 09:00</span></Summary>
+          <Summary label="Status"><select value={j.status} onChange={(e) => void patch({ job: { status: e.target.value } })} className="w-full bg-transparent font-black outline-none">{ALL_STATUSES.map((x) => <option key={x.value} value={x.value}>{x.label}</option>)}</select></Summary>
+          <Summary label="Agreed value"><span className="text-2xl font-black">{money(agreed)}</span></Summary>
+          <Summary label="Balance"><span className="text-2xl font-black">{money(balance)}</span></Summary>
+          <Summary label="Next action"><span className="font-black">{j.next_action || "Not set"}</span>{j.next_action_at && <span className="mt-1 block text-xs text-black/50">{new Date(j.next_action_at).toLocaleString("en-GB")}</span>}</Summary>
         </section>
 
-        <nav className="mt-5 flex gap-1 overflow-x-auto rounded-2xl border border-black/10 bg-white p-1.5">
-          {tabs.map((item) => (
-            <button key={item} onClick={() => setTab(item)} className={`whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-bold ${tab === item ? "bg-[#141414] text-white" : "text-black/60 hover:bg-black/5"}`}>{item}</button>
-          ))}
-        </nav>
-
+        <nav className="mt-5 flex gap-1 overflow-x-auto rounded-2xl border border-black/10 bg-white p-1.5">{tabs.map((item) => <button key={item} onClick={() => setTab(item)} className={`whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-bold ${tab === item ? "bg-[#141414] text-white" : "text-black/60 hover:bg-black/5"}`}>{item}</button>)}</nav>
         <div className="mt-5">
-          {tab === "Overview" && <Overview />}
-          {tab === "Activity" && <Activity />}
-          {tab === "Quote" && <Quote />}
-          {tab === "Costs & Payments" && <Costs />}
-          {tab === "Files" && <Files />}
-          {tab === "Subcontractors" && <Subcontractors />}
+          {tab === "Overview" && <Overview data={data} onSave={patch} />}
+          {tab === "Activity" && <Activity data={data} onAction={action} />}
+          {tab === "Quote" && <Quote data={data} reference={reference} onAction={action} />}
+          {tab === "Costs & Payments" && <Costs data={data} agreed={agreed} received={received} balance={balance} grossProfit={grossProfit} onAction={action} />}
+          {tab === "Files" && <Files data={data} reference={reference} reload={load} />}
+          {tab === "Subcontractors" && <Subcontractors data={data} onAction={action} />}
         </div>
       </div>
     </main>
   );
 }
 
-function Summary({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div className="rounded-2xl border border-black/10 bg-white p-4 shadow-[0_8px_30px_rgba(0,0,0,0.04)]"><p className="mb-2 text-xs font-bold uppercase tracking-[0.08em] text-black/45">{label}</p>{children}</div>;
+function Summary({ label, children }: { label: string; children: React.ReactNode }) { return <div className="rounded-2xl border border-black/10 bg-white p-4 shadow-[0_8px_30px_rgba(0,0,0,0.04)]"><p className="mb-2 text-xs font-bold uppercase tracking-[0.08em] text-black/45">{label}</p>{children}</div>; }
+function Card({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) { return <section className={`rounded-2xl border border-black/10 bg-white p-5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] ${className}`}><h2 className="mb-4 text-lg font-black">{title}</h2>{children}</section>; }
+const inputClass = "h-11 w-full rounded-xl border border-black/15 px-3 outline-none focus:border-[#e66a24]";
+function Field({ label, children, wide = false }: { label: string; children: React.ReactNode; wide?: boolean }) { return <label className={wide ? "md:col-span-2" : ""}><span className="mb-1.5 block text-xs font-bold uppercase tracking-[0.06em] text-black/45">{label}</span>{children}</label>; }
+function Submit({ children = "Save" }: { children?: React.ReactNode }) { return <button className="rounded-xl bg-[#141414] px-4 py-2.5 text-sm font-black text-white">{children}</button>; }
+
+function Overview({ data, onSave }: { data: Bundle; onSave: (p: any) => Promise<void> }) {
+  const j = data.job, c = data.customer || {};
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault(); const fd = new FormData(e.currentTarget);
+    const finishes = FINISH_TYPES.filter((x) => fd.getAll("finish").includes(x));
+    await onSave({ customer: { first_name: text(fd,"first_name"), last_name: text(fd,"last_name"), phone: text(fd,"phone"), email: text(fd,"email"), address_line_1: text(fd,"address_line_1"), address_line_2: text(fd,"address_line_2"), city: text(fd,"city"), postcode: text(fd,"postcode") }, job: { job_type: text(fd,"job_type"), manager: text(fd,"manager"), enquiry_source: text(fd,"enquiry_source"), customer_reference: text(fd,"customer_reference"), site_address_line_1: text(fd,"site_address_line_1"), site_address_line_2: text(fd,"site_address_line_2"), site_city: text(fd,"site_city"), site_postcode: text(fd,"site_postcode"), dimensions: text(fd,"dimensions"), material: text(fd,"material"), colour: text(fd,"colour"), finishes, customer_requirements: text(fd,"customer_requirements"), internal_notes: text(fd,"internal_notes"), site_visit_required: fd.get("site_visit_required") === "on", site_visit_at: iso(fd.get("site_visit_at")), site_visit_completed_at: iso(fd.get("site_visit_completed_at")), scheduled_at: iso(fd.get("scheduled_at")), expected_completion_at: iso(fd.get("expected_completion_at")), materials_ordered: fd.get("materials_ordered") === "on", next_action: text(fd,"next_action"), next_action_at: iso(fd.get("next_action_at")), agreed_amount: num(fd,"agreed_amount"), payment_method: text(fd,"payment_method"), snagging_required: fd.get("snagging_required") === "on", snagging_notes: text(fd,"snagging_notes"), snagging_completed_at: iso(fd.get("snagging_completed_at")) } });
+  }
+  return <form onSubmit={(e) => void submit(e)} className="grid gap-5 xl:grid-cols-3">
+    <Card title="Customer"><div className="grid gap-3"><Field label="First name"><input name="first_name" defaultValue={c.first_name || ""} className={inputClass} required /></Field><Field label="Surname"><input name="last_name" defaultValue={c.last_name || ""} className={inputClass} /></Field><Field label="Phone"><input name="phone" defaultValue={c.phone || ""} className={inputClass} /></Field><Field label="Email"><input name="email" type="email" defaultValue={c.email || ""} className={inputClass} /></Field><Field label="Customer address"><input name="address_line_1" defaultValue={c.address_line_1 || ""} className={inputClass} /></Field><Field label="Address line 2"><input name="address_line_2" defaultValue={c.address_line_2 || ""} className={inputClass} /></Field><Field label="City"><input name="city" defaultValue={c.city || ""} className={inputClass} /></Field><Field label="Postcode"><input name="postcode" defaultValue={c.postcode || ""} className={inputClass} /></Field></div></Card>
+    <Card title="Job details" className="xl:col-span-2"><div className="grid gap-4 md:grid-cols-2"><Field label="Job type"><select name="job_type" defaultValue={j.job_type} className={inputClass}>{JOB_TYPES.map((x) => <option key={x}>{x}</option>)}</select></Field><Field label="Managed by"><select name="manager" defaultValue={j.manager} className={inputClass}><option value="MD">Mark</option><option value="JB">Jonathan</option></select></Field><Field label="Enquiry source"><input name="enquiry_source" defaultValue={j.enquiry_source || ""} className={inputClass} /></Field><Field label="Customer PO / reference"><input name="customer_reference" defaultValue={j.customer_reference || ""} className={inputClass} /></Field><Field label="Dimensions"><input name="dimensions" defaultValue={j.dimensions || ""} className={inputClass} /></Field><Field label="Material"><input name="material" defaultValue={j.material || ""} className={inputClass} /></Field><Field label="Colour / RAL"><input name="colour" defaultValue={j.colour || ""} className={inputClass} /></Field><Field label="Agreed amount"><input name="agreed_amount" type="number" step="0.01" min="0" defaultValue={j.agreed_amount ?? ""} className={inputClass} /></Field><Field label="Payment method"><select name="payment_method" defaultValue={j.payment_method || "Bank transfer"} className={inputClass}><option>Bank transfer</option><option>Cash</option><option>Card</option><option>Other</option></select></Field></div>
+      <div className="mt-5"><p className="mb-2 text-xs font-bold uppercase text-black/45">Finish, select all that apply</p><div className="flex flex-wrap gap-2">{FINISH_TYPES.map((x) => <label key={x} className="rounded-full border border-black/15 px-3 py-2 text-xs font-bold"><input name="finish" value={x} type="checkbox" defaultChecked={(j.finishes || []).includes(x)} className="mr-2" />{x}</label>)}</div></div>
+      <div className="mt-4 grid gap-4 md:grid-cols-2"><Field label="Customer requirements"><textarea name="customer_requirements" defaultValue={j.customer_requirements || ""} className="min-h-32 w-full rounded-xl border border-black/15 p-3" /></Field><Field label="Internal notes"><textarea name="internal_notes" defaultValue={j.internal_notes || ""} className="min-h-32 w-full rounded-xl border border-black/15 p-3" /></Field></div>
+    </Card>
+    <Card title="Site & scheduling"><div className="grid gap-3"><Field label="Site address"><input name="site_address_line_1" defaultValue={j.site_address_line_1 || ""} className={inputClass} /></Field><Field label="Site address 2"><input name="site_address_line_2" defaultValue={j.site_address_line_2 || ""} className={inputClass} /></Field><Field label="City"><input name="site_city" defaultValue={j.site_city || ""} className={inputClass} /></Field><Field label="Postcode"><input name="site_postcode" defaultValue={j.site_postcode || ""} className={inputClass} /></Field><label className="text-sm font-bold"><input name="site_visit_required" type="checkbox" defaultChecked={j.site_visit_required} className="mr-2" />Site visit required</label><Field label="Site visit"><input name="site_visit_at" type="datetime-local" defaultValue={localInput(j.site_visit_at)} className={inputClass} /></Field><Field label="Site visit completed"><input name="site_visit_completed_at" type="datetime-local" defaultValue={localInput(j.site_visit_completed_at)} className={inputClass} /></Field><Field label="Installation date"><input name="scheduled_at" type="datetime-local" defaultValue={localInput(j.scheduled_at)} className={inputClass} /></Field><Field label="Expected completion"><input name="expected_completion_at" type="datetime-local" defaultValue={localInput(j.expected_completion_at)} className={inputClass} /></Field><label className="text-sm font-bold"><input name="materials_ordered" type="checkbox" defaultChecked={j.materials_ordered} className="mr-2" />Materials ordered</label></div></Card>
+    <Card title="Next action"><div className="grid gap-3"><Field label="Action"><input name="next_action" defaultValue={j.next_action || ""} className={inputClass} /></Field><Field label="Due"><input name="next_action_at" type="datetime-local" defaultValue={localInput(j.next_action_at)} className={inputClass} /></Field></div></Card>
+    <Card title="Snagging / remedial"><div className="grid gap-3"><label className="text-sm font-bold"><input name="snagging_required" type="checkbox" defaultChecked={j.snagging_required} className="mr-2" />Snagging/remedial work required</label><Field label="Notes"><textarea name="snagging_notes" defaultValue={j.snagging_notes || ""} className="min-h-24 w-full rounded-xl border border-black/15 p-3" /></Field><Field label="Completed"><input name="snagging_completed_at" type="datetime-local" defaultValue={localInput(j.snagging_completed_at)} className={inputClass} /></Field></div></Card>
+    <div className="xl:col-span-3 flex justify-end"><Submit>Save job</Submit></div>
+  </form>;
 }
 
-function Card({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) {
-  return <section className={`rounded-2xl border border-black/10 bg-white p-5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] ${className}`}><h2 className="mb-4 text-lg font-black">{title}</h2>{children}</section>;
+function Activity({ data, onAction }: { data: Bundle; onAction: (p: any) => Promise<any> }) {
+  async function submit(e: FormEvent<HTMLFormElement>) { e.preventDefault(); const fd = new FormData(e.currentTarget); await onAction({ type:"activity", activity_type:text(fd,"activity_type"), summary:text(fd,"summary"), details:text(fd,"details"), next_action:text(fd,"next_action"), next_action_at:iso(fd.get("next_action_at")) }); e.currentTarget.reset(); }
+  return <div className="grid gap-5 xl:grid-cols-[420px_1fr]"><Card title="Log follow-up / activity"><form onSubmit={(e)=>void submit(e)} className="grid gap-3"><Field label="Method"><select name="activity_type" className={inputClass}><option value="whatsapp">WhatsApp</option><option value="call">Phone</option><option value="email">Email</option><option value="site_visit">Site visit</option><option value="note">Internal note</option><option value="status">Status update</option></select></Field><Field label="Summary"><input name="summary" required className={inputClass} /></Field><Field label="Details"><textarea name="details" className="min-h-28 w-full rounded-xl border border-black/15 p-3" /></Field><Field label="Next action"><input name="next_action" className={inputClass} /></Field><Field label="Next action due"><input name="next_action_at" type="datetime-local" className={inputClass} /></Field><Submit>Log activity</Submit></form></Card><div className="space-y-5"><Card title="Activity timeline"><div className="space-y-3">{data.activities.length === 0 && <p className="text-sm text-black/50">No activity logged yet.</p>}{data.activities.map((a:any)=><div key={a.id} className="rounded-xl border border-black/10 p-4"><div className="flex flex-wrap justify-between gap-2"><p className="font-black">{a.summary}</p><span className="text-xs text-black/45">{new Date(a.occurred_at).toLocaleString("en-GB")}</span></div><p className="mt-1 text-xs font-bold uppercase text-[#e66a24]">{a.actor === "MD" ? "Mark" : a.actor === "JB" ? "Jonathan" : "System"} · {a.activity_type}</p>{a.details && <p className="mt-2 text-sm text-black/60">{a.details}</p>}</div>)}</div></Card><Card title="Audit trail"><div className="space-y-2">{data.auditEvents.map((a:any)=><div key={a.id} className="flex justify-between gap-4 border-b border-black/8 py-2 text-sm"><span><b>{a.actor === "MD" ? "Mark" : "Jonathan"}</b> {a.action} {a.entity_type}</span><span className="shrink-0 text-black/40">{new Date(a.created_at).toLocaleString("en-GB")}</span></div>)}</div></Card></div></div>;
 }
 
-function Input({ label, value = "" }: { label: string; value?: string }) {
-  return <label className="block"><span className="mb-1.5 block text-xs font-bold uppercase tracking-[0.06em] text-black/45">{label}</span><input defaultValue={value} className="h-11 w-full rounded-xl border border-black/15 px-3 outline-none focus:border-[#e66a24]" /></label>;
+function Quote({ data, reference, onAction }: { data: Bundle; reference: string; onAction: (p:any)=>Promise<any> }) {
+  async function submit(e: FormEvent<HTMLFormElement>) { e.preventDefault(); const fd = new FormData(e.currentTarget); await onAction({ type:"quote", amount:num(fd,"amount"), deposit_amount:num(fd,"deposit_amount"), lead_time:text(fd,"lead_time"), valid_until:text(fd,"valid_until"), scope_text:text(fd,"scope_text"), exclusions:text(fd,"exclusions") }); }
+  const suggested = useMemo(()=>{ const j=data.job; return [`Supply and install ${String(j.job_type || "metalwork").toLowerCase()} to the agreed site.`, j.dimensions ? `Approximate dimensions: ${j.dimensions}.` : "", j.material ? `Manufactured in ${j.material}.` : "", (j.finishes||[]).length ? `Finish: ${(j.finishes||[]).join(" and ")}${j.colour ? `, ${j.colour}` : ""}.` : "", j.customer_requirements || ""].filter(Boolean).join("\n\n"); },[data]);
+  return <div className="grid gap-5 xl:grid-cols-[1fr_380px]"><Card title="Create quote"><form onSubmit={(e)=>void submit(e)} className="grid gap-4"><div className="grid gap-4 md:grid-cols-2"><Field label="Quote amount"><input name="amount" type="number" min="0" step="0.01" required defaultValue={data.job.quoted_amount ?? ""} className={inputClass} /></Field><Field label="Deposit required"><input name="deposit_amount" type="number" min="0" step="0.01" className={inputClass} /></Field><Field label="Lead time"><input name="lead_time" placeholder="e.g. 4-6 weeks" className={inputClass} /></Field><Field label="Valid until"><input name="valid_until" type="date" className={inputClass} /></Field></div><Field label="Customer-facing scope"><textarea name="scope_text" required defaultValue={suggested} className="min-h-64 w-full rounded-xl border border-black/15 p-3" /></Field><Field label="Exclusions / notes"><textarea name="exclusions" className="min-h-24 w-full rounded-xl border border-black/15 p-3" /></Field><div className="flex flex-wrap gap-2"><Submit>Save new quote version</Submit>{data.quotes[0] && <a href={`/admin/jobs/${reference}/quote/${data.quotes[0].id}`} target="_blank" className="rounded-xl border border-black/15 px-4 py-2.5 text-sm font-bold">Open latest printable quote</a>}</div></form></Card><Card title="Quote history">{data.quotes.length===0 ? <p className="text-sm text-black/50">No quote versions yet.</p> : <div className="space-y-3">{data.quotes.map((q:any)=><div key={q.id} className="rounded-xl border border-black/10 p-3"><div className="flex justify-between gap-3"><b>Version {q.version}</b><b>{money(q.amount)}</b></div><p className="mt-1 text-xs text-black/45">{new Date(q.created_at).toLocaleString("en-GB")} · {q.status}</p><a href={`/admin/jobs/${reference}/quote/${q.id}`} target="_blank" className="mt-2 inline-block text-sm font-black text-[#e66a24]">Open / print PDF</a></div>)}</div>}</Card></div>;
 }
 
-function Overview() {
-  return (
-    <div className="grid gap-5 xl:grid-cols-3">
-      <Card title="Customer" className="xl:col-span-1">
-        <div className="space-y-3"><Input label="First name" value="Example" /><Input label="Surname" value="Customer" /><Input label="Phone" /><Input label="Email" /><Input label="Site address" value="North West London" /><Input label="Postcode" value="NW11" /></div>
-        <button className="mt-4 text-sm font-black text-[#e66a24]">View customer history</button>
-      </Card>
-      <Card title="Job details" className="xl:col-span-2">
-        <div className="grid gap-4 md:grid-cols-2"><Input label="Job type" value="Fencing" /><Input label="Managed by" value="Jonathan" /><Input label="Dimensions" value="40m" /><Input label="Material" value="Mild steel" /><Input label="Colour / RAL" value="Black" /><Input label="Enquiry source" value="WhatsApp" /></div>
-        <div className="mt-5"><p className="mb-2 text-xs font-bold uppercase tracking-[0.06em] text-black/45">Finish</p><div className="flex flex-wrap gap-2">{FINISH_TYPES.slice(0, 6).map((finish) => <label key={finish} className="rounded-full border border-black/15 px-3 py-2 text-xs font-bold"><input type="checkbox" className="mr-2" defaultChecked={finish === "Galvanised" || finish === "Powder coated"} />{finish}</label>)}</div></div>
-        <label className="mt-5 block"><span className="mb-1.5 block text-xs font-bold uppercase tracking-[0.06em] text-black/45">Customer requirements</span><textarea className="min-h-28 w-full rounded-xl border border-black/15 p-3" defaultValue="40m palisade fencing including 3 pedestrian gates and a double-leaf swing driveway gate." /></label>
-        <label className="mt-4 block"><span className="mb-1.5 block text-xs font-bold uppercase tracking-[0.06em] text-black/45">Internal notes</span><textarea className="min-h-28 w-full rounded-xl border border-black/15 p-3" placeholder="Pricing, measurements, fabricator notes and anything customer should not see." /></label>
-      </Card>
-      <Card title="Site visit">
-        <div className="space-y-3"><Input label="Required" value="Yes" /><Input label="Booked" value="11 Sep 2026, 11:00" /><Input label="Completed" value="11 Sep 2026, 12:10" /><Input label="Attended by" value="Jonathan" /></div>
-      </Card>
-      <Card title="Scheduling">
-        <div className="space-y-3"><Input label="Installation date" /><Input label="Expected completion" /><Input label="Materials ordered" value="Yes" /><Input label="Fabricator / installer" /></div>
-      </Card>
-      <Card title="Next action">
-        <Input label="Action" value="Complete installation and upload after photos" /><div className="mt-3"><Input label="Due date / time" value="17 Sep 2026, 09:00" /></div><div className="mt-3"><Input label="Assigned to" value="Jonathan" /></div>
-      </Card>
-    </div>
-  );
+function Costs({ data, agreed, received, balance, grossProfit, onAction }: { data:Bundle; agreed:number; received:number; balance:number; grossProfit:number; onAction:(p:any)=>Promise<any> }) {
+  async function payment(e:FormEvent<HTMLFormElement>){e.preventDefault();const fd=new FormData(e.currentTarget);await onAction({type:"payment",direction:text(fd,"direction"),payment_type:text(fd,"payment_type"),amount:num(fd,"amount"),payment_method:text(fd,"payment_method"),counterparty:text(fd,"counterparty"),paid_at:iso(fd.get("paid_at")),due_at:iso(fd.get("due_at")),notes:text(fd,"notes")});e.currentTarget.reset();}
+  async function cost(e:FormEvent<HTMLFormElement>){e.preventDefault();const fd=new FormData(e.currentTarget);await onAction({type:"cost",category:text(fd,"category"),supplier:text(fd,"supplier"),estimated_amount:num(fd,"estimated_amount"),actual_amount:num(fd,"actual_amount"),notes:text(fd,"notes")});e.currentTarget.reset();}
+  async function material(e:FormEvent<HTMLFormElement>){e.preventDefault();const fd=new FormData(e.currentTarget);await onAction({type:"material_order",supplier_name:text(fd,"supplier_name"),description:text(fd,"description"),amount:num(fd,"amount"),ordered_at:iso(fd.get("ordered_at")),expected_at:iso(fd.get("expected_at")),notes:text(fd,"notes")});e.currentTarget.reset();}
+  return <div className="grid gap-5 xl:grid-cols-2"><Card title="Customer payments"><div className="mb-4 grid grid-cols-3 gap-2 text-center"><Stat label="Agreed" value={money(agreed)}/><Stat label="Received" value={money(received)}/><Stat label="Outstanding" value={money(balance)}/></div><form onSubmit={(e)=>void payment(e)} className="grid gap-3 md:grid-cols-2"><Field label="Direction"><select name="direction" className={inputClass}><option value="customer_in">Customer payment in</option><option value="subcontractor_out">Subcontractor payment out</option><option value="supplier_out">Supplier payment out</option></select></Field><Field label="Type"><select name="payment_type" className={inputClass}><option>Deposit</option><option>Part payment</option><option>Final payment</option><option>Refund</option><option>Other</option></select></Field><Field label="Amount"><input name="amount" type="number" min="0" step="0.01" required className={inputClass}/></Field><Field label="Method"><select name="payment_method" className={inputClass}><option>Bank transfer</option><option>Cash</option><option>Card</option><option>Other</option></select></Field><Field label="Paid date"><input name="paid_at" type="datetime-local" className={inputClass}/></Field><Field label="Due date"><input name="due_at" type="datetime-local" className={inputClass}/></Field><Field label="Counterparty"><input name="counterparty" className={inputClass}/></Field><Field label="Notes"><input name="notes" className={inputClass}/></Field><Submit>Add payment</Submit></form><div className="mt-5 space-y-2">{data.payments.map((p:any)=><div key={p.id} className="flex justify-between gap-3 rounded-lg bg-[#f5f5f2] p-3 text-sm"><span>{p.payment_type} · {p.payment_method || ""}{p.paid_at ? ` · ${new Date(p.paid_at).toLocaleDateString("en-GB")}` : " · unpaid/due"}</span><b>{p.direction==="customer_in"?"+":"-"}{money(p.amount)}</b></div>)}</div></Card>
+    <Card title="Job costs & gross profit"><div className="mb-4 rounded-xl bg-[#f5f5f2] p-4"><p className="text-sm text-black/45">Current gross profit</p><p className="mt-1 text-2xl font-black">{money(grossProfit)}</p></div><form onSubmit={(e)=>void cost(e)} className="grid gap-3 md:grid-cols-2"><Field label="Category"><select name="category" className={inputClass}><option>Materials</option><option>Fabrication</option><option>Installation</option><option>Automation equipment</option><option>Transport</option><option>Galvanising</option><option>Powder coating</option><option>Other</option></select></Field><Field label="Supplier"><input name="supplier" className={inputClass}/></Field><Field label="Estimated"><input name="estimated_amount" type="number" step="0.01" min="0" className={inputClass}/></Field><Field label="Actual"><input name="actual_amount" type="number" step="0.01" min="0" className={inputClass}/></Field><Field label="Notes" wide><input name="notes" className={inputClass}/></Field><Submit>Add cost</Submit></form><div className="mt-5 space-y-2">{data.costs.map((x:any)=><div key={x.id} className="flex justify-between rounded-lg bg-[#f5f5f2] p-3 text-sm"><span>{x.category}{x.supplier ? ` · ${x.supplier}` : ""}</span><b>{money(x.actual_amount ?? x.estimated_amount)}</b></div>)}</div></Card>
+    <Card title="Materials / supplier orders" className="xl:col-span-2"><form onSubmit={(e)=>void material(e)} className="grid gap-3 md:grid-cols-3"><Field label="Supplier"><input name="supplier_name" className={inputClass}/></Field><Field label="Description"><input name="description" required className={inputClass}/></Field><Field label="Amount"><input name="amount" type="number" step="0.01" min="0" className={inputClass}/></Field><Field label="Ordered"><input name="ordered_at" type="datetime-local" className={inputClass}/></Field><Field label="Expected"><input name="expected_at" type="datetime-local" className={inputClass}/></Field><Field label="Notes"><input name="notes" className={inputClass}/></Field><Submit>Add material order</Submit></form><div className="mt-5 grid gap-2 md:grid-cols-2">{data.materialOrders.map((o:any)=><div key={o.id} className="rounded-xl border border-black/10 p-3"><div className="flex justify-between"><b>{o.description}</b><b>{o.amount ? money(o.amount) : ""}</b></div><p className="mt-1 text-sm text-black/50">{o.supplier_name || "Supplier TBC"} · {o.status}</p></div>)}</div></Card></div>;
+}
+function Stat({label,value}:{label:string;value:string}){return <div className="rounded-lg bg-[#f5f5f2] p-3"><p className="text-xs text-black/45">{label}</p><p className="mt-1 font-black">{value}</p></div>}
+
+function Files({ data, reference, reload }: { data:Bundle; reference:string; reload:()=>Promise<void> }) {
+  const [busy,setBusy]=useState(false); const [error,setError]=useState("");
+  async function upload(e:FormEvent<HTMLFormElement>){e.preventDefault();setBusy(true);setError("");const fd=new FormData(e.currentTarget);const res=await fetch(`/api/admin/jobs/${reference}/files`,{method:"POST",body:fd});const body=await res.json();if(!res.ok)setError(body.error||"Upload failed");else{e.currentTarget.reset();await reload();}setBusy(false);}
+  async function remove(id:string){if(!confirm("Delete this file?"))return;const res=await fetch(`/api/admin/jobs/${reference}/files?id=${encodeURIComponent(id)}`,{method:"DELETE"});if(res.ok)await reload();}
+  return <Card title="Photos & files"><form onSubmit={(e)=>void upload(e)} className="grid gap-3 rounded-2xl border-2 border-dashed border-black/15 p-5 md:grid-cols-[1fr_220px_auto_auto]"><input name="file" type="file" required className="text-sm"/><select name="category" className={inputClass}><option>before</option><option>site-survey</option><option>drawing</option><option>quote</option><option>fabrication</option><option>installation</option><option>after</option><option>invoice</option><option>other</option></select><label className="flex items-center text-sm font-bold"><input name="include_in_quote" value="true" type="checkbox" className="mr-2"/>Quote photo</label><button disabled={busy} className="rounded-xl bg-[#141414] px-4 py-2 text-sm font-black text-white disabled:opacity-50">{busy?"Uploading...":"Upload"}</button></form>{error&&<p className="mt-3 text-sm text-red-700">{error}</p>}<div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{data.files.map((f:any)=><div key={f.id} className="rounded-xl border border-black/10 p-3"><p className="truncate font-bold">{f.file_name}</p><p className="mt-1 text-xs uppercase text-black/45">{f.category}{f.include_in_quote?" · included in quote":""}</p><div className="mt-3 flex gap-3">{f.signed_url&&<a href={f.signed_url} target="_blank" className="text-sm font-black text-[#e66a24]">Open</a>}<button onClick={()=>void remove(f.id)} className="text-sm font-bold text-red-700">Delete</button></div></div>)}</div>{data.files.length===0&&<p className="mt-5 text-sm text-black/50">No files uploaded yet.</p>}</Card>;
 }
 
-function Activity() {
-  return <Card title="Activity timeline"><div className="space-y-3">{[
-    ["16 Sep, 12:00", "Jonathan", "Job updated", "Materials confirmed on site."],
-    ["15 Sep, 16:20", "Mark", "WhatsApp follow-up", "Customer confirmed access arrangements."],
-    ["11 Sep, 12:10", "Jonathan", "Site visit completed", "Measurements and site photos added."],
-  ].map(([date, actor, title, note]) => <div key={date + title} className="grid gap-1 rounded-xl border border-black/10 p-4 sm:grid-cols-[150px_110px_1fr]"><span className="text-sm text-black/45">{date}</span><span className="text-sm font-black">{actor}</span><div><p className="font-bold">{title}</p><p className="mt-1 text-sm text-black/55">{note}</p></div></div>)}</div><button className="mt-4 rounded-xl bg-[#141414] px-4 py-2.5 text-sm font-black text-white">+ Log follow-up</button></Card>;
-}
-
-function Quote() {
-  return <div className="grid gap-5 xl:grid-cols-3"><Card title="Quote builder" className="xl:col-span-2"><div className="grid gap-4 md:grid-cols-2"><Input label="Quote amount" /><Input label="Deposit required" /><Input label="Lead time" /><Input label="Valid until" /></div><label className="mt-4 block"><span className="mb-1.5 block text-xs font-bold uppercase tracking-[0.06em] text-black/45">Scope of works</span><textarea className="min-h-48 w-full rounded-xl border border-black/15 p-3" placeholder="AI-generated customer-facing scope will be editable here before PDF creation." /></label><div className="mt-4 flex flex-wrap gap-2"><button className="rounded-xl border border-black/15 px-4 py-2.5 text-sm font-bold">Generate wording with AI</button><button className="rounded-xl bg-[#e66a24] px-4 py-2.5 text-sm font-black text-white">Generate PDF</button></div></Card><Card title="Quote history"><p className="text-sm text-black/50">No quote versions yet.</p><p className="mt-4 text-xs leading-5 text-black/45">Each revision will keep its own PDF and sent date.</p></Card></div>;
-}
-
-function Costs() {
-  return <div className="grid gap-5 xl:grid-cols-2"><Card title="Customer payments"><div className="grid gap-4 md:grid-cols-2"><Input label="Agreed price" /><Input label="Payment method" /><Input label="Deposit required" /><Input label="Deposit received" /><Input label="Final payment received" /><Input label="Balance outstanding" /></div><button className="mt-4 rounded-xl bg-[#141414] px-4 py-2.5 text-sm font-black text-white">+ Add payment</button></Card><Card title="Job costs and margin"><div className="grid gap-4 md:grid-cols-2"><Input label="Materials" /><Input label="Fabrication" /><Input label="Installation" /><Input label="Powder coat / galvanising" /><Input label="Transport" /><Input label="Other costs" /></div><div className="mt-5 rounded-xl bg-[#f5f5f2] p-4"><p className="text-sm text-black/45">Estimated gross profit</p><p className="mt-1 text-2xl font-black">£TBC</p></div></Card></div>;
-}
-
-function Files() {
-  return <Card title="Photos & files"><div className="rounded-2xl border-2 border-dashed border-black/15 p-10 text-center"><p className="font-black">Drop photos, drawings or PDFs here</p><p className="mt-2 text-sm text-black/50">Before, survey, drawing, fabrication, installation and after categories will be available.</p><button className="mt-4 rounded-xl border border-black/15 px-4 py-2.5 text-sm font-bold">Choose files</button></div></Card>;
-}
-
-function Subcontractors() {
-  return <div className="grid gap-5 xl:grid-cols-2"><Card title="Assigned subcontractors"><p className="text-sm text-black/50">No subcontractor assigned yet.</p><button className="mt-4 rounded-xl bg-[#141414] px-4 py-2.5 text-sm font-black text-white">+ Assign subcontractor</button></Card><Card title="Subcontractor payment"><div className="grid gap-4 md:grid-cols-2"><Input label="Agreed cost" /><Input label="Materials included" /><Input label="Amount paid" /><Input label="Payment method" /><Input label="Paid date / time" /><Input label="Balance due" /></div></Card></div>;
+function Subcontractors({ data, onAction }:{data:Bundle;onAction:(p:any)=>Promise<any>}){
+  async function submit(e:FormEvent<HTMLFormElement>){e.preventDefault();const fd=new FormData(e.currentTarget);const existing=text(fd,"subcontractor_id");await onAction({type:"subcontractor",subcontractor_id:existing,name:existing?null:text(fd,"name"),company:text(fd,"company"),phone:text(fd,"phone"),email:text(fd,"email"),capabilities:text(fd,"capabilities"),scope:text(fd,"scope"),agreed_cost:num(fd,"agreed_cost"),materials_included:fd.get("materials_included")==="on"});e.currentTarget.reset();}
+  const byId=new Map(data.subcontractors.map((s:any)=>[s.id,s]));
+  return <div className="grid gap-5 xl:grid-cols-[420px_1fr]"><Card title="Assign subcontractor"><form onSubmit={(e)=>void submit(e)} className="grid gap-3"><Field label="Existing subcontractor"><select name="subcontractor_id" className={inputClass}><option value="">Add new instead</option>{data.subcontractors.map((s:any)=><option key={s.id} value={s.id}>{s.name}{s.company?` · ${s.company}`:""}</option>)}</select></Field><div className="grid grid-cols-2 gap-3"><Field label="New name"><input name="name" className={inputClass}/></Field><Field label="Company"><input name="company" className={inputClass}/></Field><Field label="Phone"><input name="phone" className={inputClass}/></Field><Field label="Email"><input name="email" type="email" className={inputClass}/></Field></div><Field label="Capability"><input name="capabilities" placeholder="Fabrication, installation, automation..." className={inputClass}/></Field><Field label="Scope on this job"><input name="scope" className={inputClass}/></Field><Field label="Agreed subcontract cost"><input name="agreed_cost" type="number" step="0.01" min="0" className={inputClass}/></Field><label className="text-sm font-bold"><input name="materials_included" type="checkbox" className="mr-2"/>Materials included</label><Submit>Assign</Submit></form></Card><Card title="Assigned subcontractors">{data.assignments.length===0?<p className="text-sm text-black/50">No subcontractor assigned yet.</p>:<div className="space-y-3">{data.assignments.map((a:any)=>{const s=byId.get(a.subcontractor_id) as any;return <div key={a.id} className="rounded-xl border border-black/10 p-4"><div className="flex justify-between gap-3"><div><p className="font-black">{s?.name||"Subcontractor"}</p><p className="mt-1 text-sm text-black/50">{a.scope||"Scope not specified"}</p></div><b>{a.agreed_cost?money(a.agreed_cost):"Cost TBC"}</b></div><p className="mt-2 text-xs text-black/40">Materials {a.materials_included?"included":"not included"}</p></div>})}</div>}</Card></div>;
 }
