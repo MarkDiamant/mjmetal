@@ -16,12 +16,13 @@ export async function GET(request: Request) {
   const archived = url.searchParams.get("archived") === "1";
   const archiveFilter = archived ? "archived_at=not.is.null" : "archived_at=is.null";
 
-  const [jobsResponse, paymentsResponse, assignmentsResponse, peopleResponse, costsResponse] = await Promise.all([
+  const [jobsResponse, paymentsResponse, assignmentsResponse, peopleResponse, costsResponse, xeroInvoicesResponse] = await Promise.all([
     supabaseRequest(`/rest/v1/mj_jobs?${archiveFilter}&select=*,mj_customers(*)&order=sequence_number.asc`, { method: "GET" }, session.token),
     supabaseRequest("/rest/v1/mj_payments?select=id,job_id,direction,payment_type,amount,payment_method,counterparty,paid_at,due_at,notes,created_at&order=created_at.desc", { method: "GET" }, session.token),
     supabaseRequest("/rest/v1/mj_job_subcontractors?select=id,job_id,subcontractor_id,scope,agreed_cost,deposit_amount,paid_amount,status,scheduled_at,completed_at,materials_included,assignment_role&order=created_at.asc", { method: "GET" }, session.token),
     supabaseRequest("/rest/v1/mj_subcontractors?active=eq.true&select=id,name,company,phone,email,capabilities,relationship_type&order=name.asc", { method: "GET" }, session.token),
     supabaseRequest("/rest/v1/mj_job_costs?category=eq.Commission&select=id,job_id,category,supplier,estimated_amount,actual_amount,paid_amount,paid_at,due_at,notes,created_at&order=created_at.asc", { method: "GET" }, session.token),
+    supabaseRequest("/rest/v1/mj_xero_invoices?select=job_id,status", { method: "GET" }, session.token),
   ]);
 
   if (!jobsResponse.ok) return NextResponse.json({ error: "Unable to load jobs" }, { status: 500 });
@@ -30,7 +31,13 @@ export async function GET(request: Request) {
   const assignments = assignmentsResponse.ok ? await assignmentsResponse.json() as Array<Record<string, any>> : [];
   const people = peopleResponse.ok ? await peopleResponse.json() as Array<Record<string, any>> : [];
   const costs = costsResponse.ok ? await costsResponse.json() as Array<Record<string, any>> : [];
+  const xeroInvoices = xeroInvoicesResponse.ok ? await xeroInvoicesResponse.json() as Array<Record<string, any>> : [];
   const personById = new Map(people.map((s) => [s.id, s]));
+  const invoicedJobIds = new Set(
+    xeroInvoices
+      .filter((invoice) => !["DRAFT", "VOIDED", "DELETED"].includes(String(invoice.status || "").toUpperCase()))
+      .map((invoice) => String(invoice.job_id)),
+  );
 
   const paymentsByJob = new Map<string, Array<Record<string, any>>>();
   const paidByJob = new Map<string, number>();
@@ -83,7 +90,9 @@ export async function GET(request: Request) {
     const commissionAgreed = commissions.reduce((sum, c) => sum + Number(c.agreedAmount || 0), 0);
     const commissionPaid = commissions.reduce((sum, c) => sum + Number(c.paidAmount || 0), 0);
     const jobTypes = Array.isArray(job.job_types) && job.job_types.length ? job.job_types : [job.job_type].filter(Boolean);
-    const balanceActive = job.status === "awaiting_final_payment";
+    const stopped = ["declined", "cancelled"].includes(String(job.status));
+    const completedWithFinance = job.status === "completed" && (paid > 0 || invoicedJobIds.has(String(job.id)));
+    const balanceActive = !stopped && (job.status === "awaiting_final_payment" || completedWithFinance);
     const balanceOutstanding = balanceActive ? Math.max(0, value - paid) : 0;
 
     return {
