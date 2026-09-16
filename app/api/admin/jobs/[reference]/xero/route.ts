@@ -60,6 +60,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           body: JSON.stringify({ xero_contact_id: contactId, updated_at: new Date().toISOString() }),
         }, session.token));
       }
+      if (!contactId) throw new Error("Xero contact could not be resolved");
 
       const quotes = await jsonOrError(await supabaseRequest(`/rest/v1/mj_quotes?job_id=eq.${job.id}&select=scope_text&order=version.desc&limit=1`, {}, session.token));
       const description = String(quotes[0]?.scope_text || job.customer_requirements || `${job.job_type} - ${job.reference}`).slice(0, 4000);
