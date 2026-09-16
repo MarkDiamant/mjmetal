@@ -1,4 +1,4 @@
-import CrmDashboard from "@/components/admin/CrmDashboard";
+import CrmDashboardV2 from "@/components/admin/CrmDashboardV2";
 import SetupRequired from "@/components/admin/SetupRequired";
 
 export const dynamic = "force-dynamic";
@@ -10,5 +10,5 @@ export default function AdminPage() {
 
   if (!configured) return <SetupRequired />;
 
-  return <CrmDashboard />;
+  return <CrmDashboardV2 />;
 }
