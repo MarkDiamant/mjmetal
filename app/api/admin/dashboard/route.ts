@@ -6,8 +6,8 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const [activityResponse, auditResponse] = await Promise.all([
-    supabaseRequest("/rest/v1/mj_activities?select=id,job_id,activity_type,actor,summary,details,occurred_at,mj_jobs(reference)&order=occurred_at.desc&limit=20", {}, session.token),
-    supabaseRequest("/rest/v1/mj_audit_events?select=id,job_id,actor,action,entity_type,created_at,mj_jobs(reference)&order=created_at.desc&limit=30", {}, session.token),
+    supabaseRequest("/rest/v1/mj_activities?select=id,job_id,activity_type,actor,summary,details,occurred_at,mj_jobs(reference)&order=occurred_at.desc&limit=100", {}, session.token),
+    supabaseRequest("/rest/v1/mj_audit_events?select=id,job_id,actor,action,entity_type,created_at,mj_jobs(reference)&order=created_at.desc&limit=100", {}, session.token),
   ]);
 
   const manual = activityResponse.ok ? await activityResponse.json() as Array<Record<string, any>> : [];
@@ -36,7 +36,7 @@ export async function GET() {
     })),
   ]
     .sort((a, b) => new Date(b.occurred_at || 0).getTime() - new Date(a.occurred_at || 0).getTime())
-    .slice(0, 20);
+    .slice(0, 100);
 
   return NextResponse.json({ activities, admin: session.admin });
 }
