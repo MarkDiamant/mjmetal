@@ -30,6 +30,7 @@ export type JobType =
   | "Commercial Gate"
   | "Gate Automation"
   | "Railings"
+  | "Pool Mesh Cover"
   | "Window Grille"
   | "Bar Grille Door"
   | "Retractable Security Gate"
@@ -88,6 +89,7 @@ export interface Job {
   phone?: string;
   email?: string;
   jobType: JobType;
+  jobTypes?: JobType[];
   status: JobStatus;
   manager: Manager;
   source: EnquirySource;
