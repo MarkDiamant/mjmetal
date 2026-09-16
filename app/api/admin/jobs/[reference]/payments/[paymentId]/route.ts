@@ -21,6 +21,21 @@ async function audit(token: string, actor: "MD" | "JB", jobId: string, action: s
   }, token);
 }
 
+function assignmentIdFromPayment(payment: Record<string, any>) {
+  if (payment.direction !== "subcontractor_out") return null;
+  const match = String(payment.notes || "").match(/^Assignment\s+([0-9a-f-]+)$/i);
+  return match?.[1] || null;
+}
+
+async function syncAssignmentPaid(token: string, jobId: string, assignmentId: string | null) {
+  if (!assignmentId) return;
+  const payments = await jsonOrError(await supabaseRequest(`/rest/v1/mj_payments?job_id=eq.${jobId}&direction=eq.subcontractor_out&notes=eq.${encodeURIComponent(`Assignment ${assignmentId}`)}&select=amount`, {}, token));
+  const paid = payments.reduce((sum: number, payment: any) => sum + Number(payment.amount || 0), 0);
+  await supabaseRequest(`/rest/v1/mj_job_subcontractors?id=eq.${encodeURIComponent(assignmentId)}&job_id=eq.${jobId}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ paid_amount: paid }),
+  }, token);
+}
+
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ reference: string; paymentId: string }> }) {
   const session = await requireAdminToken();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -40,6 +55,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const updated = await jsonOrError(await supabaseRequest(`/rest/v1/mj_payments?id=eq.${encodeURIComponent(paymentId)}&job_id=eq.${job.id}`, {
       method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify(patch),
     }, session.token));
+    await syncAssignmentPaid(session.token, job.id, assignmentIdFromPayment(updated[0] || existing[0]));
     await audit(session.token, session.admin.initials, job.id, "updated", paymentId, patch);
     return NextResponse.json({ item: updated[0] });
   } catch (error) {
@@ -54,10 +70,12 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
   try {
     const job = await resolveJob(session.token, reference);
     if (!job) return NextResponse.json({ error: "Job not found" }, { status: 404 });
-    const existing = await jsonOrError(await supabaseRequest(`/rest/v1/mj_payments?id=eq.${encodeURIComponent(paymentId)}&job_id=eq.${job.id}&select=id,amount,payment_type,paid_at&limit=1`, {}, session.token));
+    const existing = await jsonOrError(await supabaseRequest(`/rest/v1/mj_payments?id=eq.${encodeURIComponent(paymentId)}&job_id=eq.${job.id}&select=*&limit=1`, {}, session.token));
     if (!existing.length) return NextResponse.json({ error: "Payment not found" }, { status: 404 });
+    const assignmentId = assignmentIdFromPayment(existing[0]);
     const response = await supabaseRequest(`/rest/v1/mj_payments?id=eq.${encodeURIComponent(paymentId)}&job_id=eq.${job.id}`, { method: "DELETE" }, session.token);
     if (!response.ok) throw new Error("Could not delete payment");
+    await syncAssignmentPaid(session.token, job.id, assignmentId);
     await audit(session.token, session.admin.initials, job.id, "deleted", paymentId, existing[0]);
     return NextResponse.json({ ok: true });
   } catch (error) {
