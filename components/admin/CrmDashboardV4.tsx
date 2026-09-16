@@ -22,6 +22,7 @@ function dateLabel(value?: string) {
 
 type JobSummary = {
   reference: string;
+  status?: string;
   subcontractorOutstanding?: number;
 };
 
@@ -38,6 +39,39 @@ function DashboardEnhancer() {
   useEffect(() => {
     let cancelled = false;
     let running = false;
+
+    const applyRowHighlights = (jobs: JobSummary[]) => {
+      const rowButtons = Array.from(
+        document.querySelectorAll<HTMLButtonElement>("button.grid.w-full"),
+      );
+
+      for (const job of jobs) {
+        const row = rowButtons.find(
+          (button) => button.firstElementChild?.textContent?.trim() === job.reference,
+        );
+        if (!row) continue;
+
+        const card = row.parentElement as HTMLElement | null;
+        if (!card) continue;
+
+        if (job.status === "in_progress") {
+          card.style.backgroundColor = "#eff6ff";
+          card.style.borderColor = "#bfdbfe";
+          row.style.backgroundColor = "transparent";
+          card.dataset.workflowHighlight = "in_progress";
+        } else if (job.status === "awaiting_final_payment") {
+          card.style.backgroundColor = "#fffbeb";
+          card.style.borderColor = "#fde68a";
+          row.style.backgroundColor = "transparent";
+          card.dataset.workflowHighlight = "awaiting_final_payment";
+        } else if (card.dataset.workflowHighlight) {
+          card.style.removeProperty("background-color");
+          card.style.removeProperty("border-color");
+          row.style.removeProperty("background-color");
+          delete card.dataset.workflowHighlight;
+        }
+      }
+    };
 
     const applyDueLines = (jobs: JobSummary[]) => {
       const rowButtons = Array.from(
@@ -211,6 +245,7 @@ function DashboardEnhancer() {
         if (!response.ok || cancelled) return;
         const body = await response.json();
         const jobs = (body.jobs || []) as JobSummary[];
+        applyRowHighlights(jobs);
         applyDueLines(jobs);
 
         const headings = Array.from(document.querySelectorAll<HTMLHeadingElement>("h2"));
