@@ -9,6 +9,8 @@ function money(value: number | string | null | undefined) {
 export default function QuotePrint({ reference, quoteId }: { reference: string; quoteId: string }) {
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sentMessage, setSentMessage] = useState("");
   useEffect(() => {
     fetch(`/api/admin/jobs/${encodeURIComponent(reference)}`, { cache: "no-store" }).then(async (res) => {
       if (res.status === 401) { window.location.href = "/admin/login"; return; }
@@ -35,10 +37,27 @@ export default function QuotePrint({ reference, quoteId }: { reference: string; 
     alert("WhatsApp message copied. Attach the saved PDF when sending.");
   }
 
+  async function sendQuote() {
+    if (!c.email) { alert("Add the customer's email address to the job first."); return; }
+    if (!window.confirm(`Send quotation ${j.reference} V${quote.version} to ${c.email}?`)) return;
+    setSending(true); setSentMessage("");
+    const response = await fetch(`/api/admin/jobs/${encodeURIComponent(reference)}/send-quote`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ quoteId: quote.id }),
+    });
+    const body = await response.json().catch(() => ({}));
+    setSending(false);
+    if (!response.ok) { alert(body.error || "Unable to send quote"); return; }
+    setSentMessage(`Sent to ${body.sentTo}`);
+  }
+
   return <main className="min-h-screen bg-[#ecece8] py-6 text-[#171717] print:bg-white print:py-0">
     <div className="mx-auto mb-4 flex max-w-[900px] flex-wrap justify-end gap-2 px-4 print:hidden">
+      {sentMessage && <span className="self-center rounded-lg bg-green-50 px-3 py-2 text-sm font-bold text-green-700">{sentMessage}</span>}
       <button onClick={() => window.print()} className="rounded-xl bg-[#e66a24] px-4 py-2.5 text-sm font-black text-white">Print / Save PDF</button>
-      <a href={mailHref} className="rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-bold">Email draft</a>
+      <button onClick={() => void sendQuote()} disabled={sending} className="rounded-xl bg-[#141414] px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">{sending ? "Sending..." : "Send quote by email"}</button>
+      <a href={mailHref} className="rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-bold">Open email draft</a>
       <button onClick={() => void copyWhatsApp()} className="rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-bold">Copy WhatsApp message</button>
       <a href={`/admin/jobs/${reference}`} className="rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-bold">Back to job</a>
     </div>
