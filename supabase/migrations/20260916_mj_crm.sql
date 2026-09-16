@@ -9,6 +9,8 @@ create type public.mj_job_status as enum (
   'awaiting_final_payment','completed','declined'
 );
 
+create sequence public.mj_job_sequence start with 19 increment by 1;
+
 create table public.mj_admin_users (
   user_id uuid primary key references auth.users(id) on delete cascade,
   display_name text not null,
@@ -33,7 +35,7 @@ create table public.mj_customers (
 
 create table public.mj_jobs (
   id uuid primary key default gen_random_uuid(),
-  sequence_number integer not null unique,
+  sequence_number integer not null unique default nextval('public.mj_job_sequence'),
   reference text generated always as ('MJ' || lpad(sequence_number::text, 3, '0')) stored unique,
   customer_id uuid not null references public.mj_customers(id) on delete restrict,
   site_address_line_1 text,
@@ -182,14 +184,6 @@ create index mj_activities_job_time_idx on public.mj_activities(job_id, occurred
 create index mj_payments_job_idx on public.mj_payments(job_id);
 create index mj_files_job_idx on public.mj_files(job_id);
 
-create or replace function public.mj_next_job_sequence()
-returns integer
-language sql
-security invoker
-as $$
-  select greatest(coalesce(max(sequence_number), 17), 17) + 1 from public.mj_jobs;
-$$;
-
 alter table public.mj_admin_users enable row level security;
 alter table public.mj_customers enable row level security;
 alter table public.mj_jobs enable row level security;
@@ -202,6 +196,12 @@ alter table public.mj_quotes enable row level security;
 alter table public.mj_files enable row level security;
 alter table public.mj_integration_events enable row level security;
 
+create policy "MJ user reads own admin row"
+on public.mj_admin_users
+for select
+to authenticated
+using (user_id = (select auth.uid()));
+
 create or replace function public.mj_is_admin()
 returns boolean
 language sql
@@ -209,11 +209,11 @@ stable
 security invoker
 as $$
   select exists (
-    select 1 from public.mj_admin_users where user_id = (select auth.uid())
+    select 1
+    from public.mj_admin_users
+    where user_id = (select auth.uid())
   );
 $$;
-
-create policy "MJ admins read admin users" on public.mj_admin_users for select to authenticated using (public.mj_is_admin());
 
 create policy "MJ admins full customers" on public.mj_customers for all to authenticated using (public.mj_is_admin()) with check (public.mj_is_admin());
 create policy "MJ admins full jobs" on public.mj_jobs for all to authenticated using (public.mj_is_admin()) with check (public.mj_is_admin());
