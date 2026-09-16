@@ -80,7 +80,7 @@ export default function QuotePrint({ reference, quoteId }: { reference: string; 
 
       <section className="mt-9 rounded-2xl bg-[#f5f5f2] p-6"><div className="flex items-end justify-between gap-4"><div><p className="text-xs font-black uppercase tracking-[0.12em] text-black/45">Total quotation</p><p className="mt-2 text-4xl font-black">{money(quote.amount)}</p></div><div className="text-right text-sm leading-6 text-black/60">{quote.deposit_amount && <p><b>Deposit:</b> {money(quote.deposit_amount)}</p>}{quote.lead_time && <p><b>Estimated lead time:</b> {quote.lead_time}</p>}</div></div></section>
 
-      <footer className="mt-12 border-t border-black/15 pt-5 text-xs leading-5 text-black/50"><p className="font-bold text-black/65">M&J METAL LTD</p><p>Company No. 17330239 · 4 Eastville Avenue, London, NW11 0HD</p><p>mjmetal.co.uk</p></footer>
+      <footer className="mt-12 border-t border-black/15 pt-5 text-xs leading-5 text-black/50"><p className="font-bold text-black/65">M&J METAL LTD</p><p>Company No. 17330239 · Office 6, 1st Floor, Sutherland House, 70-78 West Hendon Broadway, London, NW9 7BT</p><p>mjmetal.co.uk</p></footer>
     </article>
   </main>;
 }
