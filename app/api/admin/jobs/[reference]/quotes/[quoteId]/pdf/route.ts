@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdminToken, supabaseRequest } from "@/lib/crm/supabase-server";
 import { buildQuotePdf } from "@/lib/crm/simple-pdf";
 
+const COMPANY_ADDRESS = "Office 6, 1st Floor, Sutherland House, 70-78 West Hendon Broadway, London, NW9 7BT";
+
 async function jsonOrError(response: Response) {
   const body = await response.json().catch(() => null);
   if (!response.ok) throw new Error(body?.message || body?.error_description || body?.hint || "Database request failed");
@@ -55,6 +57,7 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
       amount: Number(quote.amount || 0),
       deposit: quote.deposit_amount === null ? null : Number(quote.deposit_amount),
       leadTime: quote.lead_time,
+      companyAddress: COMPANY_ADDRESS,
     });
 
     const fileName = `${job.reference}-V${quote.version}-quotation.pdf`;
