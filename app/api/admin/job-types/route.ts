@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { requireAdminToken, supabaseRequest } from "@/lib/crm/supabase-server";
 import { JOB_TYPES } from "@/lib/crm/constants";
 
-export async function GET() {
+const hiddenCookie = "mj_hidden_job_types";
+function hiddenFrom(request: Request) { const raw = request.headers.get("cookie")?.match(/(?:^|; )mj_hidden_job_types=([^;]*)/)?.[1]; try { return new Set<string>(JSON.parse(decodeURIComponent(raw || "%5B%5D"))); } catch { return new Set<string>(); } }
+
+export async function GET(request: Request) {
   const session = await requireAdminToken();
   if (!session) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
 
@@ -19,9 +22,24 @@ export async function GET() {
     }
   }
 
+  const hidden = hiddenFrom(request);
   const options = [...counts.entries()]
+    .filter(([name]) => !hidden.has(name))
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "en-GB"));
 
   return NextResponse.json({ options });
+}
+
+
+export async function DELETE(request: Request) {
+  const session = await requireAdminToken();
+  if (!session) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+  const body = await request.json().catch(() => ({}));
+  const name = String(body.name || "").trim();
+  if (!name) return NextResponse.json({ error: "Work type required" }, { status: 400 });
+  const hidden = hiddenFrom(request); hidden.add(name);
+  const response = NextResponse.json({ ok: true });
+  response.cookies.set(hiddenCookie, JSON.stringify([...hidden]), { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 60*60*24*365*5 });
+  return response;
 }
