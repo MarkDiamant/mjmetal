@@ -143,6 +143,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ item: created[0] });
     }
 
+    if (body.type === "cost_summary") {
+      await supabaseRequest(`/rest/v1/mj_job_costs?job_id=eq.${job.id}&category=eq.Job%20total`, { method: "DELETE" }, session.token);
+      if (body.estimated_amount !== null || body.actual_amount !== null) {
+        await jsonOrError(await supabaseRequest("/rest/v1/mj_job_costs", {
+          method: "POST", headers: { Prefer: "return=representation" },
+          body: JSON.stringify({ job_id: job.id, category: "Job total", estimated_amount: body.estimated_amount, actual_amount: body.actual_amount }),
+        }, session.token));
+      }
+      await audit(session.token, session.admin.initials, job.id, "updated", "cost_summary", job.id, body);
+      return NextResponse.json({ ok: true });
+    }
+
     if (body.type === "cost") {
       const paidAmount = body.paid_amount ? Number(body.paid_amount) : 0;
       const created = await jsonOrError(await supabaseRequest("/rest/v1/mj_job_costs", {
