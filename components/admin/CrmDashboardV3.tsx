@@ -91,7 +91,7 @@ export default function CrmDashboardV3() {
       outstanding: realJobs.reduce((s,j)=>s+Number(j.balanceOutstanding||0),0),
       pipeline: pipelineJobs.reduce((s,j)=>s+value(j),0),
       profitToDate: wonJobs.reduce((s,j)=>s+finalProfit(j),0),
-      pipelineProfit: pipelineJobs.reduce((s,j)=>s+finalProfit(j),0),
+      pipelineProfit: pipelineJobs.reduce((s,j)=>s+(j.preliminaryEstimate!=null&&j.estimatedCost!=null?Number(j.preliminaryEstimate)-Number(j.estimatedCost):0),0),
     };
   },[realJobs]);
   const filtered=useMemo(()=>{
