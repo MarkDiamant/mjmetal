@@ -374,7 +374,7 @@ projects.
             className="group mt-5 flex flex-col items-start gap-1 transition hover:opacity-80 sm:mt-0 sm:items-end"
           >
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-neutral-500">
+              <span className="text-[10px] font-medium text-neutral-500">
                 Built by
               </span>
 
