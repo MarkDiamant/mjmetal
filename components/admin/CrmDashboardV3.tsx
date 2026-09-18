@@ -84,14 +84,14 @@ export default function CrmDashboardV3() {
     const value=(j:any)=>Number(j.agreedAmount??j.quotedAmount??j.preliminaryEstimate??0);
     const wonJobs=realJobs.filter(j=>won.has(j.status));
     const pipelineJobs=realJobs.filter(j=>pending.has(j.status));
-    const cost=(j:any)=>Number(j.finalCost??j.estimatedCost??0);
+    const finalProfit=(j:any)=>j.quotedAmount!=null&&j.finalCost!=null?Number(j.quotedAmount)-Number(j.finalCost):0;
     return {
       wonValue: wonJobs.reduce((s,j)=>s+value(j),0),
       received: realJobs.reduce((s,j)=>s+Number(j.amountPaid||0),0),
       outstanding: realJobs.reduce((s,j)=>s+Number(j.balanceOutstanding||0),0),
       pipeline: pipelineJobs.reduce((s,j)=>s+value(j),0),
-      profitToDate: wonJobs.reduce((s,j)=>s+(value(j)-cost(j)),0),
-      pipelineProfit: pipelineJobs.reduce((s,j)=>s+(value(j)-cost(j)),0),
+      profitToDate: wonJobs.reduce((s,j)=>s+finalProfit(j),0),
+      pipelineProfit: pipelineJobs.reduce((s,j)=>s+finalProfit(j),0),
     };
   },[realJobs]);
   const filtered=useMemo(()=>{
