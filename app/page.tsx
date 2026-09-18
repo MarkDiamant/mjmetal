@@ -367,28 +367,7 @@ projects.
             reserved.
           </p>
 
-          <a
-            href="https://diamantsolutions.co.uk"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group mt-5 flex flex-col items-start gap-1 transition hover:opacity-80 sm:mt-0 sm:items-end"
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-medium text-neutral-500">
-                Built by
-              </span>
-
-              <img
-                src="/diamant-solutions-logo.svg"
-                alt="Diamant Solutions"
-                className="h-6 w-auto"
-              />
-            </div>
-
-            <span className="text-xs text-neutral-500">
-              Websites • CRM Systems • Direction
-            </span>
-          </a>
+          <a href="https://diamantsolutions.co.uk" target="_blank" rel="noopener noreferrer" className="builtBy"><span className="builtByLine"><span>Built by</span><img src="/diamant-solutions-logo.svg" alt="Diamant Solutions"/></span><span className="builtByTag">Websites • CRM Systems • Direction</span><strong className="builtByCta">Want something built?</strong></a>
         </div>
       </footer>
     </main>
