@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     supabaseRequest("/rest/v1/mj_payments?select=id,job_id,direction,payment_type,amount,payment_method,counterparty,paid_at,due_at,notes,created_at&order=created_at.desc", { method: "GET" }, session.token),
     supabaseRequest("/rest/v1/mj_job_subcontractors?select=id,job_id,subcontractor_id,scope,agreed_cost,deposit_amount,paid_amount,status,scheduled_at,completed_at,materials_included,assignment_role&order=created_at.asc", { method: "GET" }, session.token),
     supabaseRequest("/rest/v1/mj_subcontractors?active=eq.true&select=id,name,company,phone,email,capabilities,relationship_type&order=name.asc", { method: "GET" }, session.token),
-    supabaseRequest("/rest/v1/mj_job_costs?category=eq.Commission&select=id,job_id,category,supplier,estimated_amount,actual_amount,paid_amount,paid_at,due_at,notes,created_at&order=created_at.asc", { method: "GET" }, session.token),
+    supabaseRequest("/rest/v1/mj_job_costs?select=id,job_id,category,supplier,estimated_amount,actual_amount,paid_amount,paid_at,due_at,notes,created_at&order=created_at.asc", { method: "GET" }, session.token),
     supabaseRequest("/rest/v1/mj_xero_invoices?select=job_id,status", { method: "GET" }, session.token),
   ]);
 
@@ -86,6 +86,7 @@ export async function GET(request: Request) {
     const customerPayments = jobPayments.filter((p) => p.direction === "customer_in");
     const jobAssignments = assignmentsByJob.get(job.id) || [];
     const commissions = commissionsByJob.get(job.id) || [];
+    const jobCostSummary = costs.find((c) => c.job_id === job.id && c.category === "Job total");
     const subAgreed = jobAssignments.filter((a) => a.relationshipType !== "employee").reduce((sum, a) => sum + Number(a.agreedCost || 0), 0);
     const subPaid = jobAssignments.filter((a) => a.relationshipType !== "employee").reduce((sum, a) => sum + Number(a.paidAmount || 0), 0);
     const commissionAgreed = commissions.reduce((sum, c) => sum + Number(c.agreedAmount || 0), 0);
@@ -161,6 +162,8 @@ export async function GET(request: Request) {
       commissionAgreed,
       commissionPaid,
       commissionOutstanding: Math.max(0, commissionAgreed - commissionPaid),
+      estimatedCost: jobCostSummary?.estimated_amount == null ? undefined : Number(jobCostSummary.estimated_amount),
+      finalCost: jobCostSummary?.actual_amount == null ? undefined : Number(jobCostSummary.actual_amount),
       materialsOrdered: job.materials_ordered,
       archivedAt: job.archived_at ?? undefined,
       createdAt: job.created_at,
