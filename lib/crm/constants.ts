@@ -41,7 +41,7 @@ export const STATUS_META: Record<JobStatus, { label: string; order: number; grou
   estimate_sent: { label: "Estimate sent", order: 60, group: "active" },
   quote_preparing: { label: "Preparing quote", order: 70, group: "active" },
   quote_sent: { label: "Quote sent", order: 80, group: "active" },
-  awaiting_customer: { label: "Awaiting customer", order: 90, group: "active" },
+  awaiting_customer: { label: "Awaiting customer decision", order: 90, group: "active" },
   interested_not_ready: { label: "Interested, not ready", order: 100, group: "active" },
   customer_unsure: { label: "Customer unsure", order: 110, group: "active" },
   confirmed: { label: "Confirmed", order: 120, group: "active" },
