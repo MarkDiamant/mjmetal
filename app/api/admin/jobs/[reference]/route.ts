@@ -139,6 +139,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         method: "POST", headers: { Prefer: "return=representation" },
         body: JSON.stringify({ job_id: job.id, direction: body.direction || "customer_in", payment_type: body.payment_type || "payment", amount: Number(body.amount || 0), payment_method: body.payment_method || null, counterparty: body.counterparty || null, paid_at: body.paid_at || null, due_at: body.due_at || null, notes: body.notes || null }),
       }, session.token));
+      if ((body.direction || "customer_in") === "customer_in" && body.paid_at) {
+        const paymentType = String(body.payment_type || "").toLowerCase();
+        const patch: Record<string, unknown> = { updated_at: now };
+        if (paymentType.includes("deposit")) { patch.status = "deposit_paid"; patch.next_action = "Order materials"; }
+        if (paymentType.includes("final") || paymentType.includes("balance")) { patch.status = "completed"; patch.completed_at = body.paid_at || now; patch.next_action = null; patch.next_action_at = null; patch.next_action_assignee = null; }
+        if (Object.keys(patch).length > 1) await supabaseRequest(`/rest/v1/mj_jobs?id=eq.${job.id}`, { method: "PATCH", body: JSON.stringify(patch) }, session.token);
+      }
       await audit(session.token, session.admin.initials, job.id, "created", "payment", created[0]?.id, body);
       return NextResponse.json({ item: created[0] });
     }
@@ -183,7 +190,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         method: "POST", headers: { Prefer: "return=representation" },
         body: JSON.stringify({ job_id: job.id, version, status: body.status || "draft", scope_text: body.scope_text, exclusions: body.exclusions || null, amount: Number(body.amount || 0), deposit_amount: body.deposit_amount ? Number(body.deposit_amount) : null, lead_time: body.lead_time || null, valid_until: body.valid_until || null, created_by: session.admin.initials }),
       }, session.token));
-      await supabaseRequest(`/rest/v1/mj_jobs?id=eq.${job.id}`, { method: "PATCH", body: JSON.stringify({ quoted_amount: Number(body.amount || 0), status: "quote_preparing", updated_at: now }) }, session.token);
+      await supabaseRequest(`/rest/v1/mj_jobs?id=eq.${job.id}`, { method: "PATCH", body: JSON.stringify({ quoted_amount: Number(body.amount || 0), status: "quote_preparing", next_action: "Send quote", updated_at: now }) }, session.token);
       await audit(session.token, session.admin.initials, job.id, "created", "quote", created[0]?.id, { version, amount: body.amount });
       return NextResponse.json({ item: created[0] });
     }
