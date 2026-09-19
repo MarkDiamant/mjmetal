@@ -20,7 +20,7 @@ export default function AdminBrandBar() {
           <img src={config.logoUrl} alt={config.businessName} className="h-10 w-auto shrink-0 object-contain sm:h-12" />
           <div className="min-w-0"><p className="text-xs font-black uppercase tracking-[0.12em] text-[#e66a24] sm:tracking-[0.16em]">{config.businessName}</p><p className="truncate text-xs font-bold text-black/55 sm:text-sm">{config.systemName}</p></div>
         </a>
-        <div className="flex w-full gap-2 sm:w-auto sm:shrink-0"><a href="/admin/archive" className="flex-1 rounded-lg border border-black/10 px-3 py-2 text-center text-xs font-bold sm:flex-none">Archive</a><a href="/admin/integrations" className="flex-1 rounded-lg border border-black/10 px-3 py-2 text-center text-xs font-bold sm:flex-none">Integrations</a><a href="/admin/settings" className="flex-1 rounded-lg border border-black/10 px-3 py-2 text-center text-xs font-bold sm:flex-none">Settings</a></div>
+        <div className="flex w-full gap-2 sm:w-auto sm:shrink-0"><a href="/admin/archive" className="flex-1 rounded-lg border border-black/10 px-3 py-2 text-center text-xs font-bold sm:flex-none">Archive</a><a href="/admin/integrations" className="flex-1 rounded-lg border border-black/10 px-3 py-2 text-center text-xs font-bold sm:flex-none">Integrations</a><a href="/admin/users" className="flex-1 rounded-lg border border-black/10 px-3 py-2 text-center text-xs font-bold sm:flex-none">Users</a><a href="/admin/settings" className="flex-1 rounded-lg border border-black/10 px-3 py-2 text-center text-xs font-bold sm:flex-none">Settings</a></div>
       </div>
     </div>
   );
