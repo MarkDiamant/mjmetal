@@ -39,7 +39,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       });
     }
 
-    const [customers, activities, payments, costs, quotes, files, assignments, subcontractors, materialOrders, auditEvents, suppliers] = await Promise.all([
+    const [customers, activities, payments, costs, quotes, files, assignments, subcontractors, materialOrders, auditEvents, suppliers, xeroInvoices] = await Promise.all([
       jsonOrError(await supabaseRequest(`/rest/v1/mj_customers?id=eq.${job.customer_id}&select=*`, {}, session.token)),
       jsonOrError(await supabaseRequest(`/rest/v1/mj_activities?job_id=eq.${job.id}&select=*&order=occurred_at.desc`, {}, session.token)),
       jsonOrError(await supabaseRequest(`/rest/v1/mj_payments?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)),
@@ -51,6 +51,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       jsonOrError(await supabaseRequest(`/rest/v1/mj_material_orders?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)),
       jsonOrError(await supabaseRequest(`/rest/v1/mj_audit_events?job_id=eq.${job.id}&select=*&order=created_at.desc&limit=100`, {}, session.token)),
       jsonOrError(await supabaseRequest(`/rest/v1/mj_suppliers?active=eq.true&select=*&order=name.asc`, {}, session.token)),
+      jsonOrError(await supabaseRequest(`/rest/v1/mj_xero_invoices?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)),
     ]);
 
     const filesWithUrls = await Promise.all(files.map(async (file: any) => {
@@ -64,7 +65,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     return NextResponse.json({
       job, customer: customers[0] || null, activities, payments, costs, quotes, files: filesWithUrls,
-      assignments, subcontractors, materialOrders, suppliers, auditEvents, currentAdmin: session.admin, _full: true,
+      assignments, subcontractors, materialOrders, suppliers, auditEvents, xeroInvoices, currentAdmin: session.admin, _full: true,
     });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Failed to load job" }, { status: 500 });
