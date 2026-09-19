@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { ROLE_PERMISSIONS, type PermissionKey, type UserRole } from "@/lib/crm/permissions";
 
 const ACCESS_COOKIE = "mj_admin_access";
 const REFRESH_COOKIE = "mj_admin_refresh";
@@ -76,4 +77,12 @@ export async function clearSessionCookies() {
   const store = await cookies();
   store.delete(ACCESS_COOKIE);
   store.delete(REFRESH_COOKIE);
+}
+
+export async function requirePermission(permission: PermissionKey) {
+  const session = await requireAdminToken();
+  if (!session) return null;
+  const role: UserRole = session.admin.initials === "MD" ? "owner" : "admin";
+  if (!ROLE_PERMISSIONS[role].includes(permission)) return null;
+  return { ...session, role, permissions: ROLE_PERMISSIONS[role] };
 }
