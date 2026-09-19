@@ -100,7 +100,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ref
   const sentAt = new Date().toISOString();
   await Promise.all([
     supabaseRequest(`/rest/v1/mj_quotes?id=eq.${encodeURIComponent(quote.id)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ status: "sent", sent_at: sentAt, pdf_path: storagePath }) }, session.token),
-    supabaseRequest(`/rest/v1/mj_jobs?id=eq.${encodeURIComponent(job.id)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ status: "quote_sent", quote_sent_at: sentAt, updated_at: sentAt }) }, session.token),
+    supabaseRequest(`/rest/v1/mj_jobs?id=eq.${encodeURIComponent(job.id)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ status: "quote_sent", quote_sent_at: sentAt, next_action: "Follow up quote", updated_at: sentAt }) }, session.token),
     supabaseRequest("/rest/v1/mj_activities", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ job_id: job.id, activity_type: "email", actor: session.admin.initials, summary: `Quotation V${quote.version} emailed with PDF attachment`, details: customer.email, occurred_at: sentAt }) }, session.token),
     supabaseRequest("/rest/v1/mj_integration_events", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ job_id: job.id, source: "resend", event_type: "quote_sent", payload: { quote_id: quote.id, version: quote.version, to: customer.email, pdf_path: storagePath }, occurred_at: sentAt, processed_at: sentAt }) }, session.token),
   ]);
