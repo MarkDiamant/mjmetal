@@ -16,10 +16,11 @@ export const PERMISSION_LABELS: Record<PermissionKey,string> = {
  manage_subscription:"Manage subscription & billing",
 };
 
-const all=Object.keys(PERMISSION_LABELS) as PermissionKey[];
+export const ALL_PERMISSIONS=Object.keys(PERMISSION_LABELS) as PermissionKey[];
+const all=ALL_PERMISSIONS;
 export const ROLE_PERMISSIONS: Record<UserRole,PermissionKey[]> = {
  owner: all,
- admin: all.filter(x=>x!=="manage_subscription"),
+ admin: all,
  manager: all.filter(x=>!["manage_users","manage_business_settings","manage_subscription"].includes(x)),
  office: ["view_jobs","edit_jobs","view_completed_jobs","view_history","view_customer_details","view_pricing","view_money_overview","view_payments_invoices","view_files","view_workforce"],
  sales: ["view_jobs","edit_jobs","view_completed_jobs","view_history","view_customer_details","view_pricing","view_files"],
@@ -27,4 +28,4 @@ export const ROLE_PERMISSIONS: Record<UserRole,PermissionKey[]> = {
  custom: [],
 };
 export const ROLE_LABELS:Record<UserRole,string>={owner:"Owner",admin:"Admin",manager:"Manager",office:"Office",sales:"Sales",field:"Field / engineer",custom:"Custom"};
-export const USER_PLANS=[{id:"users_1_2",label:"1–2 users",min:1,max:2},{id:"users_3_5",label:"3–5 users",min:3,max:5}] as const;
+
