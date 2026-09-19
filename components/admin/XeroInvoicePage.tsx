@@ -49,7 +49,7 @@ export default function XeroInvoicePage({ reference }: { reference: string }) {
   if (loading && !jobData) return <main className="min-h-screen bg-[#f5f5f2] p-10 text-center">Loading Xero...</main>;
   const job = jobData?.job || {};
   const customer = jobData?.customer || {};
-  const amount = Number(job.agreed_amount ?? job.quoted_amount ?? 0);
+  const amount = Number(job.quoted_amount ?? job.agreed_amount ?? 0);
   const name = [customer.first_name, customer.last_name].filter(Boolean).join(" ") || "Customer";
 
   return <main className="min-h-screen bg-[#f5f5f2] px-5 py-8 text-[#141414]">
@@ -63,7 +63,7 @@ export default function XeroInvoicePage({ reference }: { reference: string }) {
       {message && <p className="mt-5 rounded-xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800">{message}</p>}
 
       <section className="mt-6 rounded-2xl border border-black/10 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
-        <div className="grid gap-4 sm:grid-cols-3"><div><p className="text-xs font-bold uppercase text-black/45">Customer</p><p className="mt-1 font-black">{name}</p></div><div><p className="text-xs font-bold uppercase text-black/45">Job value</p><p className="mt-1 text-xl font-black">{money(amount)}</p></div><div><p className="text-xs font-bold uppercase text-black/45">CRM reference</p><p className="mt-1 font-black text-[#e66a24]">{reference}</p></div></div>
+        <div className="grid gap-4 sm:grid-cols-3"><div><p className="text-xs font-bold uppercase text-black/45">Customer</p><p className="mt-1 font-black">{name}</p></div><div><p className="text-xs font-bold uppercase text-black/45">Job value</p><p className="mt-1 text-xl font-black">{money(amount)}</p><p className="mt-1 text-xs text-black/45">VAT {Number(job.vat_rate||0)}%</p></div><div><p className="text-xs font-bold uppercase text-black/45">CRM reference</p><p className="mt-1 font-black text-[#e66a24]">{reference}</p></div></div>
         <div className="mt-6 flex flex-wrap gap-3">
           {invoices.length === 0 ? <button disabled={busy || amount <= 0} onClick={() => void action("create")} className="rounded-xl bg-[#13b5ea] px-5 py-3 text-sm font-black text-white disabled:opacity-50">Create Xero invoice draft</button> : <button disabled={busy} onClick={() => void action("sync")} className="rounded-xl bg-[#13b5ea] px-5 py-3 text-sm font-black text-white disabled:opacity-50">Sync status from Xero</button>}
         </div>
