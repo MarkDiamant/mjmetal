@@ -1,4 +1,4 @@
-export type CrmModuleKey = "photos" | "workforce" | "commission" | "payments" | "costs" | "finishes" | "siteVisits";
+export type CrmModuleKey = "photos" | "workforce" | "commission" | "payments" | "costs" | "finishes" | "siteVisits" | "scheduling" | "quotes" | "invoices";
 
 export type CrmConfig = {
   businessName: string;
@@ -43,6 +43,9 @@ export const DEFAULT_CRM_CONFIG: CrmConfig = {
     costs: true,
     finishes: true,
     siteVisits: true,
+    scheduling: true,
+    quotes: true,
+    invoices: true,
   },
 };
 
