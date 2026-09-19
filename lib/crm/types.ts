@@ -42,8 +42,7 @@ export type JobType =
   | "Other";
 
 export type FinishType =
-  | "Primed"
-  | "Painted"
+  | "Primed & painted"
   | "Spray painted"
   | "Powder coated"
   | "Galvanised"
