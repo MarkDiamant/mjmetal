@@ -188,9 +188,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       const version = (existing[0]?.version || 0) + 1;
       const created = await jsonOrError(await supabaseRequest("/rest/v1/mj_quotes", {
         method: "POST", headers: { Prefer: "return=representation" },
-        body: JSON.stringify({ job_id: job.id, version, status: body.status || "draft", scope_text: body.scope_text, exclusions: body.exclusions || null, amount: Number(body.amount || 0), deposit_amount: body.deposit_amount ? Number(body.deposit_amount) : null, lead_time: body.lead_time || null, valid_until: body.valid_until || null, created_by: session.admin.initials }),
+        body: JSON.stringify({ job_id: job.id, version, status: body.status || "draft", vat_rate: Number(body.vat_rate || 0), scope_text: body.scope_text, exclusions: body.exclusions || null, amount: Number(body.amount || 0), deposit_amount: body.deposit_amount ? Number(body.deposit_amount) : null, lead_time: body.lead_time || null, valid_until: body.valid_until || null, created_by: session.admin.initials }),
       }, session.token));
-      await supabaseRequest(`/rest/v1/mj_jobs?id=eq.${job.id}`, { method: "PATCH", body: JSON.stringify({ quoted_amount: Number(body.amount || 0), status: "quote_preparing", next_action: "Send quote", updated_at: now }) }, session.token);
+      await supabaseRequest(`/rest/v1/mj_jobs?id=eq.${job.id}`, { method: "PATCH", body: JSON.stringify({ quoted_amount: Number(body.amount || 0), vat_rate: Number(body.vat_rate || 0), status: "quote_preparing", next_action: "Send quote", updated_at: now }) }, session.token);
       await audit(session.token, session.admin.initials, job.id, "created", "quote", created[0]?.id, { version, amount: body.amount });
       return NextResponse.json({ item: created[0] });
     }
