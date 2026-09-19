@@ -13,7 +13,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
   openGraph: { title: "M&J Metal", description: "Bespoke metal gates, railings and security metalwork across London.", url: "https://mjmetal.co.uk", siteName: "M&J Metal Ltd", locale: "en_GB", type: "website", images: [{ url: "/og-image.jpg", width: 1200, height: 630, alt: "M&J Metal" }] },
   twitter: { card: "summary_large_image", title: "M&J Metal", description: "Bespoke metal gates, railings and security metalwork across London.", images: ["/og-image.jpg"] },
-  icons: { icon: "/favicon.png", shortcut: "/favicon.png", apple: "/apple-touch-icon.png" },
+  manifest: "/manifest.webmanifest",
+  icons: { icon: "/images/logo.png", shortcut: "/images/logo.png", apple: "/images/logo.png" },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
