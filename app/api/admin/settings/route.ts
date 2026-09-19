@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdminToken, supabaseRequest } from "@/lib/crm/supabase-server";
+import { requirePermission, supabaseRequest } from "@/lib/crm/supabase-server";
 import { DEFAULT_CRM_CONFIG, normaliseCrmConfig } from "@/lib/crm/config";
 
 const SETTINGS_PATH = "_crm/settings.json";
@@ -23,13 +23,13 @@ async function writeSettings(token: string, settings: unknown) {
 }
 
 export async function GET() {
-  const session = await requireAdminToken();
+  const session = await requirePermission("manage_business_settings");
   if (!session) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   return NextResponse.json({ settings: await readSettings(session.token) });
 }
 
 export async function PUT(request: NextRequest) {
-  const session = await requireAdminToken();
+  const session = await requirePermission("manage_business_settings");
   if (!session) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   const settings = normaliseCrmConfig(await request.json().catch(() => ({})));
   const saved = await writeSettings(session.token, settings);
@@ -38,7 +38,7 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const session = await requireAdminToken();
+  const session = await requirePermission("manage_business_settings");
   if (!session) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   const form = await request.formData();
   const file = form.get("logo");
