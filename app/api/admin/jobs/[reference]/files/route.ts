@@ -49,6 +49,31 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   return NextResponse.json({ item: rows[0] });
 }
 
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ reference: string }> }) {
+  const session = await requireAdminToken();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { reference } = await params;
+  const body = await request.json();
+  if (!body.id) return NextResponse.json({ error: "Missing file id" }, { status: 400 });
+
+  const jobResponse = await supabaseRequest(`/rest/v1/mj_jobs?reference=eq.${encodeURIComponent(reference)}&select=id&limit=1`, {}, session.token);
+  const jobs = jobResponse.ok ? await jobResponse.json() : [];
+  const job = jobs[0];
+  if (!job) return NextResponse.json({ error: "Job not found" }, { status: 404 });
+
+  const update = await supabaseRequest(`/rest/v1/mj_files?id=eq.${encodeURIComponent(body.id)}&job_id=eq.${job.id}`, {
+    method: "PATCH", headers: { Prefer: "return=representation" },
+    body: JSON.stringify({ include_in_quote: Boolean(body.include_in_quote) }),
+  }, session.token);
+  if (!update.ok) return NextResponse.json({ error: "Could not update file" }, { status: 500 });
+  const rows = await update.json();
+  await supabaseRequest("/rest/v1/mj_audit_events", {
+    method: "POST", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ job_id: job.id, actor: session.admin.initials, action: "updated", entity_type: "file", entity_id: body.id, changes: { include_in_quote: Boolean(body.include_in_quote) } }),
+  }, session.token);
+  return NextResponse.json({ item: rows[0] });
+}
+
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ reference: string }> }) {
   const session = await requireAdminToken();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
