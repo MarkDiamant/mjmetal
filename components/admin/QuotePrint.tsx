@@ -27,7 +27,7 @@ export default function QuotePrint({ reference, quoteId }: { reference: string; 
   const j = data.job, c = data.customer || {};
   const name = [c.first_name, c.last_name].filter(Boolean).join(" ");
   const site = [j.site_address_line_1 || c.address_line_1, j.site_address_line_2 || c.address_line_2, j.site_city || c.city, j.site_postcode || c.postcode].filter(Boolean).join(", ");
-  const photos = (data.files || []).filter((f: any) => f.include_in_quote && f.signed_url && String(f.mime_type || "").startsWith("image/")).slice(0, 2);
+  const photos = (data.files || []).filter((f: any) => f.include_in_quote && f.signed_url && String(f.mime_type || "").startsWith("image/")).slice(0, 3);
   const message = `Hi ${c.first_name || ""},\n\nPlease find our quotation ${j.reference} for ${String(j.job_type || "metalwork").toLowerCase()} at ${site}.\n\nQuotation: ${money(quote.amount)}\n\nKind regards,\nM&J Metal`;
   const mailSubject = `M&J Metal quotation ${j.reference}`;
   const mailHref = `mailto:${encodeURIComponent(c.email || "")}?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(message)}`;
@@ -53,6 +53,7 @@ export default function QuotePrint({ reference, quoteId }: { reference: string; 
   }
 
   return <main className="min-h-screen bg-[#ecece8] py-6 text-[#171717] print:bg-white print:py-0">
+    <style>{`@media print { @page { size: A4; margin: 0; } .quote-page { width: 210mm; min-height: 297mm; box-shadow: none !important; break-after: page; page-break-after: always; } .quote-page:last-child { break-after: auto; page-break-after: auto; } }`}</style>
     <div className="mx-auto mb-4 flex max-w-[900px] flex-wrap justify-end gap-2 px-4 print:hidden">
       {sentMessage && <span className="self-center rounded-lg bg-green-50 px-3 py-2 text-sm font-bold text-green-700">{sentMessage}</span>}
       <button onClick={() => window.print()} className="rounded-xl bg-[#e66a24] px-4 py-2.5 text-sm font-black text-white">Print / Save PDF</button>
@@ -62,25 +63,39 @@ export default function QuotePrint({ reference, quoteId }: { reference: string; 
       <a href={`/admin/jobs/${reference}`} className="rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-bold">Back to job</a>
     </div>
 
-    <article className="mx-auto min-h-[1120px] max-w-[900px] bg-white px-10 py-10 shadow-xl print:min-h-0 print:max-w-none print:shadow-none sm:px-14">
-      <header className="flex items-start justify-between gap-8 border-b-4 border-[#e66a24] pb-6">
-        <div><img src="/images/logo.png" alt="M&J Metal" className="h-20 w-auto object-contain" /><p className="mt-3 text-sm font-semibold text-black/55">Bespoke Gates & Metalwork</p></div>
-        <div className="text-right"><h1 className="text-3xl font-black uppercase tracking-tight">Quotation</h1><p className="mt-2 text-lg font-black text-[#e66a24]">{j.reference} / V{quote.version}</p><p className="mt-1 text-sm text-black/55">Date: {new Date(quote.created_at).toLocaleDateString("en-GB")}</p>{quote.valid_until && <p className="text-sm text-black/55">Valid until: {new Date(`${quote.valid_until}T12:00:00`).toLocaleDateString("en-GB")}</p>}</div>
+    <article className="quote-page mx-auto flex min-h-[1120px] max-w-[900px] flex-col bg-white px-10 py-9 shadow-xl sm:px-14">
+      <header className="flex items-start justify-between gap-8 border-b-4 border-[#e66a24] pb-5">
+        <div><img src="/images/logo.png" alt="M&J Metal" className="h-20 w-auto object-contain" /></div>
+        <div className="text-right"><h1 className="text-3xl font-black uppercase tracking-tight">Quotation</h1><p className="mt-1 text-lg font-black text-[#e66a24]">{j.reference} / V{quote.version}</p><p className="mt-1 text-xs text-black/55">Issued {new Date(quote.created_at).toLocaleDateString("en-GB")}{quote.valid_until ? ` · Valid until ${new Date(`${quote.valid_until}T12:00:00`).toLocaleDateString("en-GB")}` : ""}</p></div>
       </header>
 
-      <section className="mt-8 grid gap-8 sm:grid-cols-2">
-        <div><p className="text-xs font-black uppercase tracking-[0.12em] text-[#e66a24]">Prepared for</p><p className="mt-2 text-xl font-black">{name}</p>{site && <p className="mt-2 leading-6 text-black/65">{site}</p>}{c.phone && <p className="mt-1 text-black/60">{c.phone}</p>}{c.email && <p className="text-black/60">{c.email}</p>}</div>
-        <div><p className="text-xs font-black uppercase tracking-[0.12em] text-[#e66a24]">Project</p><p className="mt-2 text-xl font-black">{j.job_type}</p>{j.dimensions && <p className="mt-2 text-black/65">Approx. dimensions: {j.dimensions}</p>}{j.material && <p className="text-black/65">Material: {j.material}</p>}{(j.finishes || []).length > 0 && <p className="text-black/65">Finish: {(j.finishes || []).join(" + ")}{j.colour ? `, ${j.colour}` : ""}</p>}{j.customer_reference && <p className="mt-1 text-black/65">Customer reference: {j.customer_reference}</p>}</div>
+      <section className="mt-6 grid gap-6 sm:grid-cols-2">
+        <div><p className="text-[10px] font-black uppercase tracking-[0.12em] text-[#e66a24]">Client</p><p className="mt-1 text-lg font-black">{name}</p>{site && <p className="mt-1 text-sm leading-5 text-black/65">{site}</p>}{c.phone && <p className="mt-1 text-xs text-black/55">{c.phone}</p>}{c.email && <p className="text-xs text-black/55">{c.email}</p>}</div>
+        <div><p className="text-[10px] font-black uppercase tracking-[0.12em] text-[#e66a24]">Project</p><p className="mt-1 text-lg font-black">{j.job_type}</p>{j.dimensions && <p className="mt-1 text-sm text-black/65">Approx. dimensions: {j.dimensions}</p>}{j.material && <p className="text-sm text-black/65">Material: {j.material}</p>}{(j.finishes || []).length > 0 && <p className="text-sm text-black/65">Finish: {(j.finishes || []).join(" + ")}{j.colour ? `, ${j.colour}` : ""}</p>}</div>
       </section>
 
-      <section className="mt-9"><h2 className="border-b border-black/15 pb-2 text-lg font-black">Scope of works</h2><div className="mt-4 whitespace-pre-wrap leading-7 text-black/75">{quote.scope_text}</div></section>
-      {quote.exclusions && <section className="mt-7"><h2 className="border-b border-black/15 pb-2 text-lg font-black">Notes / exclusions</h2><div className="mt-4 whitespace-pre-wrap leading-7 text-black/70">{quote.exclusions}</div></section>}
+      <section className="mt-6"><h2 className="border-b border-black/15 pb-1.5 text-base font-black">Scope of works</h2><div className="mt-3 whitespace-pre-wrap text-[14px] leading-6 text-black/75">{quote.scope_text}</div></section>
 
-      {photos.length > 0 && <section className="mt-8"><h2 className="mb-4 border-b border-black/15 pb-2 text-lg font-black">Site photos</h2><div className="grid grid-cols-2 gap-4">{photos.map((f: any) => <img key={f.id} src={f.signed_url} alt={f.file_name} className="h-64 w-full rounded-xl border border-black/10 object-cover" />)}</div></section>}
+      {photos.length > 0 && <section className="mt-6"><div className={`grid gap-3 ${photos.length===1?"grid-cols-1":photos.length===2?"grid-cols-2":"grid-cols-3"}`}>{photos.map((f: any) => <img key={f.id} src={f.signed_url} alt={f.file_name} className="h-48 w-full rounded-lg border border-black/10 object-cover" />)}</div></section>}
 
-      <section className="mt-9 rounded-2xl bg-[#f5f5f2] p-6"><div className="flex items-end justify-between gap-4"><div><p className="text-xs font-black uppercase tracking-[0.12em] text-black/45">Total quotation</p><p className="mt-2 text-4xl font-black">{money(quote.amount)}</p></div><div className="text-right text-sm leading-6 text-black/60">{quote.deposit_amount && <p><b>Deposit:</b> {money(quote.deposit_amount)}</p>}{quote.lead_time && <p><b>Estimated lead time:</b> {quote.lead_time}</p>}</div></div></section>
+      <section className="mt-auto rounded-xl bg-[#f5f5f2] p-5"><div className="flex items-end justify-between gap-4"><div><p className="text-[10px] font-black uppercase tracking-[0.12em] text-black/45">Quotation total</p><p className="mt-1 text-3xl font-black">{money(quote.amount)}</p><p className="mt-1 text-[10px] text-black/45">No VAT charged</p></div><div className="text-right text-sm leading-5 text-black/60">{quote.deposit_amount && <p><b>Deposit:</b> {money(quote.deposit_amount)}</p>}{quote.lead_time && <p><b>Estimated lead time:</b> {quote.lead_time}</p>}</div></div></section>
+      <footer className="mt-4 text-[10px] leading-4 text-black/45">M&J Metal Ltd · Company No. 17330239 · 020 3284 5045 · info@mjmetal.co.uk · mjmetal.co.uk</footer>
+    </article>
 
-      <footer className="mt-12 border-t border-black/15 pt-5 text-xs leading-5 text-black/50"><p className="font-bold text-black/65">M&J METAL LTD</p><p>Company No. 17330239 · Office 6, 1st Floor, Sutherland House, 70-78 West Hendon Broadway, London, NW9 7BT</p><p>mjmetal.co.uk</p></footer>
+    <article className="quote-page mx-auto mt-6 flex min-h-[1120px] max-w-[900px] flex-col bg-white px-10 py-9 shadow-xl print:mt-0 sm:px-14">
+      <header className="flex items-center justify-between border-b-4 border-[#e66a24] pb-4"><img src="/images/logo.png" alt="M&J Metal" className="h-14 w-auto object-contain"/><div className="text-right"><p className="font-black">{j.reference} / V{quote.version}</p><p className="text-xs text-black/45">Quotation details</p></div></header>
+      {quote.exclusions && <section className="mt-6"><h2 className="text-base font-black">Project notes</h2><div className="mt-2 whitespace-pre-wrap text-sm leading-5 text-black/70">{quote.exclusions}</div></section>}
+      <section className="mt-6"><h2 className="text-base font-black">Payment & key terms</h2><div className="mt-3 grid gap-x-8 gap-y-2 text-[12px] leading-5 text-black/65 sm:grid-cols-2">
+        <p><b>Payment:</b> {quote.deposit_amount ? `${money(quote.deposit_amount)} deposit, with the remaining balance due on completion.` : "Payment terms as agreed for this project."}</p>
+        <p><b>Validity:</b> This quotation is valid for 30 days unless another validity date is shown above.</p>
+        <p><b>Scope:</b> The price covers only the works specifically described in this quotation. Additional or changed works will be agreed separately.</p>
+        <p><b>Measurements:</b> Final site measurements take precedence over preliminary dimensions.</p>
+        <p><b>Lead times:</b> Dates and lead times are estimates and may change due to access, materials or circumstances outside our control.</p>
+        <p><b>Ownership:</b> Fabricated items remain the property of M&J Metal Ltd until paid for in full.</p>
+      </div></section>
+      <section className="mt-6 rounded-xl border border-black/10 bg-[#fafaf8] p-4 text-[11px] leading-5 text-black/55"><b className="text-black/70">General assumptions</b><p className="mt-1">Unless specifically included in the scope, the quotation excludes electrical work, decorating, planning applications and unforeseen structural alterations. Any variation to specification, site conditions or access requirements may affect the price or programme.</p></section>
+      <section className="mt-7"><h2 className="text-base font-black">Acceptance</h2><p className="mt-2 text-sm leading-5 text-black/65">I/We accept this quotation and authorise M&J Metal Ltd to proceed with the works described.</p><div className="mt-8 grid grid-cols-3 gap-5 text-xs"><div className="border-t border-black/35 pt-2">Name</div><div className="border-t border-black/35 pt-2">Signature</div><div className="border-t border-black/35 pt-2">Date</div></div></section>
+      <footer className="mt-auto border-t border-black/10 pt-4 text-[10px] leading-4 text-black/45"><p className="font-bold text-black/60">M&J METAL LTD</p><p>Office 6, 1st Floor, Sutherland House, 70-78 West Hendon Broadway, London, NW9 7BT</p><p>020 3284 5045 · info@mjmetal.co.uk · mjmetal.co.uk · Company No. 17330239</p></footer>
     </article>
   </main>;
 }
