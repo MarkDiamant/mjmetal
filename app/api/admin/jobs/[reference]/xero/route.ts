@@ -64,7 +64,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
       const quotes = await jsonOrError(await supabaseRequest(`/rest/v1/mj_quotes?job_id=eq.${job.id}&select=scope_text&order=version.desc&limit=1`, {}, session.token));
       const description = String(quotes[0]?.scope_text || job.customer_requirements || `${job.job_type} - ${job.reference}`).slice(0, 4000);
-      const invoice = await createXeroDraftInvoice(session.token, { contactId, reference: job.reference, description, amount });
+      const invoice = await createXeroDraftInvoice(session.token, { contactId, reference: job.reference, description, amount, vatRate: Number(job.vat_rate || 0) });
 
       const created = await jsonOrError(await supabaseRequest("/rest/v1/mj_xero_invoices", {
         method: "POST",
