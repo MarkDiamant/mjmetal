@@ -58,6 +58,7 @@ export async function createXeroDraftInvoice(sessionToken: string, input: {
   reference: string;
   description: string;
   amount: number;
+  vatRate?: number;
 }) {
   const payload = {
     Invoices: [{
@@ -69,6 +70,7 @@ export async function createXeroDraftInvoice(sessionToken: string, input: {
         Description: input.description,
         Quantity: 1,
         UnitAmount: Number(input.amount.toFixed(2)),
+        TaxType: Number(input.vatRate || 0) > 0 ? "OUTPUT2" : "NONE",
       }],
     }],
   };
