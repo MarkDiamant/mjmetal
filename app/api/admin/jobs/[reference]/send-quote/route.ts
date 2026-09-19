@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { requireAdminToken, supabaseRequest } from "@/lib/crm/supabase-server";
 import { buildQuotePdf } from "@/lib/crm/simple-pdf";
+import { DEFAULT_CRM_CONFIG, normaliseCrmConfig } from "@/lib/crm/config";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const COMPANY_ADDRESS = "Office 6, 1st Floor, Sutherland House, 70-78 West Hendon Broadway, London, NW9 7BT";
+async function crmSettings(token:string){const p="_crm/settings.json".split("/").map(encodeURIComponent).join("/");const r=await supabaseRequest(`/storage/v1/object/mj-job-files/${p}`,{method:"GET"},token);return r.ok?normaliseCrmConfig(await r.json().catch(()=>null)):DEFAULT_CRM_CONFIG;}
 
 function esc(value: unknown) {
   return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
@@ -17,6 +18,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ref
   if (!session) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
 
   const { reference } = await params;
+  const config = await crmSettings(session.token);
   const body = await request.json().catch(() => ({})) as { quoteId?: string };
   if (!body.quoteId) return NextResponse.json({ error: "Quote is required" }, { status: 400 });
 
@@ -60,7 +62,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ref
     amount: Number(quote.amount || 0),
     deposit: quote.deposit_amount === null ? null : Number(quote.deposit_amount),
     leadTime: quote.lead_time,
-    companyAddress: COMPANY_ADDRESS,
+    companyAddress: config.businessDetails.officeAddress,
   });
 
   const fileName = `${job.reference}-V${quote.version}-quotation.pdf`;
@@ -81,18 +83,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ ref
     from: "M&J Metal <info@mjmetal.co.uk>",
     to: [customer.email],
     replyTo: "info@mjmetal.co.uk",
-    subject: `M&J Metal quotation ${job.reference}`,
+    subject: `${config.businessName} quotation ${job.reference}`,
     attachments: [{ filename: fileName, content: pdf }],
     html: `
       <div style="font-family:Arial,sans-serif;max-width:680px;margin:auto;color:#171717;line-height:1.6">
-        <h2 style="margin-bottom:4px">M&amp;J Metal</h2><p style="color:#666;margin-top:0">Bespoke Gates &amp; Metalwork</p>
+        <h2 style="margin-bottom:4px">${esc(config.businessName)}</h2>
         <hr style="border:none;border-top:4px solid #e66a24;margin:24px 0">
         <p>Dear ${esc(customer.first_name || name)},</p>
         <p>Please find attached our quotation <strong>${esc(job.reference)}</strong>${site ? ` for works at ${esc(site)}` : ""}.</p>
         <h3>Scope of works</h3><p>${scopeHtml}</p>
         ${exclusionsHtml ? `<h3>Notes / exclusions</h3><p>${exclusionsHtml}</p>` : ""}
         <div style="background:#f5f5f2;padding:18px;border-radius:12px;margin:24px 0"><div style="font-size:13px;color:#666">Total quotation</div><div style="font-size:28px;font-weight:700">${money(quote.amount)}</div>${quote.deposit_amount ? `<div><strong>Deposit:</strong> ${money(quote.deposit_amount)}</div>` : ""}${quote.lead_time ? `<div><strong>Estimated lead time:</strong> ${esc(quote.lead_time)}</div>` : ""}${quote.valid_until ? `<div><strong>Valid until:</strong> ${new Date(`${quote.valid_until}T12:00:00`).toLocaleDateString("en-GB")}</div>` : ""}</div>
-        <p>If you would like to proceed or have any questions, simply reply to this email.</p><p>Kind regards,<br><strong>M&amp;J Metal</strong><br>info@mjmetal.co.uk<br>${esc(COMPANY_ADDRESS)}<br>mjmetal.co.uk</p>
+        <p>If you would like to proceed or have any questions, simply reply to this email.</p><p>Kind regards,<br><strong>${esc(config.businessName)}</strong><br>${esc(config.businessDetails.email)}<br>${esc(config.businessDetails.officeAddress)}<br>${esc(config.businessDetails.website)}</p>
       </div>`,
   });
   if (error) return NextResponse.json({ error: error.message || "Unable to send quote" }, { status: 500 });
