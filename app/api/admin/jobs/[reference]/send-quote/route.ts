@@ -43,6 +43,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ ref
   const finish = Array.isArray(job.finishes) ? job.finishes.join(" + ") : "";
 
   const pdf = buildQuotePdf({
+    companyName: config.businessName,
+    companyNumber: config.businessDetails.companyNumber,
+    phone: config.businessDetails.phone,
+    email: config.businessDetails.email,
+    website: config.businessDetails.website,
+    vatRegistered: config.businessDetails.vatRegistered,
+    vatNumber: config.businessDetails.vatNumber,
     reference: job.reference,
     version: Number(quote.version || 1),
     date: displayDate(quote.created_at),
