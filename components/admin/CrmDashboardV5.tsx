@@ -19,10 +19,10 @@ function MobileQuickEditFix() {
         main button.grid.w-full > :nth-child(1),
         main button.grid.w-full > :nth-child(2),
         main button.grid.w-full > :nth-child(3),
-        main button.grid.w-full > :nth-child(7) { grid-column: 1 / -1; }
-        main button.grid.w-full > :nth-child(4) { grid-column: 1; justify-self: start; white-space: normal !important; line-height: 1.15; }
-        main button.grid.w-full > :nth-child(5) { grid-column: 2; justify-self: end; padding-left: 0.5rem; }
-        main button.grid.w-full > :nth-child(6) { grid-column: 1 / -1; justify-self: end; text-align: right; }
+        main button.grid.w-full > :nth-child(4) { grid-column: 1 / -1; }
+        main button.grid.w-full > :nth-child(4) { justify-self: start; white-space: normal !important; line-height: 1.15; }
+        main button.grid.w-full > :nth-child(5) { grid-column: 1; justify-self: start; }
+        main button.grid.w-full > :nth-child(6) { grid-column: 2; justify-self: end; text-align: right; }
         main .border-t.border-\[\#e66a24\]\/20 { min-width: 0; max-width: 100%; overflow-x: hidden; padding-left: 0.75rem; padding-right: 0.75rem; }
         main .border-t.border-\[\#e66a24\]\/20 > div { min-width: 0; max-width: 100%; }
         main .border-t.border-\[\#e66a24\]\/20 section { width: 100%; min-width: 0; max-width: 100%; overflow-x: hidden; }
