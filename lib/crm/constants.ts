@@ -19,8 +19,7 @@ export const JOB_TYPES: JobType[] = [
 ];
 
 export const FINISH_TYPES: FinishType[] = [
-  "Primed",
-  "Painted",
+  "Primed & painted",
   "Spray painted",
   "Powder coated",
   "Galvanised",
