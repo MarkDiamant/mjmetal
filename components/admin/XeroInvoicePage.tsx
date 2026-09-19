@@ -42,6 +42,7 @@ export default function XeroInvoicePage({ reference }: { reference: string }) {
     const body = await res.json().catch(() => ({}));
     if (!res.ok) { setError(body.error || "Xero action failed"); setMessage(""); setBusy(false); return; }
     setMessage(actionName === "create" ? "Draft invoice created in Xero" : "Xero status updated");
+    if(actionName==="create") await fetch(`/api/admin/jobs/${encodeURIComponent(reference)}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({job:{status:"awaiting_final_payment",next_action:"Collect outstanding balance"}})});
     await load(); setBusy(false);
   }
 
