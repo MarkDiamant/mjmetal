@@ -49,8 +49,20 @@ export default function IntegrationsPage() {
           </div>
         </section>
 
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          {[
+            ["Google / Gmail","Send quotes, invoices and CRM emails from your business Gmail account.","Email"],
+            ["Microsoft 365 / Outlook","Send CRM emails from your Microsoft business mailbox.","Email"],
+            ["Google Calendar","Sync site visits, appointments and scheduled work with your calendar.","Calendar"],
+            ["Microsoft Outlook Calendar","Sync CRM appointments and scheduled work with Outlook.","Calendar"],
+            ["Stripe","Take and reconcile customer payments from CRM jobs and invoices.","Payments"],
+            ["QuickBooks","Accounting and invoice integration for businesses that use QuickBooks.","Accounting"],
+            ["Google Drive","Link job documents and business files where useful.","Files"],
+            ["Microsoft OneDrive","Link job documents and business files where useful.","Files"],
+          ].map(([name,description,category])=><section key={name} className="rounded-2xl border border-black/10 bg-white p-5"><div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.12em] text-black/35">{category}</p><h2 className="mt-1 text-lg font-black">{name}</h2></div><span className="rounded-full bg-black/5 px-2.5 py-1 text-xs font-bold text-black/45">Planned</span></div><p className="mt-2 text-sm leading-6 text-black/55">{description}</p></section>)}
+        </div>
         <section className="mt-5 rounded-2xl border border-black/10 bg-white p-6">
-          <h2 className="text-lg font-black">AI quote wording</h2><p className="mt-2 text-sm leading-6 text-black/55">Manual for now. Generate wording in ChatGPT and paste it into the Scope of Works box on the job quote tab. No extra OpenAI API charge is required.</p>
+          <h2 className="text-lg font-black">Email connections</h2><p className="mt-2 text-sm leading-6 text-black/55">Email connections will start with sending only, so quotes, invoices and CRM messages can come from the business&apos;s own mailbox. Inbox access can remain a separate optional permission if job-linked email threads are added later.</p>
         </section>
       </div>
     </main>
