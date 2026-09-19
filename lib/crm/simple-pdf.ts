@@ -30,6 +30,13 @@ function wrap(value: string, max = 88) {
 }
 
 export type QuotePdfInput = {
+  companyName?: string;
+  companyNumber?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  vatRegistered?: boolean;
+  vatNumber?: string;
   reference: string;
   version: number;
   date: string;
@@ -72,7 +79,7 @@ export function buildQuotePdf(input: QuotePdfInput): Buffer {
   const heading = (text: string) => { gap(4); line(text, 12, true, 50, 18); };
   const paragraph = (text: string) => { for (const l of wrap(text, 88)) line(l || " ", 10, false, 50, 14); };
 
-  page.commands.push(`BT /F2 22 Tf 0.90 0.36 0.10 rg 50 800 Td (${esc("M&J METAL LTD")}) Tj ET`);
+  page.commands.push(`BT /F2 22 Tf 0.90 0.36 0.10 rg 50 800 Td (${esc((input.companyName || "M&J Metal").toUpperCase())}) Tj ET`);
   page.commands.push(`BT /F2 18 Tf 0 0 0 rg 420 800 Td (${esc("QUOTATION")}) Tj ET`);
   page.y = 768;
   rule();
@@ -106,10 +113,13 @@ export function buildQuotePdf(input: QuotePdfInput): Buffer {
 
   gap(14);
   rule();
-  line("M&J METAL LTD", 9, true);
-  line("Company No. 17330239", 8);
+  line((input.companyName || "M&J Metal").toUpperCase(), 9, true);
+  if (input.companyNumber) line(`Company No. ${input.companyNumber}`, 8);
   if (input.companyAddress) line(input.companyAddress, 8);
-  line("mjmetal.co.uk", 8);
+  if (input.phone) line(input.phone, 8);
+  if (input.email) line(input.email, 8);
+  if (input.website) line(input.website, 8);
+  line(input.vatRegistered ? (input.vatNumber ? `VAT ${input.vatNumber}` : "VAT registered") : "VAT not charged", 8);
 
   const objects: string[] = [];
   objects[1] = "<< /Type /Catalog /Pages 2 0 R >>";
