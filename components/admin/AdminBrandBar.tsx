@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { DEFAULT_CRM_CONFIG } from "@/lib/crm/config";
+import DiamantCredit from "@/components/admin/DiamantCredit";
 
 export default function AdminBrandBar() {
   const pathname = usePathname();
@@ -18,7 +19,7 @@ export default function AdminBrandBar() {
       <div className="mx-auto flex max-w-[1500px] flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5 lg:px-8">
         <a href="/admin" className="flex min-w-0 items-center gap-2.5 sm:gap-3">
           <img src={config.logoUrl} alt={config.businessName} className="h-10 w-auto shrink-0 object-contain sm:h-12" />
-          <div className="min-w-0"><p className="text-xs font-black uppercase tracking-[0.12em] sm:tracking-[0.16em]" style={{color:config.accentColour}}>{config.businessName}</p><p className="truncate text-xs font-bold text-black/55 sm:text-sm">{config.systemName}</p><p className="mt-0.5 text-[10px] font-bold text-black/35">Powered by <span className="font-black text-[#e66a24]">Diamant Solutions</span></p></div>
+          <div className="min-w-0"><p className="text-xs font-black uppercase tracking-[0.12em] sm:tracking-[0.16em]" style={{color:config.accentColour}}>{config.businessName}</p><p className="truncate text-xs font-bold text-black/55 sm:text-sm">{config.systemName}</p><div className="mt-1"><DiamantCredit compact /></div></div>
         </a>
         <div className="flex w-full gap-2 sm:w-auto sm:shrink-0"><a href="/admin/archive" className="flex-1 rounded-lg border border-black/10 px-3 py-2 text-center text-xs font-bold sm:flex-none">Archive</a><a href="/admin/integrations" className="flex-1 rounded-lg border border-black/10 px-3 py-2 text-center text-xs font-bold sm:flex-none">Integrations</a><a href="/admin/users" className="flex-1 rounded-lg border border-black/10 px-3 py-2 text-center text-xs font-bold sm:flex-none">Users</a><a href="/admin/settings" className="flex-1 rounded-lg border border-black/10 px-3 py-2 text-center text-xs font-bold sm:flex-none">Settings</a></div>
       </div>
