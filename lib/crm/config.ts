@@ -17,8 +17,8 @@ export const DEFAULT_CRM_CONFIG: CrmConfig = {
   logoUrl: "/images/logo.png",
   accentColour: "#e66a24",
   workforceTitle: "Fabricators / installers / subcontractors",
-  workforceSingular: "person",
-  workforceRoles: ["Fabricator", "Installer", "Fabricator + installer", "Other"],
+  workforceSingular: "team member",
+  workforceRoles: ["Installer", "Engineer", "Technician", "Contractor", "Subcontractor", "Surveyor", "Project manager", "Fabricator", "Other"],
   modules: {
     photos: true,
     workforce: true,
