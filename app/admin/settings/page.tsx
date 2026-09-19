@@ -4,7 +4,7 @@ import { DEFAULT_CRM_CONFIG, type CrmConfig, type CrmModuleKey } from "@/lib/crm
 
 const moduleLabels: Record<CrmModuleKey,string> = {
   photos:"Photos & files", workforce:"Workforce / assigned people", commission:"Commission",
-  payments:"Customer payments", costs:"Costs & profit", finishes:"Finishes / specifications", siteVisits:"Site visits & scheduling",
+  payments:"Customer payments", costs:"Costs & profit", finishes:"Finishes / specifications", siteVisits:"Site visits", scheduling:"Scheduling", quotes:"Quotes", invoices:"Invoices",
 };
 const rolePresets=["Installer","Engineer","Technician","Contractor","Subcontractor","Surveyor","Project manager","Electrician","Plumber","Carpenter","Builder","Cleaner","Driver","Consultant","Salesperson","Fabricator","Other"];
 
