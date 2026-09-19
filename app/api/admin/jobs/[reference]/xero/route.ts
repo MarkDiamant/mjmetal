@@ -43,7 +43,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       const existing = await listLocalInvoices(session.token, job.id);
       if (existing.length) return NextResponse.json({ error: "A Xero invoice already exists for this job" }, { status: 409 });
 
-      const amount = Number(job.agreed_amount ?? job.quoted_amount ?? 0);
+      const amount = Number(body.amount ?? job.quoted_amount ?? job.agreed_amount ?? 0);
       if (!Number.isFinite(amount) || amount <= 0) return NextResponse.json({ error: "Set an agreed or quoted amount before creating the Xero invoice" }, { status: 400 });
 
       const customers = await jsonOrError(await supabaseRequest(`/rest/v1/mj_customers?id=eq.${job.customer_id}&select=*&limit=1`, {}, session.token));
@@ -63,8 +63,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       if (!contactId) throw new Error("Xero contact could not be resolved");
 
       const quotes = await jsonOrError(await supabaseRequest(`/rest/v1/mj_quotes?job_id=eq.${job.id}&select=scope_text&order=version.desc&limit=1`, {}, session.token));
-      const description = String(quotes[0]?.scope_text || job.customer_requirements || `${job.job_type} - ${job.reference}`).slice(0, 4000);
-      const invoice = await createXeroDraftInvoice(session.token, { contactId, reference: job.reference, description, amount, vatRate: Number(job.vat_rate || 0) });
+      const description = String(body.description || quotes[0]?.scope_text || job.customer_requirements || `${job.job_type} - ${job.reference}`).slice(0, 4000);
+      const invoice = await createXeroDraftInvoice(session.token, { contactId, reference: job.reference, description, amount, vatRate: Number(body.vat_rate ?? job.vat_rate ?? 0) });
 
       const created = await jsonOrError(await supabaseRequest("/rest/v1/mj_xero_invoices", {
         method: "POST",
