@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { DEFAULT_CRM_CONFIG, type CrmConfig } from "@/lib/crm/config";
 
 export default function IntegrationsPage() {
   const [loading, setLoading] = useState(true);
   const [connected, setConnected] = useState(false);
   const [tenantName, setTenantName] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [crmConfig,setCrmConfig]=useState<CrmConfig>(DEFAULT_CRM_CONFIG);
 
   async function load() {
     setLoading(true);
@@ -18,10 +20,10 @@ export default function IntegrationsPage() {
     setLoading(false);
   }
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => { void load(); fetch("/api/admin/settings",{cache:"no-store"}).then(async r=>{if(r.ok){const b=await r.json();setCrmConfig(b.settings||DEFAULT_CRM_CONFIG);}}).catch(()=>{}); }, []);
 
   async function disconnect() {
-    if (!window.confirm("Disconnect Xero from M&J CRM?")) return;
+    if (!window.confirm(`Disconnect Xero from ${crmConfig.businessName}?`)) return;
     const response = await fetch("/api/integrations/xero/status", { method: "DELETE" });
     if (!response.ok) { setError("Unable to disconnect Xero"); return; }
     await load();
