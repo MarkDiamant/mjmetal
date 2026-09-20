@@ -12,7 +12,7 @@ export async function GET() {
   const store = await cookies();
   store.set("mj_xero_oauth_state", state, {
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
     maxAge: 10 * 60,
