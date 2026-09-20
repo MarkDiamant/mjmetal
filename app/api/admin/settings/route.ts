@@ -46,9 +46,11 @@ export async function POST(request: NextRequest) {
   const form = await request.formData();
   const file = form.get("logo");
   if (!(file instanceof File)) return NextResponse.json({ error: "Choose a logo" }, { status: 400 });
-  if (!file.type.startsWith("image/")) return NextResponse.json({ error: "Logo must be an image" }, { status: 400 });
+  const allowedTypes = new Set(["image/png","image/jpeg","image/webp","image/svg+xml"]);
+  if (!allowedTypes.has(file.type)) return NextResponse.json({ error: "Logo must be a PNG, JPG, WebP or SVG image" }, { status: 400 });
   if (file.size > 5 * 1024 * 1024) return NextResponse.json({ error: "Maximum logo size is 5 MB" }, { status: 400 });
-  const ext = (file.name.split(".").pop() || "png").replace(/[^a-z0-9]/gi, "").toLowerCase();
+  const extByType:Record<string,string>={"image/png":"png","image/jpeg":"jpg","image/webp":"webp","image/svg+xml":"svg"};
+  const ext = extByType[file.type] || "png";
   const path = `${LOGO_PREFIX}.${ext || "png"}`;
   const encoded = path.split("/").map(encodeURIComponent).join("/");
   const upload = await supabaseRequest(`/storage/v1/object/mj-job-files/${encoded}`, {
