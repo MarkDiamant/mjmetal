@@ -96,15 +96,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ ref
   await supabaseRequest(`/rest/v1/mj_quotes?id=eq.${encodeURIComponent(quote.id)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ pdf_path: storagePath }) }, session.token);
 
   const { error } = await resend.emails.send({
-    from: "M&J Metal <info@mjmetal.co.uk>",
+    from: `${config.businessName} <${config.businessDetails.email}>`,
     to: [customer.email],
-    replyTo: "info@mjmetal.co.uk",
+    replyTo: config.businessDetails.email,
     subject: `${config.businessName} quotation ${job.reference}`,
     attachments: [{ filename: fileName, content: pdf }],
     html: `
       <div style="font-family:Arial,sans-serif;max-width:680px;margin:auto;color:#171717;line-height:1.6">
         <h2 style="margin-bottom:4px">${esc(config.businessName)}</h2>
-        <hr style="border:none;border-top:4px solid #e66a24;margin:24px 0">
+        <hr style="border:none;border-top:4px solid ${esc(config.accentColour)};margin:24px 0">
         <p>Dear ${esc(customer.first_name || name)},</p>
         <p>Please find attached our quotation <strong>${esc(job.reference)}</strong>${site ? ` for works at ${esc(site)}` : ""}.</p>
         <h3>Scope of works</h3><p>${scopeHtml}</p>
