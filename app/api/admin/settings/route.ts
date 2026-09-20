@@ -34,7 +34,7 @@ export async function PUT(request: NextRequest) {
   const requested = normaliseCrmConfig(await request.json().catch(() => ({})));
   const current = await readSettings(session.token);
   // Tenant identity and subscription state are controlled by Diamant Solutions, not editable business settings.
-  const settings = { ...requested, tenantKey: current.tenantKey, billing: current.billing };
+  const settings = { ...requested, tenantKey: current.tenantKey, plan: current.plan, billing: current.billing, ai: { ...requested.ai, enabled: current.plan.aiIncluded ? requested.ai.enabled : false, textAssist: current.plan.aiIncluded ? requested.ai.textAssist : false, voiceAssist: current.plan.aiIncluded ? requested.ai.voiceAssist : false } };
   const saved = await writeSettings(session.token, settings);
   if (!saved.ok) return NextResponse.json({ error: "Could not save CRM settings" }, { status: 500 });
   return NextResponse.json({ settings });
