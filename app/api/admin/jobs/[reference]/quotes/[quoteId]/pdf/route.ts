@@ -18,6 +18,7 @@ function date(value: string | null | undefined) {
 
 export async function POST(_request: NextRequest, { params }: { params: Promise<{ reference: string; quoteId: string }> }) {
   const session = await requirePermission("view_pricing");
+  if(session&&!session.permissions.includes("edit_jobs")) return NextResponse.json({error:"You do not have permission to generate quote files"},{status:403});
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
