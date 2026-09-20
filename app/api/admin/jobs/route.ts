@@ -19,6 +19,8 @@ export async function GET(request: Request) {
   const canPayments=session.permissions.includes("view_payments_invoices");
   const canWorkforce=session.permissions.includes("view_workforce");
   const canCosts=session.permissions.includes("view_costs_profit");
+  const canPricing=session.permissions.includes("view_pricing");
+  const canCustomer=session.permissions.includes("view_customer_details");
   const [jobsResponse, paymentsResponse, assignmentsResponse, peopleResponse, costsResponse, xeroInvoicesResponse] = await Promise.all([
     supabaseRequest(`/rest/v1/mj_jobs?${archiveFilter}&select=*,mj_customers(*)&order=sequence_number.asc`, { method: "GET" }, session.token),
     canPayments?supabaseRequest("/rest/v1/mj_payments?select=id,job_id,direction,payment_type,amount,payment_method,counterparty,paid_at,due_at,notes,created_at&order=created_at.desc", { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
@@ -80,7 +82,7 @@ export async function GET(request: Request) {
   const mapped = jobs.map((job) => {
     const customer = job.mj_customers ?? {};
     
-    const quoted = job.quoted_amount === null ? undefined : Number(job.quoted_amount);
+    const quoted = canPricing && job.quoted_amount !== null ? Number(job.quoted_amount) : undefined;
     const paid = paidByJob.get(job.id) ?? 0;
     const writtenOff = Number(job.written_off_amount || 0);
     const value = quoted ?? 0;
@@ -106,9 +108,9 @@ export async function GET(request: Request) {
       reference: job.reference,
       sequenceNumber: job.sequence_number,
       customerId: job.customer_id,
-      firstName: customer.first_name || "",
-      lastName: customer.last_name || "",
-      customerName: [customer.first_name, customer.last_name].filter(Boolean).join(" "),
+      firstName: canCustomer ? customer.first_name || "" : "",
+      lastName: canCustomer ? customer.last_name || "" : "",
+      customerName: canCustomer ? [customer.first_name, customer.last_name].filter(Boolean).join(" ") : "Customer details restricted",
       customerAddressLine1: customer.address_line_1 || "",
       customerAddressLine2: customer.address_line_2 || "",
       customerCity: customer.city || "",
@@ -119,8 +121,8 @@ export async function GET(request: Request) {
       sitePostcode: job.site_postcode || "",
       address: [job.site_address_line_1 || customer.address_line_1, job.site_address_line_2 || customer.address_line_2, job.site_city || customer.city].filter(Boolean).join(", "),
       postcode: job.site_postcode || customer.postcode || "",
-      phone: customer.phone || "",
-      email: customer.email || "",
+      phone: canCustomer ? customer.phone || "" : "",
+      email: canCustomer ? customer.email || "" : "",
       jobType: job.job_type,
       jobTypes,
       status: job.status,
@@ -137,7 +139,7 @@ export async function GET(request: Request) {
       siteVisitRequired: job.site_visit_required,
       siteVisitAt: job.site_visit_at ?? undefined,
       siteVisitCompletedAt: job.site_visit_completed_at ?? undefined,
-      preliminaryEstimate: job.preliminary_estimate === null ? undefined : Number(job.preliminary_estimate),
+      preliminaryEstimate: canPricing && job.preliminary_estimate !== null ? Number(job.preliminary_estimate) : undefined,
       preliminaryEstimateSentAt: job.preliminary_estimate_sent_at ?? undefined,
       quotedAmount: quoted,
       quoteSentAt: job.quote_sent_at ?? undefined,
@@ -155,7 +157,7 @@ export async function GET(request: Request) {
       writtenOffAt: job.written_off_at ?? undefined,
       writeOffReason: job.write_off_reason ?? undefined,
       collectionRequired,
-      customerPayments,
+      customerPayments: canPayments ? customerPayments : [],
       workforceAssignments: jobAssignments,
       subcontractorAgreed: subAgreed,
       subcontractorPaid: subPaid,
@@ -164,8 +166,8 @@ export async function GET(request: Request) {
       commissionAgreed,
       commissionPaid,
       commissionOutstanding: Math.max(0, commissionAgreed - commissionPaid),
-      estimatedCost: jobCostSummary?.estimated_amount == null ? undefined : Number(jobCostSummary.estimated_amount),
-      finalCost: jobCostSummary?.actual_amount == null ? undefined : Number(jobCostSummary.actual_amount),
+      estimatedCost: canCosts && jobCostSummary?.estimated_amount != null ? Number(jobCostSummary.estimated_amount) : undefined,
+      finalCost: canCosts && jobCostSummary?.actual_amount != null ? Number(jobCostSummary.actual_amount) : undefined,
       materialsOrdered: job.materials_ordered,
       archivedAt: job.archived_at ?? undefined,
       createdAt: job.created_at,
@@ -173,7 +175,7 @@ export async function GET(request: Request) {
     };
   });
 
-  return NextResponse.json({ jobs: mapped, people, admin: session.admin });
+  return NextResponse.json({ jobs: mapped, people, admin: session.admin, permissions: session.permissions });
 }
 
 export async function POST(request: Request) {
