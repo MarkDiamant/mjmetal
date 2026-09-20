@@ -35,9 +35,9 @@ export default function AdminLoginPage() {
   return (
     <main className="min-h-screen bg-[#f5f5f2] px-5 py-12 text-[#141414]">
       <div className="mx-auto max-w-md rounded-3xl border border-black/10 bg-white p-7 shadow-[0_14px_50px_rgba(0,0,0,0.08)] sm:p-9">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#e66a24]">M&J Metal</p>
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#e66a24]">Business CRM</p>
         <h1 className="mt-2 text-3xl font-black tracking-tight">Admin login</h1>
-        <p className="mt-3 text-sm leading-6 text-black/55">Secure access for Mark and Jonathan.</p>
+        <p className="mt-3 text-sm leading-6 text-black/55">Secure access for authorised users.</p>
 
         <form className="mt-7 space-y-4" onSubmit={handleSubmit}>
           <label className="block">
