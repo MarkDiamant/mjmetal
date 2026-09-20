@@ -60,7 +60,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ re
 
     await supabaseRequest("/rest/v1/mj_audit_events", {
       method: "POST", headers: { Prefer: "return=minimal" },
-      body: JSON.stringify({ job_id: job.id, actor: session.admin.initials, action: "updated", entity_type: "subcontractor_assignment", entity_id: assignmentId, changes: { ...patch, add_payment: addPayment || undefined, paid_at: body.paid_at || undefined } }),
+      body: JSON.stringify({ job_id: job.id, actor: session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user", action: "updated", entity_type: "subcontractor_assignment", entity_id: assignmentId, changes: { ...patch, add_payment: addPayment || undefined, paid_at: body.paid_at || undefined } }),
     }, session.token);
 
     return NextResponse.json({ assignment: rows[0] });
@@ -84,7 +84,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 
     await supabaseRequest("/rest/v1/mj_audit_events", {
       method: "POST", headers: { Prefer: "return=minimal" },
-      body: JSON.stringify({ job_id: job.id, actor: session.admin.initials, action: "removed", entity_type: "subcontractor_assignment", entity_id: assignmentId, changes: { subcontractor_id: assignment.subcontractor_id, assignment_role: assignment.assignment_role || null } }),
+      body: JSON.stringify({ job_id: job.id, actor: session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user", action: "removed", entity_type: "subcontractor_assignment", entity_id: assignmentId, changes: { subcontractor_id: assignment.subcontractor_id, assignment_role: assignment.assignment_role || null } }),
     }, session.token);
 
     return NextResponse.json({ ok: true });
