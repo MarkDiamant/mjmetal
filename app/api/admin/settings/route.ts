@@ -23,7 +23,7 @@ async function writeSettings(token: string, settings: unknown) {
 }
 
 export async function GET() {
-  const session = await requirePermission("manage_business_settings");
+  const session = await requirePermission("view_jobs");
   if (!session) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   return NextResponse.json({ settings: await readSettings(session.token) });
 }
