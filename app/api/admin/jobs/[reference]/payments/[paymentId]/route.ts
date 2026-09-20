@@ -57,7 +57,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify(patch),
     }, session.token));
     await syncAssignmentPaid(session.token, job.id, assignmentIdFromPayment(updated[0] || existing[0]));
-    await audit(session.token, session.admin.initials, job.id, "updated", paymentId, patch);
+    await audit(session.token, session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user", job.id, "updated", paymentId, patch);
     return NextResponse.json({ item: updated[0] });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Could not update payment" }, { status: 500 });
@@ -78,7 +78,7 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
     const response = await supabaseRequest(`/rest/v1/mj_payments?id=eq.${encodeURIComponent(paymentId)}&job_id=eq.${job.id}`, { method: "DELETE" }, session.token);
     if (!response.ok) throw new Error("Could not delete payment");
     await syncAssignmentPaid(session.token, job.id, assignmentId);
-    await audit(session.token, session.admin.initials, job.id, "deleted", paymentId, existing[0]);
+    await audit(session.token, session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user", job.id, "deleted", paymentId, existing[0]);
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Could not delete payment" }, { status: 500 });
