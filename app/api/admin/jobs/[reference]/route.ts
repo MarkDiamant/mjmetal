@@ -26,7 +26,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     const coreOnly = request.nextUrl.searchParams.get("mode") === "core";
     const canPayments=session.permissions.includes("view_payments_invoices"), canCosts=session.permissions.includes("view_costs_profit"), canPricing=session.permissions.includes("view_pricing"), canFiles=session.permissions.includes("view_files"), canWorkforce=session.permissions.includes("view_workforce"), canHistory=session.permissions.includes("view_history"), canCustomer=session.permissions.includes("view_customer_details");
-    const safeJob={...job,finishes:Array.from(new Set((job.finishes||[]).map((x:string)=>["Primed","Painted"].includes(x)?"Primed & painted":x)))};
+    const safeJob={...job,finishes:Array.from(new Set<string>(((job.finishes||[]) as string[]).map((x:string)=>["Primed","Painted"].includes(x)?"Primed & painted":x)))};
     if(!canPricing){delete safeJob.quoted_amount;delete safeJob.preliminary_estimate;delete safeJob.vat_rate;}
     if(!canPayments){delete safeJob.payment_method;delete safeJob.written_off_amount;delete safeJob.written_off_at;delete safeJob.write_off_reason;}
     if(!canCosts){delete safeJob.materials_ordered;delete safeJob.materials_ordered_at;}
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { reference } = await params;
   const body = await request.json();
-  const permissionForAction:Record<string,string>={payment:"view_payments_invoices",cost_summary:"view_costs_profit",cost:"view_costs_profit",quote:"view_pricing",subcontractor:"view_workforce",material_order:"view_costs_profit"};
+  const permissionForAction:Record<string,any>={payment:"view_payments_invoices",cost_summary:"view_costs_profit",cost:"view_costs_profit",quote:"view_pricing",subcontractor:"view_workforce",material_order:"view_costs_profit"};
   const needed=permissionForAction[String(body.type||"")];
   if(needed&&!session.permissions.includes(needed)) return NextResponse.json({error:"You do not have permission for this action"},{status:403});
   if(body.type==="activity"&&!session.permissions.includes("view_history")) return NextResponse.json({error:"You do not have permission to add job activity"},{status:403});
