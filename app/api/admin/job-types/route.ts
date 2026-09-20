@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdminToken, supabaseRequest } from "@/lib/crm/supabase-server";
+import { requirePermission, supabaseRequest } from "@/lib/crm/supabase-server";
 import { DEFAULT_CRM_CONFIG, normaliseCrmConfig } from "@/lib/crm/config";
 
 async function settings(token:string){
@@ -9,7 +9,7 @@ async function settings(token:string){
 }
 
 export async function GET() {
-  const session=await requireAdminToken();
+  const session=await requirePermission("view_jobs");
   if(!session)return NextResponse.json({error:"Unauthorised"},{status:401});
   const [response,config]=await Promise.all([
     supabaseRequest("/rest/v1/mj_jobs?select=job_type,job_types",{method:"GET"},session.token),
@@ -26,4 +26,18 @@ export async function GET() {
   }
   const options=[...counts.entries()].filter(([name,count])=>configured.has(name)||count>0).map(([name,count])=>({name,count}));
   return NextResponse.json({options});
+}
+
+export async function POST(request:Request){
+  const session=await requirePermission("manage_business_settings");
+  if(!session)return NextResponse.json({error:"Unauthorised"},{status:401});
+  const body=await request.json().catch(()=>({})); const name=String(body.name||"").trim();
+  if(!name)return NextResponse.json({error:"Enter a work type"},{status:400});
+  const current=await settings(session.token);
+  if(current.workTypes.some(x=>x.toLowerCase()===name.toLowerCase()))return NextResponse.json({settings:current});
+  const next=normaliseCrmConfig({...current,workTypes:[...current.workTypes,name]});
+  const path="_crm/settings.json".split("/").map(encodeURIComponent).join("/");
+  const saved=await supabaseRequest(`/storage/v1/object/mj-job-files/${path}`,{method:"POST",headers:{"Content-Type":"application/json","x-upsert":"true"},body:JSON.stringify(next)},session.token);
+  if(!saved.ok)return NextResponse.json({error:"Could not save work type"},{status:500});
+  return NextResponse.json({settings:next},{status:201});
 }
