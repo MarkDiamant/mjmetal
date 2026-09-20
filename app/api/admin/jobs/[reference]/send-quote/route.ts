@@ -97,7 +97,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ ref
   await supabaseRequest(`/rest/v1/mj_quotes?id=eq.${encodeURIComponent(quote.id)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ pdf_path: storagePath }) }, session.token);
 
   const verifiedSender=process.env.CRM_VERIFIED_FROM_EMAIL?.trim();
-  const fromAddress=verifiedSender?`${config.businessName} <${verifiedSender}>`:`${config.businessName} <${config.businessDetails.email}>`;
+  if(!verifiedSender&&config.tenantKey!=="mj-metal") return NextResponse.json({error:"Outgoing email is not configured for this business yet."},{status:503});
+  const senderEmail=verifiedSender||"info@mjmetal.co.uk";
+  const fromAddress=`${config.businessName} <${senderEmail}>`;
   const { error } = await resend.emails.send({
     from: fromAddress,
     to: [customer.email],
