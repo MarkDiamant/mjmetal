@@ -3,7 +3,7 @@ import { requirePermission } from "@/lib/crm/supabase-server";
 import { disconnectXero, getStoredXeroConnection } from "@/lib/crm/xero";
 
 export async function GET() {
-  const session = await requireAdminToken();
+  const session = await requirePermission("manage_business_settings");
   if (!session) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   try {
     const connection = await getStoredXeroConnection(session.token);
@@ -14,7 +14,7 @@ export async function GET() {
 }
 
 export async function DELETE() {
-  const session = await requireAdminToken();
+  const session = await requirePermission("manage_business_settings");
   if (!session) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   try {
     await disconnectXero(session.token);
