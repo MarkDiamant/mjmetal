@@ -62,9 +62,13 @@ export type QuotePdfInput = {
   sortCode?: string | null;
   defaultDepositPercent?: number;
   quoteValidityDays?: number;
+  template?: "mj-signature" | "clean" | "classic";
+  accentColour?: string;
 };
 
 export function buildQuotePdf(input: QuotePdfInput): Buffer {
+  const template=input.template==="mj-signature"||input.template==="classic"?input.template:"clean";
+  const accent=template==="classic"?"0 0 0":template==="mj-signature"?"0.90 0.36 0.10":"0.18 0.18 0.18";
   type Page = { commands: string[]; y: number };
   const pages: Page[] = [];
   const newPage = () => {
@@ -80,12 +84,12 @@ export function buildQuotePdf(input: QuotePdfInput): Buffer {
     page.y -= spacing;
   };
   const gap = (n = 8) => { page.y -= n; if (page.y < 65) page = newPage(); };
-  const rule = () => { page.commands.push(`0.90 0.36 0.10 rg 50 ${page.y} 495 3 re f`); page.y -= 18; };
+  const rule = () => { page.commands.push(`${accent} rg 50 ${page.y} 495 ${template==="mj-signature"?3:1} re f`); page.y -= 18; };
   const heading = (text: string) => { gap(4); line(text, 12, true, 50, 18); };
   const paragraph = (text: string) => { for (const l of wrap(text, 88)) line(l || " ", 10, false, 50, 14); };
 
-  page.commands.push(`BT /F2 22 Tf 0.90 0.36 0.10 rg 50 800 Td (${esc((input.companyName || "M&J Metal").toUpperCase())}) Tj ET`);
-  page.commands.push(`BT /F2 18 Tf 0 0 0 rg 420 800 Td (${esc("QUOTATION")}) Tj ET`);
+  page.commands.push(`BT /F2 ${template==="classic"?18:22} Tf ${accent} rg 50 800 Td (${esc((input.companyName || "M&J Metal").toUpperCase())}) Tj ET`);
+  page.commands.push(`BT /F2 ${template==="classic"?16:18} Tf 0 0 0 rg 420 800 Td (${esc("QUOTATION")}) Tj ET`);
   page.y = 768;
   rule();
   line(`${input.reference} / V${input.version}`, 12, true);
