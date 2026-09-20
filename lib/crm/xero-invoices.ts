@@ -28,6 +28,12 @@ async function xeroJson(sessionToken: string, path: string, init: RequestInit = 
   return body;
 }
 
+export async function findXeroContactByNumber(sessionToken:string, contactNumber:string) {
+  const where=`ContactNumber=="${contactNumber.replaceAll('"','')}"`;
+  const body=await xeroJson(sessionToken, `/Contacts?where=${encodeURIComponent(where)}`);
+  return body?.Contacts?.[0] || null;
+}
+
 export async function createXeroContact(sessionToken: string, customer: Record<string, any>, referencePrefix = "CRM") {
   const fullName = [customer.first_name, customer.last_name].filter(Boolean).join(" ").trim() || "Customer";
   const payload = {
@@ -51,6 +57,12 @@ export async function createXeroContact(sessionToken: string, customer: Record<s
   const contact = body?.Contacts?.[0];
   if (!contact?.ContactID) throw new Error("Xero did not return a contact ID");
   return contact;
+}
+
+export async function findXeroInvoiceByReference(sessionToken:string, reference:string) {
+  const where=`Reference=="${reference.replaceAll('"','')}"`;
+  const body=await xeroJson(sessionToken, `/Invoices?where=${encodeURIComponent(where)}`);
+  return body?.Invoices?.[0] || null;
 }
 
 export async function createXeroDraftInvoice(sessionToken: string, input: {
