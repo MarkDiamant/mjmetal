@@ -75,6 +75,7 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
       sortCode: config.businessDetails.sortCode,
       defaultDepositPercent: config.businessDetails.defaultDepositPercent,
       quoteValidityDays: config.businessDetails.quoteValidityDays,
+      paymentTerms: config.businessDetails.paymentTerms,
     });
 
     const fileName = `${job.reference}-V${quote.version}-quotation.pdf`;
