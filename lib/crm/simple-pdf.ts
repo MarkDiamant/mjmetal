@@ -57,6 +57,11 @@ export type QuotePdfInput = {
   deposit?: number | null;
   leadTime?: string | null;
   companyAddress?: string | null;
+  bankName?: string | null;
+  accountNumber?: string | null;
+  sortCode?: string | null;
+  defaultDepositPercent?: number;
+  quoteValidityDays?: number;
 };
 
 export function buildQuotePdf(input: QuotePdfInput): Buffer {
@@ -86,6 +91,7 @@ export function buildQuotePdf(input: QuotePdfInput): Buffer {
   line(`${input.reference} / V${input.version}`, 12, true);
   line(`Date: ${input.date}`, 9);
   if (input.validUntil) line(`Valid until: ${input.validUntil}`, 9);
+  else if (input.quoteValidityDays) line(`Validity: ${input.quoteValidityDays} days`, 9);
   gap(5);
 
   heading("Prepared for");
@@ -109,6 +115,7 @@ export function buildQuotePdf(input: QuotePdfInput): Buffer {
   heading("Quotation total");
   line(`GBP ${Number(input.amount || 0).toFixed(2)}`, 18, true, 50, 24);
   if (input.deposit) line(`Deposit: GBP ${Number(input.deposit).toFixed(2)}`, 10, true);
+  else if (input.defaultDepositPercent) line(`Deposit: ${input.defaultDepositPercent}%`, 10, true);
   if (input.leadTime) line(`Estimated lead time: ${input.leadTime}`, 10);
 
   gap(14);
@@ -119,6 +126,8 @@ export function buildQuotePdf(input: QuotePdfInput): Buffer {
   if (input.phone) line(input.phone, 8);
   if (input.email) line(input.email, 8);
   if (input.website) line(input.website, 8);
+  if (input.bankName) line(`Payment: ${input.bankName}`, 8);
+  if (input.sortCode || input.accountNumber) line(`Sort code ${input.sortCode || ""}  Account ${input.accountNumber || ""}`, 8);
   line(input.vatRegistered ? (input.vatNumber ? `VAT ${input.vatNumber}` : "VAT registered") : "VAT not charged", 8);
 
   const objects: string[] = [];
