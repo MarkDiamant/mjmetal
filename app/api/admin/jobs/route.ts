@@ -79,11 +79,11 @@ export async function GET(request: Request) {
 
   const mapped = jobs.map((job) => {
     const customer = job.mj_customers ?? {};
-    const agreed = job.agreed_amount === null ? undefined : Number(job.agreed_amount);
+    
     const quoted = job.quoted_amount === null ? undefined : Number(job.quoted_amount);
     const paid = paidByJob.get(job.id) ?? 0;
     const writtenOff = Number(job.written_off_amount || 0);
-    const value = agreed ?? quoted ?? 0;
+    const value = quoted ?? 0;
     const placeholder = String(job.internal_notes || "").startsWith("Historical placeholder created for backfill.");
     const jobPayments = paymentsByJob.get(job.id) || [];
     const customerPayments = jobPayments.filter((p) => p.direction === "customer_in");
@@ -141,7 +141,6 @@ export async function GET(request: Request) {
       preliminaryEstimateSentAt: job.preliminary_estimate_sent_at ?? undefined,
       quotedAmount: quoted,
       quoteSentAt: job.quote_sent_at ?? undefined,
-      agreedAmount: agreed,
       paymentMethod: job.payment_method ?? undefined,
       nextAction: collectionRequired ? `Collect outstanding ${new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(balanceOutstanding)} or write off` : job.next_action ?? undefined,
       nextActionAt: collectionRequired ? undefined : job.next_action_at ?? undefined,
@@ -194,7 +193,7 @@ export async function POST(request: Request) {
 
     let customerId = body.existingCustomerId as string | undefined;
     if (!customerId) {
-      if (!body.firstName) return NextResponse.json({ error: "Customer first name is required" }, { status: 400 });
+      if (!body.firstName) return NextResponse.json({ error: "Customer name or company is required" }, { status: 400 });
       const email = normaliseEmail(body.email), phone = normalisePhone(body.phone);
       if (email || phone) {
         const existingResponse = await supabaseRequest("/rest/v1/mj_customers?select=id,first_name,last_name,email,phone,postcode&order=updated_at.desc", { method: "GET" }, session.token);
