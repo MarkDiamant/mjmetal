@@ -65,7 +65,7 @@ export default function QuotePrint({ reference, quoteId }: { reference: string; 
     <style>{`@media print { @page { size: A4; margin: 0; } .quote-page { width: 210mm; min-height: 297mm; box-shadow: none !important; break-after: page; page-break-after: always; } .quote-page:last-child { break-after: auto; page-break-after: auto; } }`}</style>
     <div className="mx-auto mb-4 flex max-w-[900px] flex-wrap justify-end gap-2 px-4 print:hidden">
       {sentMessage && <span className="self-center rounded-lg bg-green-50 px-3 py-2 text-sm font-bold text-green-700">{sentMessage}</span>}
-      <button onClick={() => window.print()} className="rounded-xl bg-[var(--brand)] px-4 py-2.5 text-sm font-black text-white">Print / Save PDF</button>
+      <button onClick={() => document.getElementById("save-quote-pdf")?.click()} className="rounded-xl bg-[var(--brand)] px-4 py-2.5 text-sm font-black text-white">Save PDF</button>
       <button onClick={() => void sendQuote()} disabled={sending} className="rounded-xl bg-[#141414] px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">{sending ? "Sending..." : "Send quote by email"}</button>
       <a href={mailHref} className="rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-bold">Open email draft</a>
       <button onClick={() => void copyWhatsApp()} className="rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-bold">Copy WhatsApp message</button>
