@@ -88,7 +88,7 @@ export function buildQuotePdf(input: QuotePdfInput): Buffer {
   const gap = (n = 8) => { page.y -= n; if (page.y < 65 && pages.length < maxPages) page = newPage(); };
   const rule = () => { page.commands.push(`${accent} rg 50 ${page.y} 495 ${template==="mj-signature"?3:1} re f`); page.y -= 18; };
   const heading = (text: string) => { gap(4); line(text, 12, true, 50, 18); };
-  const paragraph = (text: string) => { for (const l of wrap(text, 88)) line(l || " ", 10, false, 50, 14); };
+  const paragraph = (text: string, maxLines = 40) => { const lines=wrap(text,88); for (const l of lines.slice(0,maxLines)) line(l || " ", 10, false, 50, 14); if(lines.length>maxLines) line("Continued in project documentation.",9,false,50,13); };
 
   page.commands.push(`BT /F2 ${template==="classic"?18:22} Tf ${accent} rg 50 800 Td (${esc((input.companyName || "Business").toUpperCase())}) Tj ET`);
   page.commands.push(`BT /F2 ${template==="classic"?16:18} Tf 0 0 0 rg 420 800 Td (${esc("QUOTATION")}) Tj ET`);
@@ -115,16 +115,27 @@ export function buildQuotePdf(input: QuotePdfInput): Buffer {
   if (input.customerReference) line(`Customer reference: ${input.customerReference}`, 9);
 
   heading("Scope of works");
-  paragraph(input.scope);
-  if (input.exclusions) { heading("Notes / exclusions"); paragraph(input.exclusions); }
+  paragraph(input.scope, 24);
+  if (input.exclusions) { heading("Notes / exclusions"); paragraph(input.exclusions, 8); }
 
   heading("Quotation total");
   line(`GBP ${Number(input.amount || 0).toFixed(2)}`, 18, true, 50, 24);
   if (input.deposit) line(`Deposit: GBP ${Number(input.deposit).toFixed(2)}`, 10, true);
   else if (input.defaultDepositPercent) line(`Deposit: ${input.defaultDepositPercent}%`, 10, true);
-  if (input.paymentTerms) paragraph(`Payment terms: ${input.paymentTerms}`);
   if (input.leadTime) line(`Estimated lead time: ${input.leadTime}`, 10);
 
+  if (pages.length < 2) page = newPage();
+  page.y=790;
+  line("PAYMENT & KEY TERMS",14,true);
+  rule();
+  const cleanTerms=input.deposit&&input.paymentTerms?input.paymentTerms.replace(/^\s*\d+(?:\.\d+)?%\s+deposit\s*,?\s*/i,""):input.paymentTerms;
+  if (cleanTerms) paragraph(`Payment terms: ${input.deposit?`Deposit GBP ${Number(input.deposit).toFixed(2)}. `:""}${cleanTerms}`,12);
+  else if(input.deposit) paragraph(`Payment terms: Deposit GBP ${Number(input.deposit).toFixed(2)}. Remaining balance due as agreed.`,12);
+  paragraph(`Validity: This quotation is valid for ${input.quoteValidityDays||30} days unless another validity date is shown.`,6);
+  paragraph("Scope: The price covers only the works specifically described in this quotation. Additional or changed works will be agreed separately.",6);
+  paragraph("Measurements: Final site measurements take precedence over preliminary dimensions.",4);
+  paragraph("Lead times: Dates and lead times are estimates and may change due to access, materials or circumstances outside our control.",6);
+  paragraph("Ownership: Fabricated items remain the property of the supplier until paid for in full.",4);
   gap(14);
   rule();
   line((input.companyName || "Business").toUpperCase(), 9, true);
