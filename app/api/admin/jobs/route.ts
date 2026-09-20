@@ -129,7 +129,7 @@ export async function GET(request: Request) {
       manager: job.manager,
       source: job.enquiry_source,
       enquiryAt: job.enquiry_at,
-      finishes: Array.from(new Set((job.finishes ?? []).map((x:string)=>["Primed","Painted"].includes(x)?"Primed & painted":x))),
+      finishes: Array.from(new Set<string>(((job.finishes ?? []) as string[]).map((x:string)=>["Primed","Painted"].includes(x)?"Primed & painted":x))),
       colour: job.colour ?? undefined,
       dimensions: job.dimensions ?? undefined,
       material: job.material ?? undefined,
