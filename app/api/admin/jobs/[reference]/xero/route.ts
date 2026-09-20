@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission, supabaseRequest } from "@/lib/crm/supabase-server";
 import { DEFAULT_CRM_CONFIG, normaliseCrmConfig } from "@/lib/crm/config";
-import { createXeroContact, createXeroDraftInvoice, getXeroInvoice } from "@/lib/crm/xero-invoices";
+import { createXeroContact, createXeroDraftInvoice, findXeroContactByNumber, findXeroInvoiceByReference, getXeroInvoice } from "@/lib/crm/xero-invoices";
 
 async function jsonOrError(response: Response) {
   const body = await response.json().catch(() => null);
@@ -58,7 +58,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         const settingsRes=await supabaseRequest(`/storage/v1/object/mj-job-files/${settingsPath}`,{method:"GET"},session.token);
         const cfg=settingsRes.ok?normaliseCrmConfig(await settingsRes.json().catch(()=>null)):DEFAULT_CRM_CONFIG;
         const prefix=(cfg.businessName||"CRM").replace(/[^A-Za-z0-9]/g,"").slice(0,6).toUpperCase()||"CRM";
-        const contact = await createXeroContact(session.token, customer, prefix);
+        const contactNumber=`${prefix}-${String(customer.id).replace(/-/g, "").slice(0, 20)}`;
+        const contact = await findXeroContactByNumber(session.token,contactNumber) || await createXeroContact(session.token, customer, prefix);
         contactId = contact.ContactID;
         await jsonOrError(await supabaseRequest(`/rest/v1/mj_customers?id=eq.${customer.id}`, {
           method: "PATCH",
@@ -76,7 +77,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       const businessCfg=settingsRes2.ok?normaliseCrmConfig(await settingsRes2.json().catch(()=>null)):DEFAULT_CRM_CONFIG;
       const vatRate=businessCfg.businessDetails.vatRegistered?Number(body.vat_rate ?? 20):0;
       if(businessCfg.businessDetails.vatRegistered&&(!Number.isFinite(vatRate)||vatRate<0||vatRate>100)) return NextResponse.json({error:"Enter a valid VAT rate before creating the invoice"},{status:400});
-      const invoice = await createXeroDraftInvoice(session.token, { contactId, reference: job.reference, description, amount, vatRate });
+      const recoveredInvoice=await findXeroInvoiceByReference(session.token,job.reference);
+      const invoice = recoveredInvoice || await createXeroDraftInvoice(session.token, { contactId, reference: job.reference, description, amount, vatRate });
 
       const created = await jsonOrError(await supabaseRequest("/rest/v1/mj_xero_invoices", {
         method: "POST",
