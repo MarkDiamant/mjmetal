@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { setSessionCookies, supabaseRequest } from "@/lib/crm/supabase-server";
+import { loadCrmUsers } from "@/lib/crm/user-access";
 
 export async function POST(request: Request) {
   try {
@@ -30,7 +31,9 @@ export async function POST(request: Request) {
 
     const admins = adminResponse.ok ? await adminResponse.json() as unknown[] : [];
     if (!admins.length) {
-      return NextResponse.json({ error: "This account is not authorised for M&J Admin" }, { status: 403 });
+      const users = await loadCrmUsers(session.access_token);
+      const allowed = users.some((u) => u.status !== "disabled" && (u.userId === session.user.id || (!!session.user.email && u.email?.toLowerCase() === session.user.email.toLowerCase())));
+      if (!allowed) return NextResponse.json({ error: "This account is not authorised for M&J Admin" }, { status: 403 });
     }
 
     await setSessionCookies(session.access_token, session.refresh_token, session.expires_in);
