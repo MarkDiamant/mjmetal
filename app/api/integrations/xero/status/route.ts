@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdminToken } from "@/lib/crm/supabase-server";
+import { requirePermission } from "@/lib/crm/supabase-server";
 import { disconnectXero, getStoredXeroConnection } from "@/lib/crm/xero";
 
 export async function GET() {
