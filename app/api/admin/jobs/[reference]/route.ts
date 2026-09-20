@@ -26,7 +26,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     const coreOnly = request.nextUrl.searchParams.get("mode") === "core";
     const canPayments=session.permissions.includes("view_payments_invoices"), canCosts=session.permissions.includes("view_costs_profit"), canPricing=session.permissions.includes("view_pricing"), canFiles=session.permissions.includes("view_files"), canWorkforce=session.permissions.includes("view_workforce"), canHistory=session.permissions.includes("view_history"), canCustomer=session.permissions.includes("view_customer_details");
-    const safeJob={...job};
+    const safeJob={...job,finishes:Array.from(new Set((job.finishes||[]).map((x:string)=>["Primed","Painted"].includes(x)?"Primed & painted":x)))};
     if(!canPricing){delete safeJob.quoted_amount;delete safeJob.preliminary_estimate;delete safeJob.vat_rate;}
     if(!canPayments){delete safeJob.payment_method;delete safeJob.written_off_amount;delete safeJob.written_off_at;delete safeJob.write_off_reason;}
     if(!canCosts){delete safeJob.materials_ordered;delete safeJob.materials_ordered_at;}
