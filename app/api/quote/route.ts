@@ -6,14 +6,16 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
 
-    const name = String(formData.get("name") || "");
-    const phone = String(formData.get("phone") || "");
-    const email = String(formData.get("email") || "");
-    const message = String(formData.get("message") || "");
+    const name = String(formData.get("name") || "").trim().slice(0,120);
+    const phone = String(formData.get("phone") || "").trim().slice(0,60);
+    const email = String(formData.get("email") || "").trim().slice(0,254);
+    const message = String(formData.get("message") || "").trim().slice(0,5000);
+    if(!name||(!phone&&!email)||!message) return Response.json({success:false,error:"Please enter your name, contact details and message."},{status:400});
+    const esc=(v:string)=>v.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;");
 
     const files = formData
       .getAll("files")
-      .filter((file): file is File => file instanceof File && file.size > 0);
+      .filter((file): file is File => file instanceof File && file.size > 0 && file.size <= 10*1024*1024).slice(0,5);
 
     const attachments = await Promise.all(
       files.map(async (file) => ({
@@ -29,11 +31,11 @@ export async function POST(request: Request) {
       subject: `New Quote Request - ${name}`,
       html: `
         <h2>New Quote Request</h2>
-        <p><strong>Name:</strong> ${name}</p>
-        <p><strong>Phone:</strong> ${phone}</p>
-        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Name:</strong> ${esc(name)}</p>
+        <p><strong>Phone:</strong> ${esc(phone)}</p>
+        <p><strong>Email:</strong> ${esc(email)}</p>
         <p><strong>Message:</strong></p>
-        <p>${message.replace(/\n/g, "<br/>")}</p>
+        <p>${esc(message).replace(/\n/g, "<br/>")}</p>
         <p><strong>Attachments:</strong> ${files.length}</p>
       `,
       attachments,
