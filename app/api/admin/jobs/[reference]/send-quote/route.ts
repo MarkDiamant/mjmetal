@@ -96,8 +96,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ ref
   }
   await supabaseRequest(`/rest/v1/mj_quotes?id=eq.${encodeURIComponent(quote.id)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ pdf_path: storagePath }) }, session.token);
 
+  const verifiedSender=process.env.CRM_VERIFIED_FROM_EMAIL?.trim();
+  const fromAddress=verifiedSender?`${config.businessName} <${verifiedSender}>`:`${config.businessName} <${config.businessDetails.email}>`;
   const { error } = await resend.emails.send({
-    from: `${config.businessName} <${config.businessDetails.email}>`,
+    from: fromAddress,
     to: [customer.email],
     replyTo: config.businessDetails.email,
     subject: `${config.businessName} quotation ${job.reference}`,
