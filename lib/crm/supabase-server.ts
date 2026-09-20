@@ -82,7 +82,9 @@ export async function clearSessionCookies() {
 export async function requirePermission(permission: PermissionKey) {
   const session = await requireAdminToken();
   if (!session) return null;
-  const role: UserRole = session.admin.initials === "MD" ? "owner" : "admin";
-  if (!ROLE_PERMISSIONS[role].includes(permission)) return null;
-  return { ...session, role, permissions: ROLE_PERMISSIONS[role] };
+  const { loadCrmUsers, effectiveAccess } = await import("@/lib/crm/user-access");
+  const users = await loadCrmUsers(session.token);
+  const access = effectiveAccess(users,{id:session.user.id,email:session.user.email,initials:session.admin.initials});
+  if (!access || !access.permissions.includes(permission)) return null;
+  return { ...session, role: access.role, permissions: access.permissions, accessUser: access };
 }
