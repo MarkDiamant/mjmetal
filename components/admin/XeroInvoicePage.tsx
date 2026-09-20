@@ -39,7 +39,7 @@ export default function XeroInvoicePage({ reference }: { reference: string }) {
     const res = await fetch(`/api/admin/jobs/${encodeURIComponent(reference)}/xero`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: actionName, description: jobData?.quotes?.[0]?.scope_text || jobData?.job?.customer_requirements || "" }),
+      body: JSON.stringify({ action: actionName }),
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) { setError(body.error || "Xero action failed"); setMessage(""); setBusy(false); return; }
