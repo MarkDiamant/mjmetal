@@ -28,12 +28,12 @@ async function xeroJson(sessionToken: string, path: string, init: RequestInit = 
   return body;
 }
 
-export async function createXeroContact(sessionToken: string, customer: Record<string, any>) {
-  const fullName = [customer.first_name, customer.last_name].filter(Boolean).join(" ").trim() || "M&J Customer";
+export async function createXeroContact(sessionToken: string, customer: Record<string, any>, referencePrefix = "CRM") {
+  const fullName = [customer.first_name, customer.last_name].filter(Boolean).join(" ").trim() || "Customer";
   const payload = {
     Contacts: [{
       Name: fullName,
-      ContactNumber: `MJ-${String(customer.id).replace(/-/g, "").slice(0, 20)}`,
+      ContactNumber: `${referencePrefix}-${String(customer.id).replace(/-/g, "").slice(0, 20)}`,
       FirstName: customer.first_name || undefined,
       LastName: customer.last_name || undefined,
       EmailAddress: customer.email || undefined,
