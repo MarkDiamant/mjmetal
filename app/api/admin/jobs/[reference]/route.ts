@@ -131,6 +131,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { reference } = await params;
   const body = await request.json();
+  const permissionForAction:Record<string,string>={payment:"view_payments_invoices",cost_summary:"view_costs_profit",cost:"view_costs_profit",quote:"view_pricing",subcontractor:"view_workforce",material_order:"view_costs_profit"};
+  const needed=permissionForAction[String(body.type||"")];
+  if(needed&&!session.permissions.includes(needed)) return NextResponse.json({error:"You do not have permission for this action"},{status:403});
+  if(body.type==="activity"&&!session.permissions.includes("view_history")) return NextResponse.json({error:"You do not have permission to add job activity"},{status:403});
   try {
     const rows = await jsonOrError(await supabaseRequest(`/rest/v1/mj_jobs?reference=eq.${encodeURIComponent(reference)}&select=id,quoted_amount`, {}, session.token));
     const job = rows[0];
