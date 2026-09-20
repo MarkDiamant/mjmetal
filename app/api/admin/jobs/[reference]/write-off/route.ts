@@ -32,7 +32,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     await supabaseRequest("/rest/v1/mj_audit_events", {
       method: "POST",
       headers: { Prefer: "return=minimal" },
-      body: JSON.stringify({ job_id: job.id, actor: session.admin.initials, action: "written_off", entity_type: "customer_balance", entity_id: job.id, changes: { amount, total_written_off: totalWrittenOff, reason } }),
+      body: JSON.stringify({ job_id: job.id, actor: session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user", action: "written_off", entity_type: "customer_balance", entity_id: job.id, changes: { amount, total_written_off: totalWrittenOff, reason } }),
     }, session.token);
     return NextResponse.json({ job: updated[0] });
   } catch (error) {
