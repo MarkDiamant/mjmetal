@@ -9,6 +9,7 @@ async function jsonOrEmpty(response: Response) {
 export async function GET(_request: Request, { params }: { params: Promise<{ reference: string }> }) {
   const session = await requirePermission("view_payments_invoices");
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if(!session.permissions.includes("view_workforce")) return NextResponse.json({error:"You do not have permission to view workforce payment details"},{status:403});
 
   const { reference } = await params;
   const jobs = await jsonOrEmpty(await supabaseRequest(`/rest/v1/mj_jobs?reference=eq.${encodeURIComponent(reference)}&select=id&limit=1`, {}, session.token));
