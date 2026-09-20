@@ -98,7 +98,7 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
       const rows = await jsonOrError(await supabaseRequest("/rest/v1/mj_files", {
         method: "POST",
         headers: { Prefer: "return=representation" },
-        body: JSON.stringify({ job_id: job.id, category: "quote", storage_path: storagePath, file_name: fileName, mime_type: "application/pdf", include_in_quote: false, uploaded_by: session.admin.initials }),
+        body: JSON.stringify({ job_id: job.id, category: "quote", storage_path: storagePath, file_name: fileName, mime_type: "application/pdf", include_in_quote: false, uploaded_by: session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user" }),
       }, session.token));
       file = rows[0];
     }
@@ -112,7 +112,7 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     await supabaseRequest("/rest/v1/mj_audit_events", {
       method: "POST",
       headers: { Prefer: "return=minimal" },
-      body: JSON.stringify({ job_id: job.id, actor: session.admin.initials, action: "generated", entity_type: "quote_pdf", entity_id: quote.id, changes: { version: quote.version, file_name: fileName } }),
+      body: JSON.stringify({ job_id: job.id, actor: session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user", action: "generated", entity_type: "quote_pdf", entity_id: quote.id, changes: { version: quote.version, file_name: fileName } }),
     }, session.token);
 
     const signed = await supabaseRequest(`/storage/v1/object/sign/mj-job-files/${encodedPath}`, { method: "POST", body: JSON.stringify({ expiresIn: 3600 }) }, session.token);
