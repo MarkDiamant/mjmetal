@@ -22,7 +22,7 @@ export default function IntegrationsPage() {
     setLoading(false);
   }
 
-  useEffect(() => { void load(); const q=new URLSearchParams(window.location.search); if(q.get("xero")==="choose_org"){setChoosing(true);fetch("/api/integrations/xero/organisations",{cache:"no-store"}).then(async r=>{const b=await r.json();if(r.ok)setOrganisations(b.organisations||[]);else setError(b.error||"Unable to load Xero organisations");}).catch(()=>setError("Unable to load Xero organisations"));} fetch("/api/admin/settings",{cache:"no-store"}).then(async r=>{if(r.ok){const b=await r.json();setCrmConfig(b.settings||DEFAULT_CRM_CONFIG);}}).catch(()=>{}); }, []);
+  useEffect(() => { void load(); const q=new URLSearchParams(window.location.search); if(q.get("xero")==="choose_org"){setChoosing(true);fetch("/api/integrations/xero/organisations",{cache:"no-store"}).then(async r=>{const b=await r.json();if(r.ok)setOrganisations(b.organisations||[]);else {setChoosing(false);setError(b.error||"Unable to load Xero organisations");}}).catch(()=>setError("Unable to load Xero organisations"));} fetch("/api/admin/settings",{cache:"no-store"}).then(async r=>{if(r.ok){const b=await r.json();setCrmConfig(b.settings||DEFAULT_CRM_CONFIG);}}).catch(()=>{}); }, []);
 
   async function chooseOrganisation(tenantId:string){setError("");const r=await fetch("/api/integrations/xero/organisations",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({tenantId})});const b=await r.json().catch(()=>({}));if(!r.ok){setError(b.error||"Unable to connect Xero");return;}setChoosing(false);setOrganisations([]);window.history.replaceState({},"","/admin/integrations");await load();}
 
