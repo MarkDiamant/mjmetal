@@ -5,7 +5,7 @@ import { requirePermission } from "@/lib/crm/supabase-server";
 import { getXeroAuthorizeUrl } from "@/lib/crm/xero";
 
 export async function GET() {
-  const session = await requireAdminToken();
+  const session = await requirePermission("manage_business_settings");
   if (!session) return NextResponse.redirect(new URL("/admin/login", process.env.NEXT_PUBLIC_APP_URL || process.env.XERO_REDIRECT_URI || "http://localhost:3000"));
 
   const state = crypto.randomBytes(24).toString("base64url");
