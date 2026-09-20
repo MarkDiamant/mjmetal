@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdminToken, supabaseRequest } from "@/lib/crm/supabase-server";
+import { requirePermission, supabaseRequest } from "@/lib/crm/supabase-server";
 
 async function jsonOrError(response: Response) {
   const body = await response.json().catch(() => null);
@@ -16,7 +16,7 @@ async function audit(token: string, actor: "MD" | "JB", jobId: string, action: s
 }
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ reference: string }> }) {
-  const session = await requireAdminToken();
+  const session = await requirePermission("view_jobs");
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { reference } = await params;
   try {
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ reference: string }> }) {
-  const session = await requireAdminToken();
+  const session = await requirePermission("edit_jobs");
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { reference } = await params;
   const body = await request.json();
@@ -113,7 +113,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ reference: string }> }) {
-  const session = await requireAdminToken();
+  const session = await requirePermission("edit_jobs");
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { reference } = await params;
   const body = await request.json();
