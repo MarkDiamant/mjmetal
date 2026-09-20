@@ -122,7 +122,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const { reference } = await params;
   const body = await request.json();
   try {
-    const rows = await jsonOrError(await supabaseRequest(`/rest/v1/mj_jobs?reference=eq.${encodeURIComponent(reference)}&select=id,agreed_amount`, {}, session.token));
+    const rows = await jsonOrError(await supabaseRequest(`/rest/v1/mj_jobs?reference=eq.${encodeURIComponent(reference)}&select=id,quoted_amount`, {}, session.token));
     const job = rows[0];
     if (!job) return NextResponse.json({ error: "Job not found" }, { status: 404 });
     const now = new Date().toISOString();
