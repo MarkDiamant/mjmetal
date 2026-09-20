@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdminToken, supabaseRequest } from "@/lib/crm/supabase-server";
+import { requirePermission, supabaseRequest } from "@/lib/crm/supabase-server";
 
 async function jsonOrError(response: Response) {
   const body = await response.json().catch(() => null);
@@ -25,7 +25,8 @@ async function recalculatePaidAmount(jobId: string, assignmentId: string, token:
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ reference: string; assignmentId: string }> }) {
-  const session = await requireAdminToken();
+  const session = await requirePermission("view_workforce");
+  if(session&&!session.permissions.includes("edit_jobs")) return NextResponse.json({error:"You do not have permission to change job assignments"},{status:403});
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const { reference, assignmentId } = await params;
@@ -69,7 +70,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ re
 }
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ reference: string; assignmentId: string }> }) {
-  const session = await requireAdminToken();
+  const session = await requirePermission("view_workforce");
+  if(session&&!session.permissions.includes("edit_jobs")) return NextResponse.json({error:"You do not have permission to change job assignments"},{status:403});
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const { reference, assignmentId } = await params;
