@@ -91,7 +91,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         method: "PATCH", headers: { Prefer: "return=representation" },
         body: JSON.stringify({ ...body.customer, updated_at: new Date().toISOString() }),
       }, session.token));
-      await audit(session.token, session.admin.initials, job.id, "updated", "customer", job.customer_id, body.customer);
+      await audit(session.token, session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user", job.id, "updated", "customer", job.customer_id, body.customer);
     }
 
     if (body.job && Object.keys(body.job).length) {
@@ -106,7 +106,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         method: "PATCH", headers: { Prefer: "return=representation" },
         body: JSON.stringify({ ...patch, updated_at: new Date().toISOString() }),
       }, session.token));
-      await audit(session.token, session.admin.initials, job.id, "updated", "job", job.id, patch);
+      await audit(session.token, session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user", job.id, "updated", "job", job.id, patch);
       return NextResponse.json({ job: updated[0] });
     }
 
@@ -130,12 +130,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (body.type === "activity") {
       const created = await jsonOrError(await supabaseRequest("/rest/v1/mj_activities", {
         method: "POST", headers: { Prefer: "return=representation" },
-        body: JSON.stringify({ job_id: job.id, activity_type: body.activity_type || "note", actor: session.admin.initials, summary: body.summary, details: body.details || null, occurred_at: body.occurred_at || now, next_action_at: body.next_action_at || null }),
+        body: JSON.stringify({ job_id: job.id, activity_type: body.activity_type || "note", actor: session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user", summary: body.summary, details: body.details || null, occurred_at: body.occurred_at || now, next_action_at: body.next_action_at || null }),
       }, session.token));
       if (body.next_action || body.next_action_at) {
         await supabaseRequest(`/rest/v1/mj_jobs?id=eq.${job.id}`, { method: "PATCH", body: JSON.stringify({ next_action: body.next_action || body.summary, next_action_at: body.next_action_at || null, updated_at: now }) }, session.token);
       }
-      await audit(session.token, session.admin.initials, job.id, "created", "activity", created[0]?.id, body);
+      await audit(session.token, session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user", job.id, "created", "activity", created[0]?.id, body);
       return NextResponse.json({ item: created[0] });
     }
 
@@ -151,7 +151,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         if (paymentType.includes("final") || paymentType.includes("balance")) { patch.status = "completed"; patch.completed_at = body.paid_at || now; patch.next_action = null; patch.next_action_at = null; patch.next_action_assignee = null; }
         if (Object.keys(patch).length > 1) await supabaseRequest(`/rest/v1/mj_jobs?id=eq.${job.id}`, { method: "PATCH", body: JSON.stringify(patch) }, session.token);
       }
-      await audit(session.token, session.admin.initials, job.id, "created", "payment", created[0]?.id, body);
+      await audit(session.token, session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user", job.id, "created", "payment", created[0]?.id, body);
       return NextResponse.json({ item: created[0] });
     }
 
@@ -163,7 +163,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           body: JSON.stringify({ job_id: job.id, category: "Job total", estimated_amount: body.estimated_amount, actual_amount: body.actual_amount }),
         }, session.token));
       }
-      await audit(session.token, session.admin.initials, job.id, "updated", "cost_summary", job.id, body);
+      await audit(session.token, session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user", job.id, "updated", "cost_summary", job.id, body);
       return NextResponse.json({ ok: true });
     }
 
@@ -184,7 +184,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           body: JSON.stringify({ job_id: job.id, direction: "commission_out", payment_type: "Commission", amount: paidAmount, payment_method: body.payment_method || "Bank transfer", counterparty: body.supplier || null, paid_at: body.paid_at || now, notes: `Commission cost ${created[0]?.id || ""}`.trim() }),
         }, session.token);
       }
-      await audit(session.token, session.admin.initials, job.id, "created", "cost", created[0]?.id, body);
+      await audit(session.token, session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user", job.id, "created", "cost", created[0]?.id, body);
       return NextResponse.json({ item: created[0] });
     }
 
@@ -193,10 +193,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       const version = (existing[0]?.version || 0) + 1;
       const created = await jsonOrError(await supabaseRequest("/rest/v1/mj_quotes", {
         method: "POST", headers: { Prefer: "return=representation" },
-        body: JSON.stringify({ job_id: job.id, version, status: body.status || "draft", vat_rate: Number(body.vat_rate || 0), scope_text: body.scope_text, exclusions: body.exclusions || null, amount: Number(body.amount || 0), deposit_amount: body.deposit_amount ? Number(body.deposit_amount) : null, lead_time: body.lead_time || null, valid_until: body.valid_until || null, created_by: session.admin.initials }),
+        body: JSON.stringify({ job_id: job.id, version, status: body.status || "draft", vat_rate: Number(body.vat_rate || 0), scope_text: body.scope_text, exclusions: body.exclusions || null, amount: Number(body.amount || 0), deposit_amount: body.deposit_amount ? Number(body.deposit_amount) : null, lead_time: body.lead_time || null, valid_until: body.valid_until || null, created_by: session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user" }),
       }, session.token));
       await supabaseRequest(`/rest/v1/mj_jobs?id=eq.${job.id}`, { method: "PATCH", body: JSON.stringify({ quoted_amount: Number(body.amount || 0), vat_rate: Number(body.vat_rate || 0), status: "quote_preparing", next_action: "Send quote", updated_at: now }) }, session.token);
-      await audit(session.token, session.admin.initials, job.id, "created", "quote", created[0]?.id, { version, amount: body.amount });
+      await audit(session.token, session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user", job.id, "created", "quote", created[0]?.id, { version, amount: body.amount });
       return NextResponse.json({ item: created[0] });
     }
 
@@ -227,7 +227,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           scheduled_at: body.scheduled_at || null,
         }),
       }, session.token));
-      await audit(session.token, session.admin.initials, job.id, "assigned", "workforce", created[0]?.id, body);
+      await audit(session.token, session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user", job.id, "assigned", "workforce", created[0]?.id, body);
       return NextResponse.json({ item: created[0] });
     }
 
@@ -244,7 +244,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         body: JSON.stringify({ job_id: job.id, supplier_id: supplierId, supplier_name: body.supplier_name || null, description: body.description, amount: body.amount ? Number(body.amount) : null, ordered_at: body.ordered_at || now, expected_at: body.expected_at || null, status: body.status || "ordered", notes: body.notes || null }),
       }, session.token));
       await supabaseRequest(`/rest/v1/mj_jobs?id=eq.${job.id}`, { method: "PATCH", body: JSON.stringify({ materials_ordered: true, materials_ordered_at: body.ordered_at || now, updated_at: now }) }, session.token);
-      await audit(session.token, session.admin.initials, job.id, "created", "material_order", created[0]?.id, body);
+      await audit(session.token, session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user", job.id, "created", "material_order", created[0]?.id, body);
       return NextResponse.json({ item: created[0] });
     }
 
