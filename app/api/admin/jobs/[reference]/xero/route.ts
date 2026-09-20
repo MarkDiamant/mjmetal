@@ -34,6 +34,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 export async function POST(request: NextRequest, { params }: { params: Promise<{ reference: string }> }) {
   const session = await requirePermission("view_payments_invoices");
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if(!session.permissions.includes("edit_jobs")) return NextResponse.json({error:"You do not have permission to create or sync invoices"},{status:403});
 
   try {
     const { reference } = await params;
