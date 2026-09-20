@@ -26,6 +26,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     const coreOnly = request.nextUrl.searchParams.get("mode") === "core";
     const canPayments=session.permissions.includes("view_payments_invoices"), canCosts=session.permissions.includes("view_costs_profit"), canPricing=session.permissions.includes("view_pricing"), canFiles=session.permissions.includes("view_files"), canWorkforce=session.permissions.includes("view_workforce"), canHistory=session.permissions.includes("view_history"), canCustomer=session.permissions.includes("view_customer_details");
+    const safeJob={...job};
+    if(!canPricing){delete safeJob.quoted_amount;delete safeJob.preliminary_estimate;delete safeJob.vat_rate;}
+    if(!canPayments){delete safeJob.payment_method;delete safeJob.written_off_amount;delete safeJob.written_off_at;delete safeJob.write_off_reason;}
+    if(!canCosts){delete safeJob.materials_ordered;delete safeJob.materials_ordered_at;}
+    const safeAssignments=(items:any[])=>items.map((x:any)=>canCosts?x:({...x,agreed_cost:null,deposit_amount:null,paid_amount:null}));
     if (coreOnly) {
       const [customers, payments, costs, assignments] = await Promise.all([
         canCustomer?jsonOrError(await supabaseRequest(`/rest/v1/mj_customers?id=eq.${job.customer_id}&select=*`, {}, session.token)):Promise.resolve([]),
@@ -34,7 +39,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         canWorkforce?jsonOrError(await supabaseRequest(`/rest/v1/mj_job_subcontractors?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)):Promise.resolve([]),
       ]);
       return NextResponse.json({
-        job, customer: customers[0] || null, payments, costs, assignments,
+        job:safeJob, customer: customers[0] || null, payments, costs, assignments:safeAssignments(assignments),
         activities: [], quotes: [], files: [], subcontractors: [], materialOrders: [], suppliers: [], auditEvents: [],
         currentAdmin: session.admin, _full: false,
       });
@@ -65,8 +70,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }));
 
     return NextResponse.json({
-      job, customer: customers[0] || null, activities, payments, costs, quotes, files: filesWithUrls,
-      assignments, subcontractors, materialOrders, suppliers, auditEvents, xeroInvoices, currentAdmin: session.admin, _full: true,
+      job:safeJob, customer: customers[0] || null, activities, payments, costs, quotes, files: filesWithUrls,
+      assignments:safeAssignments(assignments), subcontractors, materialOrders, suppliers, auditEvents, xeroInvoices, currentAdmin: session.admin, _full: true,
     });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Failed to load job" }, { status: 500 });
