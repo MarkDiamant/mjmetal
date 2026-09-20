@@ -90,7 +90,18 @@ export async function requirePermission(permission: PermissionKey) {
   if (!session) return null;
   const settingsPath="_crm/settings.json".split("/").map(encodeURIComponent).join("/");
   const settingsResponse=await supabaseRequest(`/storage/v1/object/mj-job-files/${settingsPath}`,{method:"GET"},session.token);
-  if(settingsResponse.ok){const settings=await settingsResponse.json().catch(()=>null);const billing=settings?.billing;if(billing?.mode==="paid"&&!["active","trialing"].includes(String(billing.status||"")))return null;}
+  if(settingsResponse.ok){
+    const settings=await settingsResponse.json().catch(()=>null);
+    const billing=settings?.billing;
+    if(billing?.mode==="paid"){
+      const status=String(billing.status||"");
+      const periodEnd=billing.currentPeriodEnd?Date.parse(String(billing.currentPeriodEnd)):0;
+      const recoveryUntil=periodEnd?periodEnd+7*24*60*60*1000:0;
+      const withinRecovery=["past_due","unpaid"].includes(status)&&recoveryUntil>Date.now();
+      const cancelledButPaid=status==="cancelled"&&periodEnd>Date.now();
+      if(!["active","trialing"].includes(status)&&!withinRecovery&&!cancelledButPaid)return null;
+    }
+  }
   const { loadCrmUsers, effectiveAccess } = await import("@/lib/crm/user-access");
   const users = await loadCrmUsers(session.token);
   const access = effectiveAccess(users,{id:session.user.id,email:session.user.email,initials:session.admin.initials});
