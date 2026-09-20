@@ -15,6 +15,7 @@ function displayDate(value: string | null | undefined) { return value ? new Date
 
 export async function POST(request: Request, { params }: { params: Promise<{ reference: string }> }) {
   const session = await requirePermission("view_pricing");
+  if(session&&!session.permissions.includes("edit_jobs")) return NextResponse.json({error:"You do not have permission to send quotes"},{status:403});
   if (!session) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
 
   const { reference } = await params;
@@ -91,7 +92,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ref
   const existingMetaResponse = await supabaseRequest(`/rest/v1/mj_files?job_id=eq.${job.id}&storage_path=eq.${encodeURIComponent(storagePath)}&select=id&limit=1`, {}, session.token);
   const existingMeta = existingMetaResponse.ok ? await existingMetaResponse.json() as Array<{id:string}> : [];
   if (!existingMeta.length) {
-    await supabaseRequest("/rest/v1/mj_files", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ job_id: job.id, category: "quote", storage_path: storagePath, file_name: fileName, mime_type: "application/pdf", include_in_quote: false, uploaded_by: session.admin.initials }) }, session.token);
+    await supabaseRequest("/rest/v1/mj_files", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ job_id: job.id, category: "quote", storage_path: storagePath, file_name: fileName, mime_type: "application/pdf", include_in_quote: false, uploaded_by: session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user" }) }, session.token);
   }
   await supabaseRequest(`/rest/v1/mj_quotes?id=eq.${encodeURIComponent(quote.id)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ pdf_path: storagePath }) }, session.token);
 
@@ -119,7 +120,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ref
   await Promise.all([
     supabaseRequest(`/rest/v1/mj_quotes?id=eq.${encodeURIComponent(quote.id)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ status: "sent", sent_at: sentAt, pdf_path: storagePath }) }, session.token),
     supabaseRequest(`/rest/v1/mj_jobs?id=eq.${encodeURIComponent(job.id)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ status: "quote_sent", quote_sent_at: sentAt, next_action: "Follow up quote", updated_at: sentAt }) }, session.token),
-    supabaseRequest("/rest/v1/mj_activities", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ job_id: job.id, activity_type: "email", actor: session.admin.initials, summary: `Quotation V${quote.version} emailed with PDF attachment`, details: customer.email, occurred_at: sentAt }) }, session.token),
+    supabaseRequest("/rest/v1/mj_activities", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ job_id: job.id, activity_type: "email", actor: session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user", summary: `Quotation V${quote.version} emailed with PDF attachment`, details: customer.email, occurred_at: sentAt }) }, session.token),
     supabaseRequest("/rest/v1/mj_integration_events", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ job_id: job.id, source: "resend", event_type: "quote_sent", payload: { quote_id: quote.id, version: quote.version, to: customer.email, pdf_path: storagePath }, occurred_at: sentAt, processed_at: sentAt }) }, session.token),
   ]);
 
