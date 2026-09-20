@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     const token=await exchangeXeroCode(code), tenants=await getXeroTenants(token.access_token);
     if(!tenants.length)return NextResponse.redirect(`${base}/admin/integrations?xero=no_org`);
     if(tenants.length===1){await saveXeroConnection(session.token,session.user.id,token,tenants[0]);return NextResponse.redirect(`${base}/admin/integrations?xero=connected`);}
-    store.set("mj_xero_pending",Buffer.from(JSON.stringify({token,tenants})).toString("base64url"),{httpOnly:true,secure:true,sameSite:"lax",path:"/",maxAge:10*60});
+    store.set("mj_xero_pending",Buffer.from(JSON.stringify({token,tenants})).toString("base64url"),{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/",maxAge:10*60});
     return NextResponse.redirect(`${base}/admin/integrations?xero=choose_org`);
   }catch{return NextResponse.redirect(`${base}/admin/integrations?xero=error`);}
 }
