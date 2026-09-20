@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdminToken, supabaseRequest } from "@/lib/crm/supabase-server";
+import { requirePermission, supabaseRequest } from "@/lib/crm/supabase-server";
 
 function asNumber(value: unknown) {
   if (value === null || value === undefined || value === "") return null;
@@ -10,7 +10,7 @@ function normalisePhone(value: unknown) { return String(value || "").replace(/\D
 function normaliseEmail(value: unknown) { return String(value || "").trim().toLowerCase(); }
 
 export async function GET(request: Request) {
-  const session = await requireAdminToken();
+  const session = await requirePermission("view_jobs");
   if (!session) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   const url = new URL(request.url);
   const archived = url.searchParams.get("archived") === "1";
@@ -175,7 +175,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const session = await requireAdminToken();
+  const session = await requirePermission("edit_jobs");
   if (!session) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   try {
     const body = await request.json() as Record<string, any>;
