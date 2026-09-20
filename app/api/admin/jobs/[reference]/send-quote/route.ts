@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
-import { requireAdminToken, supabaseRequest } from "@/lib/crm/supabase-server";
+import { requirePermission, supabaseRequest } from "@/lib/crm/supabase-server";
 import { buildQuotePdf } from "@/lib/crm/simple-pdf";
 import { DEFAULT_CRM_CONFIG, normaliseCrmConfig } from "@/lib/crm/config";
 
@@ -14,7 +14,7 @@ function money(value: unknown) { return new Intl.NumberFormat("en-GB", { style: 
 function displayDate(value: string | null | undefined) { return value ? new Date(value).toLocaleDateString("en-GB") : ""; }
 
 export async function POST(request: Request, { params }: { params: Promise<{ reference: string }> }) {
-  const session = await requireAdminToken();
+  const session = await requirePermission("view_pricing");
   if (!session) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
 
   const { reference } = await params;
@@ -41,6 +41,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ref
   const scopeHtml = esc(quote.scope_text).replaceAll("\n", "<br>");
   const exclusionsHtml = quote.exclusions ? esc(quote.exclusions).replaceAll("\n", "<br>") : "";
   const finish = Array.isArray(job.finishes) ? job.finishes.join(" + ") : "";
+  if (!quote.scope_text?.trim() || Number(quote.amount||0)<=0) return NextResponse.json({ error: "Add the quote scope and final price before sending." }, { status: 400 });
 
   const pdf = buildQuotePdf({
     companyName: config.businessName,
@@ -70,6 +71,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ ref
     deposit: quote.deposit_amount === null ? null : Number(quote.deposit_amount),
     leadTime: quote.lead_time,
     companyAddress: config.businessDetails.officeAddress,
+    bankName: config.businessDetails.bankName,
+    accountNumber: config.businessDetails.accountNumber,
+    sortCode: config.businessDetails.sortCode,
+    defaultDepositPercent: config.businessDetails.defaultDepositPercent,
+    quoteValidityDays: config.businessDetails.quoteValidityDays,
   });
 
   const fileName = `${job.reference}-V${quote.version}-quotation.pdf`;
