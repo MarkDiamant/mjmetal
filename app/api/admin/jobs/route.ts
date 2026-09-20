@@ -16,13 +16,16 @@ export async function GET(request: Request) {
   const archived = url.searchParams.get("archived") === "1";
   const archiveFilter = archived ? "archived_at=not.is.null" : "archived_at=is.null";
 
+  const canPayments=session.permissions.includes("view_payments_invoices");
+  const canWorkforce=session.permissions.includes("view_workforce");
+  const canCosts=session.permissions.includes("view_costs_profit");
   const [jobsResponse, paymentsResponse, assignmentsResponse, peopleResponse, costsResponse, xeroInvoicesResponse] = await Promise.all([
     supabaseRequest(`/rest/v1/mj_jobs?${archiveFilter}&select=*,mj_customers(*)&order=sequence_number.asc`, { method: "GET" }, session.token),
-    supabaseRequest("/rest/v1/mj_payments?select=id,job_id,direction,payment_type,amount,payment_method,counterparty,paid_at,due_at,notes,created_at&order=created_at.desc", { method: "GET" }, session.token),
-    supabaseRequest("/rest/v1/mj_job_subcontractors?select=id,job_id,subcontractor_id,scope,agreed_cost,deposit_amount,paid_amount,status,scheduled_at,completed_at,materials_included,assignment_role&order=created_at.asc", { method: "GET" }, session.token),
-    supabaseRequest("/rest/v1/mj_subcontractors?active=eq.true&select=id,name,company,phone,email,capabilities,relationship_type&order=name.asc", { method: "GET" }, session.token),
-    supabaseRequest("/rest/v1/mj_job_costs?select=id,job_id,category,supplier,estimated_amount,actual_amount,paid_amount,paid_at,due_at,notes,created_at&order=created_at.asc", { method: "GET" }, session.token),
-    supabaseRequest("/rest/v1/mj_xero_invoices?select=job_id,status", { method: "GET" }, session.token),
+    canPayments?supabaseRequest("/rest/v1/mj_payments?select=id,job_id,direction,payment_type,amount,payment_method,counterparty,paid_at,due_at,notes,created_at&order=created_at.desc", { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
+    canWorkforce?supabaseRequest("/rest/v1/mj_job_subcontractors?select=id,job_id,subcontractor_id,scope,agreed_cost,deposit_amount,paid_amount,status,scheduled_at,completed_at,materials_included,assignment_role&order=created_at.asc", { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
+    canWorkforce?supabaseRequest("/rest/v1/mj_subcontractors?active=eq.true&select=id,name,company,phone,email,capabilities,relationship_type&order=name.asc", { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
+    canCosts?supabaseRequest("/rest/v1/mj_job_costs?select=id,job_id,category,supplier,estimated_amount,actual_amount,paid_amount,paid_at,due_at,notes,created_at&order=created_at.asc", { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
+    canPayments?supabaseRequest("/rest/v1/mj_xero_invoices?select=job_id,status", { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
   ]);
 
   if (!jobsResponse.ok) return NextResponse.json({ error: "Unable to load jobs" }, { status: 500 });
