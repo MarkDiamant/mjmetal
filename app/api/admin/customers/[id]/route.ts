@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdminToken, supabaseRequest } from "@/lib/crm/supabase-server";
+import { requirePermission, supabaseRequest } from "@/lib/crm/supabase-server";
 
 async function jsonOrError(response: Response) {
   const body = await response.json().catch(() => null);
@@ -8,7 +8,7 @@ async function jsonOrError(response: Response) {
 }
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await requireAdminToken();
+  const session = await requirePermission("view_customer_details");
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const { id } = await params;
@@ -21,9 +21,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     if (jobIds.length) {
       const list = jobIds.join(",");
       [activities, quotes, payments] = await Promise.all([
-        jsonOrError(await supabaseRequest(`/rest/v1/mj_activities?job_id=in.(${list})&select=*&order=occurred_at.desc&limit=250`, {}, session.token)),
-        jsonOrError(await supabaseRequest(`/rest/v1/mj_quotes?job_id=in.(${list})&select=*&order=created_at.desc`, {}, session.token)),
-        jsonOrError(await supabaseRequest(`/rest/v1/mj_payments?job_id=in.(${list})&select=*&order=created_at.desc`, {}, session.token)),
+        session.permissions.includes("view_history")?jsonOrError(await supabaseRequest(`/rest/v1/mj_activities?job_id=in.(${list})&select=*&order=occurred_at.desc&limit=250`, {}, session.token)):Promise.resolve([]),
+        session.permissions.includes("view_pricing")?jsonOrError(await supabaseRequest(`/rest/v1/mj_quotes?job_id=in.(${list})&select=*&order=created_at.desc`, {}, session.token)):Promise.resolve([]),
+        session.permissions.includes("view_payments_invoices")?jsonOrError(await supabaseRequest(`/rest/v1/mj_payments?job_id=in.(${list})&select=*&order=created_at.desc`, {}, session.token)):Promise.resolve([]),
       ]);
     }
     return NextResponse.json({ customer, jobs, activities, quotes, payments });
