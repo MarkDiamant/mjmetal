@@ -62,6 +62,7 @@ export type QuotePdfInput = {
   sortCode?: string | null;
   defaultDepositPercent?: number;
   quoteValidityDays?: number;
+  paymentTerms?: string;
   template?: "mj-signature" | "clean" | "classic";
   accentColour?: string;
 };
@@ -120,6 +121,7 @@ export function buildQuotePdf(input: QuotePdfInput): Buffer {
   line(`GBP ${Number(input.amount || 0).toFixed(2)}`, 18, true, 50, 24);
   if (input.deposit) line(`Deposit: GBP ${Number(input.deposit).toFixed(2)}`, 10, true);
   else if (input.defaultDepositPercent) line(`Deposit: ${input.defaultDepositPercent}%`, 10, true);
+  if (input.paymentTerms) paragraph(`Payment terms: ${input.paymentTerms}`);
   if (input.leadTime) line(`Estimated lead time: ${input.leadTime}`, 10);
 
   gap(14);
