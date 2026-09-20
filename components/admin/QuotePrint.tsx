@@ -33,6 +33,12 @@ export default function QuotePrint({ reference, quoteId }: { reference: string; 
   const photos = (data.files || []).filter((f: any) => f.include_in_quote && f.signed_url && String(f.mime_type || "").startsWith("image/")).slice(0, 3);
   const message = `Hi ${c.first_name || ""},\n\nPlease find our quotation ${j.reference} for ${String(j.job_type || "metalwork").toLowerCase()} at ${site}.\n\nQuotation: ${money(quote.amount)}\n\nKind regards,\n${crmConfig.businessName}`;
   const mailSubject = `${crmConfig.businessName} quotation ${j.reference}`;
+  const template=crmConfig.quoteTemplate;
+  const isClassic=template==="classic";
+  const isMj=template==="mj-signature"&&crmConfig.tenantKey==="mj-metal";
+  const pageClass=isClassic?"font-serif":isMj?"":"";
+  const headerClass=isClassic?"border-b border-black pb-5":isMj?"border-b-4 border-[var(--brand)] pb-5":"border-b-2 border-[var(--brand)] pb-5";
+  const panelClass=isClassic?"border-y border-black/20 py-5":isMj?"rounded-xl bg-[#f5f5f2] p-5":"border border-[var(--brand)]/30 p-5";
   const mailHref = `mailto:${encodeURIComponent(c.email || "")}?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(message)}`;
 
   async function copyWhatsApp() {
@@ -66,8 +72,8 @@ export default function QuotePrint({ reference, quoteId }: { reference: string; 
       <a href={`/admin/jobs/${reference}`} className="rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-bold">Back to job</a>
     </div>
 
-    <article className="quote-page mx-auto flex min-h-[1120px] max-w-[900px] flex-col bg-white px-10 py-9 shadow-xl sm:px-14">
-      <header className="flex items-start justify-between gap-8 border-b-4 border-[var(--brand)] pb-5">
+    <article className={`quote-page ${pageClass} mx-auto flex min-h-[1120px] max-w-[900px] flex-col bg-white px-10 py-9 shadow-xl sm:px-14`}>
+      <header className={`flex items-start justify-between gap-8 ${headerClass}`}>
         <div><img src={crmConfig.logoUrl} alt={crmConfig.businessName} className="h-20 w-auto object-contain" /></div>
         <div className="text-right"><h1 className="text-3xl font-black uppercase tracking-tight">Quotation</h1><p className="mt-1 text-lg font-black text-[var(--brand)]">{j.reference} / V{quote.version}</p><p className="mt-1 text-xs text-black/55">Issued {new Date(quote.created_at).toLocaleDateString("en-GB")}{quote.valid_until ? ` · Valid until ${new Date(`${quote.valid_until}T12:00:00`).toLocaleDateString("en-GB")}` : ""}</p></div>
       </header>
@@ -81,12 +87,12 @@ export default function QuotePrint({ reference, quoteId }: { reference: string; 
 
       {photos.length > 0 && <section className="mt-6"><div className={`grid gap-3 ${photos.length===1?"grid-cols-1":photos.length===2?"grid-cols-2":"grid-cols-3"}`}>{photos.map((f: any) => <img key={f.id} src={f.signed_url} alt={f.file_name} className="h-48 w-full rounded-lg border border-black/10 object-cover" />)}</div></section>}
 
-      <section className="mt-auto rounded-xl bg-[#f5f5f2] p-5"><div className="flex items-end justify-between gap-4"><div><p className="text-[10px] font-black uppercase tracking-[0.12em] text-black/45">Quotation total</p><p className="mt-1 text-3xl font-black">{money(quote.amount)}</p><p className="mt-1 text-[10px] text-black/45">{crmConfig.businessDetails.vatRegistered?"VAT shown where applicable":"VAT not charged"}</p></div><div className="text-right text-sm leading-5 text-black/60">{quote.deposit_amount && <p><b>Deposit:</b> {money(quote.deposit_amount)}</p>}{quote.lead_time && <p><b>Estimated lead time:</b> {quote.lead_time}</p>}</div></div></section>
+      <section className={`mt-auto ${panelClass}`}><div className="flex items-end justify-between gap-4"><div><p className="text-[10px] font-black uppercase tracking-[0.12em] text-black/45">Quotation total</p><p className="mt-1 text-3xl font-black">{money(quote.amount)}</p><p className="mt-1 text-[10px] text-black/45">{crmConfig.businessDetails.vatRegistered?"VAT shown where applicable":"VAT not charged"}</p></div><div className="text-right text-sm leading-5 text-black/60">{quote.deposit_amount && <p><b>Deposit:</b> {money(quote.deposit_amount)}</p>}{quote.lead_time && <p><b>Estimated lead time:</b> {quote.lead_time}</p>}</div></div></section>
       <footer className="mt-4 text-[10px] leading-4 text-black/45">{crmConfig.businessName}{crmConfig.businessDetails.companyNumber?` · Company No. ${crmConfig.businessDetails.companyNumber}`:""}{crmConfig.businessDetails.phone?` · ${crmConfig.businessDetails.phone}`:""}{crmConfig.businessDetails.email?` · ${crmConfig.businessDetails.email}`:""}{crmConfig.businessDetails.website?` · ${crmConfig.businessDetails.website}`:""}</footer>
     </article>
 
-    <article className="quote-page mx-auto mt-6 flex min-h-[1120px] max-w-[900px] flex-col bg-white px-10 py-9 shadow-xl print:mt-0 sm:px-14">
-      <header className="flex items-center justify-between border-b-4 border-[var(--brand)] pb-4"><img src={crmConfig.logoUrl} alt={crmConfig.businessName} className="h-14 w-auto object-contain"/><div className="text-right"><p className="font-black">{j.reference} / V{quote.version}</p><p className="text-xs text-black/45">Quotation details</p></div></header>
+    <article className={`quote-page ${pageClass} mx-auto mt-6 flex min-h-[1120px] max-w-[900px] flex-col bg-white px-10 py-9 shadow-xl print:mt-0 sm:px-14`}>
+      <header className={`flex items-center justify-between ${isClassic?"border-b border-black pb-4":isMj?"border-b-4 border-[var(--brand)] pb-4":"border-b-2 border-[var(--brand)] pb-4"}`}><img src={crmConfig.logoUrl} alt={crmConfig.businessName} className="h-14 w-auto object-contain"/><div className="text-right"><p className="font-black">{j.reference} / V{quote.version}</p><p className="text-xs text-black/45">Quotation details</p></div></header>
       {quote.exclusions && <section className="mt-6"><h2 className="text-base font-black">Project notes</h2><div className="mt-2 whitespace-pre-wrap text-sm leading-5 text-black/70">{quote.exclusions}</div></section>}
       <section className="mt-6"><h2 className="text-base font-black">Payment & key terms</h2><div className="mt-3 grid gap-x-8 gap-y-2 text-[12px] leading-5 text-black/65 sm:grid-cols-2">
         <p><b>Payment:</b> {quote.deposit_amount ? `${money(quote.deposit_amount)} deposit, with the remaining balance due on completion.` : crmConfig.businessDetails.defaultDepositPercent>0 ? `${crmConfig.businessDetails.defaultDepositPercent}% deposit, with the remaining balance due on completion.` : "Payment terms as agreed for this project."}</p>
