@@ -87,6 +87,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (!job) return NextResponse.json({ error: "Job not found" }, { status: 404 });
 
     if (body.customer && Object.keys(body.customer).length) {
+      if(!session.permissions.includes("view_customer_details")) return NextResponse.json({error:"You do not have permission to edit customer details"},{status:403});
       await jsonOrError(await supabaseRequest(`/rest/v1/mj_customers?id=eq.${job.customer_id}`, {
         method: "PATCH", headers: { Prefer: "return=representation" },
         body: JSON.stringify({ ...body.customer, updated_at: new Date().toISOString() }),
@@ -99,7 +100,6 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       if(!session.permissions.includes("view_pricing")) { delete patch.quoted_amount; delete patch.preliminary_estimate; delete patch.vat_rate; }
       if(!session.permissions.includes("view_payments_invoices")) { delete patch.payment_method; delete patch.written_off_amount; delete patch.written_off_at; delete patch.write_off_reason; }
       if(!session.permissions.includes("view_costs_profit")) { delete patch.materials_ordered; delete patch.materials_ordered_at; }
-      if(!session.permissions.includes("view_customer_details")) return NextResponse.json({error:"You do not have permission to edit customer details"},{status:403});
       if (["declined", "cancelled", "completed"].includes(String(patch.status || ""))) {
         patch.next_action = null;
         patch.next_action_at = null;
