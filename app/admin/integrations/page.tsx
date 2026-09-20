@@ -9,6 +9,8 @@ export default function IntegrationsPage() {
   const [tenantName, setTenantName] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [crmConfig,setCrmConfig]=useState<CrmConfig>(DEFAULT_CRM_CONFIG);
+  const [organisations,setOrganisations]=useState<Array<{tenantId:string;tenantName?:string}>>([]);
+  const [choosing,setChoosing]=useState(false);
 
   async function load() {
     setLoading(true);
@@ -20,7 +22,9 @@ export default function IntegrationsPage() {
     setLoading(false);
   }
 
-  useEffect(() => { void load(); fetch("/api/admin/settings",{cache:"no-store"}).then(async r=>{if(r.ok){const b=await r.json();setCrmConfig(b.settings||DEFAULT_CRM_CONFIG);}}).catch(()=>{}); }, []);
+  useEffect(() => { void load(); const q=new URLSearchParams(window.location.search); if(q.get("xero")==="choose_org"){setChoosing(true);fetch("/api/integrations/xero/organisations",{cache:"no-store"}).then(async r=>{const b=await r.json();if(r.ok)setOrganisations(b.organisations||[]);else setError(b.error||"Unable to load Xero organisations");}).catch(()=>setError("Unable to load Xero organisations"));} fetch("/api/admin/settings",{cache:"no-store"}).then(async r=>{if(r.ok){const b=await r.json();setCrmConfig(b.settings||DEFAULT_CRM_CONFIG);}}).catch(()=>{}); }, []);
+
+  async function chooseOrganisation(tenantId:string){setError("");const r=await fetch("/api/integrations/xero/organisations",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({tenantId})});const b=await r.json().catch(()=>({}));if(!r.ok){setError(b.error||"Unable to connect Xero");return;}setChoosing(false);setOrganisations([]);window.history.replaceState({},"","/admin/integrations");await load();}
 
   async function disconnect() {
     if (!window.confirm(`Disconnect Xero from ${crmConfig.businessName}?`)) return;
@@ -44,7 +48,7 @@ export default function IntegrationsPage() {
           </div>
 
           {connected && <div className="mt-5 rounded-xl bg-[#f5f5f2] p-4"><p className="text-xs font-bold uppercase tracking-[0.08em] text-black/45">Xero organisation</p><p className="mt-1 font-black">{tenantName || "Connected organisation"}</p></div>}
-          {error && <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p>}
+          {choosing&&<div className="mt-5 rounded-xl border border-black/10 p-4"><p className="font-black">Choose your Xero organisation</p><p className="mt-1 text-sm text-black/50">Select the organisation this CRM should use.</p><div className="mt-3 flex flex-wrap gap-2">{organisations.map(o=><button type="button" key={o.tenantId} onClick={()=>void chooseOrganisation(o.tenantId)} className="rounded-xl border border-black/15 bg-white px-4 py-2 text-sm font-bold">{o.tenantName||"Xero organisation"}</button>)}</div></div>}{error && <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p>}
 
           <div className="mt-5 flex gap-3">
             {!connected ? <a href="/api/integrations/xero/connect" className="rounded-xl bg-[#e66a24] px-5 py-3 text-sm font-black text-white">Connect Xero</a> : <button onClick={() => void disconnect()} className="rounded-xl border border-black/15 px-5 py-3 text-sm font-black">Disconnect Xero</button>}
