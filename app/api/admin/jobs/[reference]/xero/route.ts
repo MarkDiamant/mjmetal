@@ -74,7 +74,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       const settingsPath2="_crm/settings.json".split("/").map(encodeURIComponent).join("/");
       const settingsRes2=await supabaseRequest(`/storage/v1/object/mj-job-files/${settingsPath2}`,{method:"GET"},session.token);
       const businessCfg=settingsRes2.ok?normaliseCrmConfig(await settingsRes2.json().catch(()=>null)):DEFAULT_CRM_CONFIG;
-      const vatRate=businessCfg.businessDetails.vatRegistered?Number(body.vat_rate ?? job.vat_rate ?? 20):0;
+      const vatRate=businessCfg.businessDetails.vatRegistered?Number(body.vat_rate ?? 20):0;
+      if(businessCfg.businessDetails.vatRegistered&&(!Number.isFinite(vatRate)||vatRate<0||vatRate>100)) return NextResponse.json({error:"Enter a valid VAT rate before creating the invoice"},{status:400});
       const invoice = await createXeroDraftInvoice(session.token, { contactId, reference: job.reference, description, amount, vatRate });
 
       const created = await jsonOrError(await supabaseRequest("/rest/v1/mj_xero_invoices", {
@@ -89,7 +90,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           amount_due: Number(invoice.AmountDue ?? amount),
           amount_paid: Number(invoice.AmountPaid ?? 0),
           currency_code: invoice.CurrencyCode || "GBP",
-          created_by: session.admin.initials,
+          created_by: session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user",
           synced_at: new Date().toISOString(),
         }),
       }, session.token));
