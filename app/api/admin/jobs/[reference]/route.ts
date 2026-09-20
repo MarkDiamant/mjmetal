@@ -79,7 +79,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const body = await request.json();
   const permissionForAction:Record<string,any>={payment:"view_payments_invoices",cost_summary:"view_costs_profit",cost:"view_costs_profit",quote:"view_pricing",subcontractor:"view_workforce",material_order:"view_costs_profit"};
   const needed=permissionForAction[String(body.type||"")];
-  if(needed&&!session.admin.permissions?.includes(needed))return NextResponse.json({error:"You do not have permission for this action"},{status:403});
+  if(needed&&!session.permissions.includes(needed))return NextResponse.json({error:"You do not have permission for this action"},{status:403});
   try {
     const rows = await jsonOrError(await supabaseRequest(`/rest/v1/mj_jobs?reference=eq.${encodeURIComponent(reference)}&select=id,customer_id`, {}, session.token));
     const job = rows[0];
