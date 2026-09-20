@@ -2,19 +2,19 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "M&J Metal",
-    short_name: "M&J Metal",
+    name: "M&J Metal CRM",
+    short_name: "M&J CRM",
     description:
-      "Bespoke metal gates, railings and security metalwork across London.",
-    start_url: "/",
+      "Private M&J Metal job management system.",
+    start_url: "/admin",
     display: "standalone",
     background_color: "#ffffff",
     theme_color: "#ea580c",
     icons: [
       {
-        src: "/favicon.ico",
+        src: "/favicon.svg?v=4",
         sizes: "any",
-        type: "image/x-icon",
+        type: "image/svg+xml",
       },
     ],
   };
