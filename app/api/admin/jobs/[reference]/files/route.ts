@@ -7,6 +7,7 @@ function safeName(name: string) {
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ reference: string }> }) {
   const session = await requirePermission("view_files");
+  if(session&&!session.permissions.includes("edit_jobs")) return NextResponse.json({error:"You do not have permission to change files"},{status:403});
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { reference } = await params;
   const form = await request.formData();
@@ -36,14 +37,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const metadata = await supabaseRequest("/rest/v1/mj_files", {
     method: "POST",
     headers: { Prefer: "return=representation" },
-    body: JSON.stringify({ job_id: job.id, category, storage_path: storagePath, file_name: file.name, mime_type: file.type || null, include_in_quote: includeInQuote, uploaded_by: session.admin.initials }),
+    body: JSON.stringify({ job_id: job.id, category, storage_path: storagePath, file_name: file.name, mime_type: file.type || null, include_in_quote: includeInQuote, uploaded_by: session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user" }),
   }, session.token);
   const rows = metadata.ok ? await metadata.json() : null;
   if (!metadata.ok) return NextResponse.json({ error: "File uploaded but metadata could not be saved" }, { status: 500 });
 
   await supabaseRequest("/rest/v1/mj_audit_events", {
     method: "POST", headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ job_id: job.id, actor: session.admin.initials, action: "uploaded", entity_type: "file", entity_id: rows[0]?.id || null, changes: { file_name: file.name, category } }),
+    body: JSON.stringify({ job_id: job.id, actor: session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user", action: "uploaded", entity_type: "file", entity_id: rows[0]?.id || null, changes: { file_name: file.name, category } }),
   }, session.token);
 
   return NextResponse.json({ item: rows[0] });
@@ -51,6 +52,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ reference: string }> }) {
   const session = await requirePermission("view_files");
+  if(session&&!session.permissions.includes("edit_jobs")) return NextResponse.json({error:"You do not have permission to change files"},{status:403});
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { reference } = await params;
   const body = await request.json();
@@ -69,13 +71,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const rows = await update.json();
   await supabaseRequest("/rest/v1/mj_audit_events", {
     method: "POST", headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ job_id: job.id, actor: session.admin.initials, action: "updated", entity_type: "file", entity_id: body.id, changes: { include_in_quote: Boolean(body.include_in_quote) } }),
+    body: JSON.stringify({ job_id: job.id, actor: session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user", action: "updated", entity_type: "file", entity_id: body.id, changes: { include_in_quote: Boolean(body.include_in_quote) } }),
   }, session.token);
   return NextResponse.json({ item: rows[0] });
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ reference: string }> }) {
   const session = await requirePermission("view_files");
+  if(session&&!session.permissions.includes("edit_jobs")) return NextResponse.json({error:"You do not have permission to change files"},{status:403});
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { reference } = await params;
   const fileId = request.nextUrl.searchParams.get("id");
@@ -96,7 +99,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   if (!storageDelete.ok) return NextResponse.json({ error: "Could not delete stored file" }, { status: 500 });
   await supabaseRequest(`/rest/v1/mj_files?id=eq.${encodeURIComponent(fileId)}`, { method: "DELETE" }, session.token);
   await supabaseRequest("/rest/v1/mj_audit_events", {
-    method: "POST", body: JSON.stringify({ job_id: job.id, actor: session.admin.initials, action: "deleted", entity_type: "file", entity_id: fileId, changes: { file_name: item.file_name } }),
+    method: "POST", body: JSON.stringify({ job_id: job.id, actor: session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user", action: "deleted", entity_type: "file", entity_id: fileId, changes: { file_name: item.file_name } }),
   }, session.token);
   return NextResponse.json({ ok: true });
 }
