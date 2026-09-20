@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdminToken, supabaseRequest } from "@/lib/crm/supabase-server";
+import { requirePermission, supabaseRequest } from "@/lib/crm/supabase-server";
 import { createXeroContact, createXeroDraftInvoice, getXeroInvoice } from "@/lib/crm/xero-invoices";
 
 async function jsonOrError(response: Response) {
@@ -19,7 +19,7 @@ async function listLocalInvoices(token: string, jobId: string) {
 }
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ reference: string }> }) {
-  const session = await requireAdminToken();
+  const session = await requirePermission("view_payments_invoices");
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const { reference } = await params;
@@ -31,7 +31,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ reference: string }> }) {
-  const session = await requireAdminToken();
+  const session = await requirePermission("view_payments_invoices");
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
@@ -89,6 +89,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         body: JSON.stringify({ job_id: job.id, source: "xero", external_id: invoice.InvoiceID, event_type: "invoice_created", payload: { invoice_number: invoice.InvoiceNumber || null, status: invoice.Status || "DRAFT", amount } }),
       }, session.token);
 
+      await supabaseRequest(`/rest/v1/mj_jobs?id=eq.${job.id}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ status: "awaiting_final_payment", next_action: "Collect outstanding balance", updated_at: new Date().toISOString() }) }, session.token);
       return NextResponse.json({ invoice: created[0] }, { status: 201 });
     }
 
