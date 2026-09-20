@@ -23,7 +23,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <>
       <AdminBrandBar />
       <BillingAccessGate>{children}</BillingAccessGate>
-      <footer className="border-t border-black/10 bg-white px-4 py-2 text-center text-[10px] leading-tight text-black/45 print:hidden">
+      <footer className="border-t border-black/10 bg-white px-4 py-1 text-center text-[9px] leading-none text-black/40 print:hidden">
         <DiamantCredit />
       </footer>
     </>
