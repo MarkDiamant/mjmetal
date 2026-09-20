@@ -82,6 +82,9 @@ export async function clearSessionCookies() {
 export async function requirePermission(permission: PermissionKey) {
   const session = await requireAdminToken();
   if (!session) return null;
+  const settingsPath="_crm/settings.json".split("/").map(encodeURIComponent).join("/");
+  const settingsResponse=await supabaseRequest(`/storage/v1/object/mj-job-files/${settingsPath}`,{method:"GET"},session.token);
+  if(settingsResponse.ok){const settings=await settingsResponse.json().catch(()=>null);const billing=settings?.billing;if(billing?.mode==="paid"&&!["active","trialing"].includes(String(billing.status||"")))return null;}
   const { loadCrmUsers, effectiveAccess } = await import("@/lib/crm/user-access");
   const users = await loadCrmUsers(session.token);
   const access = effectiveAccess(users,{id:session.user.id,email:session.user.email,initials:session.admin.initials});
