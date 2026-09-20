@@ -48,11 +48,17 @@ export async function requireAdminToken() {
     { method: "GET" },
     token,
   );
-  if (!adminResponse.ok) return null;
-  const admins = await adminResponse.json() as Array<{ display_name: string; initials: "MD" | "JB" }>;
-  if (!admins[0]) return null;
+  const admins = adminResponse.ok ? await adminResponse.json() as Array<{ display_name: string; initials: "MD" | "JB" }> : [];
+  if (admins[0]) return { token, user: { id: payload.sub, email: payload.email }, admin: admins[0] };
 
-  return { token, user: { id: payload.sub, email: payload.email }, admin: admins[0] };
+  // Invited CRM users are authorised by the tenant access store. This keeps the
+  // legacy M&J admin table for the two original managers without forcing its
+  // MD/JB-only initials enum onto future invited users.
+  const { loadCrmUsers } = await import("@/lib/crm/user-access");
+  const users = await loadCrmUsers(token);
+  const invited = users.find((u) => u.status !== "disabled" && (u.userId === payload.sub || (!!payload.email && u.email?.toLowerCase() === payload.email.toLowerCase())));
+  if (!invited) return null;
+  return { token, user: { id: payload.sub, email: payload.email }, admin: { display_name: invited.name, initials: invited.initials as "MD" | "JB" } };
 }
 
 export async function setSessionCookies(accessToken: string, refreshToken: string, expiresIn: number) {
