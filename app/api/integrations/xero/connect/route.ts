@@ -1,12 +1,12 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { requireAdminToken } from "@/lib/crm/supabase-server";
+import { requirePermission } from "@/lib/crm/supabase-server";
 import { getXeroAuthorizeUrl } from "@/lib/crm/xero";
 
 export async function GET() {
   const session = await requireAdminToken();
-  if (!session) return NextResponse.redirect(new URL("/admin/login", process.env.XERO_REDIRECT_URI || "https://www.mjmetal.co.uk"));
+  if (!session) return NextResponse.redirect(new URL("/admin/login", process.env.NEXT_PUBLIC_APP_URL || process.env.XERO_REDIRECT_URI || "http://localhost:3000"));
 
   const state = crypto.randomBytes(24).toString("base64url");
   const store = await cookies();
