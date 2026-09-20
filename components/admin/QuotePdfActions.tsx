@@ -16,5 +16,5 @@ export default function QuotePdfActions({ reference, quoteId }: { reference: str
     if (body.url) window.open(body.url, "_blank", "noopener,noreferrer");
   }
 
-  return <div className="fixed bottom-5 left-5 z-50 flex items-center gap-2 print:hidden"><button onClick={() => void generate()} disabled={busy} className="rounded-xl bg-[#141414] px-4 py-3 text-sm font-black text-white shadow-lg disabled:opacity-50">{busy ? "Generating..." : "Generate & save PDF"}</button>{message && <span className="rounded-xl bg-white px-3 py-2 text-xs font-bold shadow">{message}</span>}</div>;
+  return <div className="fixed bottom-5 left-5 z-50 flex items-center gap-2 print:hidden"><button id="save-quote-pdf" onClick={() => void generate()} disabled={busy} className="hidden">{busy ? "Generating..." : "Generate & save PDF"}</button>{message && <span className="rounded-xl bg-white px-3 py-2 text-xs font-bold shadow">{message}</span>}</div>;
 }
