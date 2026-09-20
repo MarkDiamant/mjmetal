@@ -24,7 +24,7 @@ export type CrmConfig = {
 
 export const DEFAULT_CRM_CONFIG: CrmConfig = {
   businessName: "M&J Metal",
-  systemName: "CRM & Job Management",
+  systemName: "Business Management Software",
   logoUrl: "/images/logo.png",
   accentColour: "#e66a24",
   workforceTitle: "Fabricators / installers / subcontractors",
