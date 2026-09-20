@@ -25,12 +25,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (!job) return NextResponse.json({ error: "Job not found" }, { status: 404 });
 
     const coreOnly = request.nextUrl.searchParams.get("mode") === "core";
+    const canPayments=session.permissions.includes("view_payments_invoices"), canCosts=session.permissions.includes("view_costs_profit"), canPricing=session.permissions.includes("view_pricing"), canFiles=session.permissions.includes("view_files"), canWorkforce=session.permissions.includes("view_workforce"), canHistory=session.permissions.includes("view_history");
     if (coreOnly) {
       const [customers, payments, costs, assignments] = await Promise.all([
         jsonOrError(await supabaseRequest(`/rest/v1/mj_customers?id=eq.${job.customer_id}&select=*`, {}, session.token)),
-        jsonOrError(await supabaseRequest(`/rest/v1/mj_payments?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)),
-        jsonOrError(await supabaseRequest(`/rest/v1/mj_job_costs?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)),
-        jsonOrError(await supabaseRequest(`/rest/v1/mj_job_subcontractors?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)),
+        canPayments?jsonOrError(await supabaseRequest(`/rest/v1/mj_payments?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)):Promise.resolve([]),
+        canCosts?jsonOrError(await supabaseRequest(`/rest/v1/mj_job_costs?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)):Promise.resolve([]),
+        canWorkforce?jsonOrError(await supabaseRequest(`/rest/v1/mj_job_subcontractors?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)):Promise.resolve([]),
       ]);
       return NextResponse.json({
         job, customer: customers[0] || null, payments, costs, assignments,
@@ -41,17 +42,17 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     const [customers, activities, payments, costs, quotes, files, assignments, subcontractors, materialOrders, auditEvents, suppliers, xeroInvoices] = await Promise.all([
       jsonOrError(await supabaseRequest(`/rest/v1/mj_customers?id=eq.${job.customer_id}&select=*`, {}, session.token)),
-      jsonOrError(await supabaseRequest(`/rest/v1/mj_activities?job_id=eq.${job.id}&select=*&order=occurred_at.desc`, {}, session.token)),
+      canHistory?jsonOrError(await supabaseRequest(`/rest/v1/mj_activities?job_id=eq.${job.id}&select=*&order=occurred_at.desc`, {}, session.token)):Promise.resolve([]),
       jsonOrError(await supabaseRequest(`/rest/v1/mj_payments?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)),
       jsonOrError(await supabaseRequest(`/rest/v1/mj_job_costs?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)),
-      jsonOrError(await supabaseRequest(`/rest/v1/mj_quotes?job_id=eq.${job.id}&select=*&order=version.desc`, {}, session.token)),
-      jsonOrError(await supabaseRequest(`/rest/v1/mj_files?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)),
+      canPricing?jsonOrError(await supabaseRequest(`/rest/v1/mj_quotes?job_id=eq.${job.id}&select=*&order=version.desc`, {}, session.token)):Promise.resolve([]),
+      canFiles?jsonOrError(await supabaseRequest(`/rest/v1/mj_files?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)):Promise.resolve([]),
       jsonOrError(await supabaseRequest(`/rest/v1/mj_job_subcontractors?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)),
-      jsonOrError(await supabaseRequest(`/rest/v1/mj_subcontractors?active=eq.true&select=*&order=name.asc`, {}, session.token)),
-      jsonOrError(await supabaseRequest(`/rest/v1/mj_material_orders?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)),
-      jsonOrError(await supabaseRequest(`/rest/v1/mj_audit_events?job_id=eq.${job.id}&select=*&order=created_at.desc&limit=100`, {}, session.token)),
-      jsonOrError(await supabaseRequest(`/rest/v1/mj_suppliers?active=eq.true&select=*&order=name.asc`, {}, session.token)),
-      jsonOrError(await supabaseRequest(`/rest/v1/mj_xero_invoices?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)),
+      canWorkforce?jsonOrError(await supabaseRequest(`/rest/v1/mj_subcontractors?active=eq.true&select=*&order=name.asc`, {}, session.token)):Promise.resolve([]),
+      canCosts?jsonOrError(await supabaseRequest(`/rest/v1/mj_material_orders?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)):Promise.resolve([]),
+      canHistory?jsonOrError(await supabaseRequest(`/rest/v1/mj_audit_events?job_id=eq.${job.id}&select=*&order=created_at.desc&limit=100`, {}, session.token)):Promise.resolve([]),
+      canCosts?jsonOrError(await supabaseRequest(`/rest/v1/mj_suppliers?active=eq.true&select=*&order=name.asc`, {}, session.token)):Promise.resolve([]),
+      canPayments?jsonOrError(await supabaseRequest(`/rest/v1/mj_xero_invoices?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)):Promise.resolve([]),
     ]);
 
     const filesWithUrls = await Promise.all(files.map(async (file: any) => {
