@@ -15,6 +15,7 @@ export type CrmConfig = {
   quoteTemplate: "mj-signature" | "clean" | "classic";
   invoiceTemplate: "mj-signature" | "clean" | "classic";
   tenantKey: string;
+  plan: { includedUsers:number; additionalUserMonthly:number; aiAssistantMonthly:number; annualMonthsCharged:number; };
   ai: { enabled:boolean; textAssist:boolean; voiceAssist:boolean; includedTextActions:number|null; includedVoiceMinutes:number|null; };
   billing: { mode:"free"|"paid"; interval:"monthly"|"annual"|null; status:"active"|"past_due"|"unpaid"|"cancelled"|"trialing"; resumeUrl:string; };
   businessDetails: { phone:string; email:string; website:string; companyNumber:string; officeAddress:string; registeredAddress:string; bankName:string; accountNumber:string; sortCode:string; vatRegistered:boolean; vatNumber:string; defaultDepositPercent:number; quoteValidityDays:number; paymentTerms:string; defaultVatRate:number; };
@@ -36,6 +37,7 @@ export const DEFAULT_CRM_CONFIG: CrmConfig = {
   quoteTemplate: "mj-signature",
   invoiceTemplate: "mj-signature",
   tenantKey: "mj-metal",
+  plan: { includedUsers:2, additionalUserMonthly:10, aiAssistantMonthly:15, annualMonthsCharged:10 },
   ai: { enabled:true, textAssist:true, voiceAssist:false, includedTextActions:null, includedVoiceMinutes:null },
   billing: { mode:"free", interval:null, status:"active", resumeUrl:"" },
   businessDetails: { phone:"020 3284 5045", email:"info@mjmetal.co.uk", website:"mjmetal.co.uk", companyNumber:"17330239", officeAddress:"Office 6, 1st Floor, Sutherland House, 70-78 West Hendon Broadway, London, NW9 7BT", registeredAddress:"4 Eastville Avenue, London NW11 0HD", bankName:"M&J Metal Ltd", accountNumber:"37245425", sortCode:"60-83-71", vatRegistered:false, vatNumber:"", defaultDepositPercent:50, quoteValidityDays:30, paymentTerms:"50% deposit, with the remaining balance due on completion.", defaultVatRate:20 },
