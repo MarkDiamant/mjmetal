@@ -5,6 +5,7 @@ import BillingAccessGate from "@/components/admin/BillingAccessGate";
 
 export const metadata: Metadata = {
   title: "M&J Metal Admin",
+  manifest: "/manifest.webmanifest",
   robots: {
     index: false,
     follow: false,
