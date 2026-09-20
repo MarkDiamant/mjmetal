@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdminToken, supabaseRequest } from "@/lib/crm/supabase-server";
+import { requirePermission, supabaseRequest } from "@/lib/crm/supabase-server";
 
 async function jsonOrError(response: Response) {
   const body = await response.json().catch(() => null);
@@ -8,7 +8,8 @@ async function jsonOrError(response: Response) {
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ reference: string }> }) {
-  const session = await requireAdminToken();
+  const session = await requirePermission("view_payments_invoices");
+  if(session&&!session.permissions.includes("edit_jobs")) return NextResponse.json({error:"You do not have permission to write off balances"},{status:403});
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { reference } = await params;
   try {
