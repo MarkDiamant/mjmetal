@@ -31,7 +31,10 @@ export async function GET() {
 export async function PUT(request: NextRequest) {
   const session = await requirePermission("manage_business_settings");
   if (!session) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-  const settings = normaliseCrmConfig(await request.json().catch(() => ({})));
+  const requested = normaliseCrmConfig(await request.json().catch(() => ({})));
+  const current = await readSettings(session.token);
+  // Tenant identity and subscription state are controlled by Diamant Solutions, not editable business settings.
+  const settings = { ...requested, tenantKey: current.tenantKey, billing: current.billing };
   const saved = await writeSettings(session.token, settings);
   if (!saved.ok) return NextResponse.json({ error: "Could not save CRM settings" }, { status: 500 });
   return NextResponse.json({ settings });
