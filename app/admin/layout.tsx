@@ -4,7 +4,7 @@ import DiamantCredit from "@/components/admin/DiamantCredit";
 import BillingAccessGate from "@/components/admin/BillingAccessGate";
 
 export const metadata: Metadata = {
-  title: "M&J Metal Admin",
+  title: "CRM",
   manifest: "/manifest.webmanifest",
   robots: {
     index: false,
@@ -23,7 +23,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <>
       <AdminBrandBar />
       <BillingAccessGate>{children}</BillingAccessGate>
-      <footer className="border-t border-black/10 bg-white px-5 py-5 text-center text-xs text-black/50 print:hidden">
+      <footer className="border-t border-black/10 bg-white px-4 py-2 text-center text-[10px] leading-tight text-black/45 print:hidden">
         <DiamantCredit />
       </footer>
     </>
