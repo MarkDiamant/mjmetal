@@ -4,7 +4,7 @@ import DiamantCredit from "@/components/admin/DiamantCredit";
 import BillingAccessGate from "@/components/admin/BillingAccessGate";
 
 export const metadata: Metadata = {
-  title: "CRM",
+  title: "Business Management Software",
   manifest: "/manifest.webmanifest",
   robots: {
     index: false,
