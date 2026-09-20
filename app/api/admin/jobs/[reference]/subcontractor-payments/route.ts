@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdminToken, supabaseRequest } from "@/lib/crm/supabase-server";
+import { requirePermission, supabaseRequest } from "@/lib/crm/supabase-server";
 
 async function jsonOrEmpty(response: Response) {
   if (!response.ok) return [] as Array<Record<string, any>>;
@@ -7,7 +7,7 @@ async function jsonOrEmpty(response: Response) {
 }
 
 export async function GET(_request: Request, { params }: { params: Promise<{ reference: string }> }) {
-  const session = await requireAdminToken();
+  const session = await requirePermission("view_payments_invoices");
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { reference } = await params;
