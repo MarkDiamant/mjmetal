@@ -69,8 +69,9 @@ export type QuotePdfInput = {
 
 export function buildQuotePdf(input: QuotePdfInput): Buffer {
   const template=input.template==="mj-signature"||input.template==="classic"?input.template:"clean";
-  const accent=template==="classic"?"0 0 0":template==="mj-signature"?"0.90 0.36 0.10":"0.18 0.18 0.18";
+  const hex=String(input.accentColour||"#e66a24").replace("#",""); const rgb=/^[0-9a-fA-F]{6}$/.test(hex)?[0,2,4].map(i=>parseInt(hex.slice(i,i+2),16)/255):[0.90,0.36,0.10]; const accent=template==="classic"?"0 0 0":template==="mj-signature"?rgb.map(x=>x.toFixed(3)).join(" "):"0.18 0.18 0.18";
   type Page = { commands: string[]; y: number };
+  const maxPages=2;
   const pages: Page[] = [];
   const newPage = () => {
     const page: Page = { commands: [], y: 790 };
@@ -80,16 +81,16 @@ export function buildQuotePdf(input: QuotePdfInput): Buffer {
   let page = newPage();
 
   const line = (text: string, size = 10, bold = false, x = 50, spacing = 15) => {
-    if (page.y < 65) page = newPage();
+    if (page.y < 65 && pages.length < maxPages) page = newPage();
     page.commands.push(`BT /${bold ? "F2" : "F1"} ${size} Tf 0 0 0 rg ${x} ${page.y} Td (${esc(text)}) Tj ET`);
     page.y -= spacing;
   };
-  const gap = (n = 8) => { page.y -= n; if (page.y < 65) page = newPage(); };
+  const gap = (n = 8) => { page.y -= n; if (page.y < 65 && pages.length < maxPages) page = newPage(); };
   const rule = () => { page.commands.push(`${accent} rg 50 ${page.y} 495 ${template==="mj-signature"?3:1} re f`); page.y -= 18; };
   const heading = (text: string) => { gap(4); line(text, 12, true, 50, 18); };
   const paragraph = (text: string) => { for (const l of wrap(text, 88)) line(l || " ", 10, false, 50, 14); };
 
-  page.commands.push(`BT /F2 ${template==="classic"?18:22} Tf ${accent} rg 50 800 Td (${esc((input.companyName || "M&J Metal").toUpperCase())}) Tj ET`);
+  page.commands.push(`BT /F2 ${template==="classic"?18:22} Tf ${accent} rg 50 800 Td (${esc((input.companyName || "Business").toUpperCase())}) Tj ET`);
   page.commands.push(`BT /F2 ${template==="classic"?16:18} Tf 0 0 0 rg 420 800 Td (${esc("QUOTATION")}) Tj ET`);
   page.y = 768;
   rule();
@@ -126,7 +127,7 @@ export function buildQuotePdf(input: QuotePdfInput): Buffer {
 
   gap(14);
   rule();
-  line((input.companyName || "M&J Metal").toUpperCase(), 9, true);
+  line((input.companyName || "Business").toUpperCase(), 9, true);
   if (input.companyNumber) line(`Company No. ${input.companyNumber}`, 8);
   if (input.companyAddress) line(input.companyAddress, 8);
   if (input.phone) line(input.phone, 8);
@@ -153,7 +154,7 @@ export function buildQuotePdf(input: QuotePdfInput): Buffer {
   }
   objects[2] = `<< /Type /Pages /Kids [${pageRefs.map((n) => `${n} 0 R`).join(" ")}] /Count ${pageRefs.length} >>`;
 
-  let pdf = "%PDF-1.4\n%MJMetal\n";
+  let pdf = "%PDF-1.4\n%CRMQuote\n";
   const offsets: number[] = [0];
   for (let i = 1; i < objects.length; i++) {
     offsets[i] = Buffer.byteLength(pdf, "ascii");
