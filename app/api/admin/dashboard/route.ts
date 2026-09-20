@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { requireAdminToken, supabaseRequest } from "@/lib/crm/supabase-server";
+import { requirePermission, supabaseRequest } from "@/lib/crm/supabase-server";
 
 export async function GET() {
-  const session = await requireAdminToken();
+  const session = await requirePermission("view_history");
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const [activityResponse, auditResponse] = await Promise.all([
