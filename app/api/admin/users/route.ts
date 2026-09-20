@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/crm/supabase-server";
 import { ALL_PERMISSIONS, ROLE_PERMISSIONS, type PermissionKey, type UserRole } from "@/lib/crm/permissions";
 import { loadCrmUsers, saveCrmUsers } from "@/lib/crm/user-access";
-import { loadCrmConfig } from "@/lib/crm/config";
+import { loadCrmConfig } from "@/lib/crm/settings";
 
 function cleanPermissions(value:unknown,role:UserRole){const wanted=Array.isArray(value)?value.map(String):ROLE_PERMISSIONS[role]||[];return wanted.filter((x):x is PermissionKey=>ALL_PERMISSIONS.includes(x as PermissionKey));}
 export async function GET(){const session=await requirePermission("manage_users");if(!session)return NextResponse.json({error:"Unauthorised"},{status:401});const users=await loadCrmUsers(session.token);const cfg=await loadCrmConfig(session.token);const seatCount=users.filter(u=>u.status!=="disabled").length;return NextResponse.json({users,plan:cfg.billing.mode==="free"?"Free":null,seatCount,seatLimit:cfg.tenantKey==="mj-metal"?2:null,canAdd:cfg.tenantKey==="mj-metal"?seatCount<2:true,billingConnected:cfg.billing.mode==="paid",pricingConnected:false,message:null,currentUserId:session.accessUser.id});}
