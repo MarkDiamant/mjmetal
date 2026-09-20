@@ -14,6 +14,8 @@ export async function GET(){
       return NextResponse.json({message:"We couldn’t check your account just now. Your subscription has not been blocked. Please try again.",reason:"account"},{status:503});
     }
     const cfg=r.ok?normaliseCrmConfig(await r.json().catch(()=>null)):DEFAULT_CRM_CONFIG;
+    // The founding M&J tenant is permanently free. Billing state must never gate its CRM access.
+    if(cfg.tenantKey==="mj-metal") return NextResponse.json({blocked:false,reason:null,billing:{...cfg.billing,mode:"free",status:"active"},businessName:cfg.businessName});
     const blocked=cfg.billing.mode==="paid"&&!["active","trialing"].includes(cfg.billing.status);
     return NextResponse.json({blocked,reason:blocked?"payment":null,billing:cfg.billing,businessName:cfg.businessName});
   }catch{
