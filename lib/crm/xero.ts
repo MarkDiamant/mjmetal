@@ -14,7 +14,9 @@ const SCOPES = [
   "accounting.contacts",
 ].join(" ");
 
-type TokenResponse = {
+export type XeroTenant = { tenantId:string; tenantName?:string; tenantType?:string };
+
+export type TokenResponse = {
   access_token: string;
   refresh_token: string;
   expires_in: number;
@@ -99,10 +101,10 @@ export async function getXeroTenants(accessToken: string) {
     cache: "no-store",
   });
   if (!response.ok) throw new Error(`Unable to read Xero connections (${response.status})`);
-  return response.json() as Promise<Array<{ tenantId: string; tenantName?: string; tenantType?: string }>>;
+  return response.json() as Promise<XeroTenant[]>;
 }
 
-export async function saveXeroConnection(sessionToken: string, userId: string, token: TokenResponse, tenant: { tenantId: string; tenantName?: string }) {
+export async function saveXeroConnection(sessionToken: string, userId: string, token: TokenResponse, tenant: XeroTenant) {
   const expiresAt = new Date(Date.now() + token.expires_in * 1000).toISOString();
   const response = await supabaseRequest("/rest/v1/mj_xero_connection?on_conflict=singleton", {
     method: "POST",
