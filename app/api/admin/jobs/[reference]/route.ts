@@ -42,7 +42,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({
         job:safeJob, customer: customers[0] || null, payments, costs, assignments:safeAssignments(assignments),
         activities: [], quotes: [], files: [], subcontractors: [], materialOrders: [], suppliers: [], auditEvents: [],
-        currentAdmin: session.admin, _full: false,
+        currentAdmin: session.admin, permissions:session.permissions, _full: false,
       });
     }
 
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     return NextResponse.json({
       job:safeJob, customer: customers[0] || null, activities, payments, costs, quotes, files: filesWithUrls,
-      assignments:safeAssignments(assignments), subcontractors, materialOrders, suppliers, auditEvents, xeroInvoices, currentAdmin: session.admin, _full: true,
+      assignments:safeAssignments(assignments), subcontractors, materialOrders, suppliers, auditEvents, xeroInvoices, currentAdmin: session.admin, permissions:session.permissions, _full: true,
     });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Failed to load job" }, { status: 500 });
