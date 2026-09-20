@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdminToken, supabaseRequest } from "@/lib/crm/supabase-server";
+import { requirePermission, supabaseRequest } from "@/lib/crm/supabase-server";
 
 function safeName(name: string) {
   return name.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/-+/g, "-").slice(0, 120) || "file";
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ reference: string }> }) {
-  const session = await requireAdminToken();
+  const session = await requirePermission("view_files");
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { reference } = await params;
   const form = await request.formData();
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ reference: string }> }) {
-  const session = await requireAdminToken();
+  const session = await requirePermission("view_files");
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { reference } = await params;
   const body = await request.json();
@@ -75,7 +75,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ reference: string }> }) {
-  const session = await requireAdminToken();
+  const session = await requirePermission("view_files");
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { reference } = await params;
   const fileId = request.nextUrl.searchParams.get("id");
