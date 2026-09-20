@@ -31,6 +31,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ re
   try {
     const { reference, assignmentId } = await params;
     const body = await request.json();
+    const moneyFields=["deposit_amount","paid_amount","agreed_cost","add_payment"];
+    if(moneyFields.some(k=>k in body)&&!session.permissions.includes("view_costs_profit")) return NextResponse.json({error:"You do not have permission to change workforce costs"},{status:403});
+    if(Number(body.add_payment||0)>0&&!session.permissions.includes("view_payments_invoices")) return NextResponse.json({error:"You do not have permission to record payments"},{status:403});
     const { job, assignment } = await resolveAssignment(reference, assignmentId, session.token);
     if (!job) return NextResponse.json({ error: "Job not found" }, { status: 404 });
     if (!assignment) return NextResponse.json({ error: "Assignment not found" }, { status: 404 });
