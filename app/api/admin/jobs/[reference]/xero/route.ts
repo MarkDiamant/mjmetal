@@ -44,8 +44,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       const existing = await listLocalInvoices(session.token, job.id);
       if (existing.length) return NextResponse.json({ error: "A Xero invoice already exists for this job" }, { status: 409 });
 
-      const amount = Number(body.amount ?? job.quoted_amount ?? job.agreed_amount ?? 0);
-      if (!Number.isFinite(amount) || amount <= 0) return NextResponse.json({ error: "Set an agreed or quoted amount before creating the Xero invoice" }, { status: 400 });
+      const amount = Number(body.amount ?? job.quoted_amount ?? 0);
+      if (!Number.isFinite(amount) || amount <= 0) return NextResponse.json({ error: "Set a final quote amount before creating the Xero invoice" }, { status: 400 });
 
       const customers = await jsonOrError(await supabaseRequest(`/rest/v1/mj_customers?id=eq.${job.customer_id}&select=*&limit=1`, {}, session.token));
       const customer = customers[0];
@@ -70,7 +70,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       const quotes = await jsonOrError(await supabaseRequest(`/rest/v1/mj_quotes?job_id=eq.${job.id}&select=scope_text&order=version.desc&limit=1`, {}, session.token));
       const description = String(body.description || quotes[0]?.scope_text || job.customer_requirements || "").trim().slice(0,4000);
       if(!description) return NextResponse.json({error:"Add an invoice description before creating the Xero invoice"},{status:400});
-      const invoice = await createXeroDraftInvoice(session.token, { contactId, reference: job.reference, description, amount, vatRate: Number(body.vat_rate ?? job.vat_rate ?? 0) });
+      const settingsPath2="_crm/settings.json".split("/").map(encodeURIComponent).join("/");
+      const settingsRes2=await supabaseRequest(`/storage/v1/object/mj-job-files/${settingsPath2}`,{method:"GET"},session.token);
+      const businessCfg=settingsRes2.ok?normaliseCrmConfig(await settingsRes2.json().catch(()=>null)):DEFAULT_CRM_CONFIG;
+      const vatRate=businessCfg.businessDetails.vatRegistered?Number(body.vat_rate ?? job.vat_rate ?? 20):0;
+      const invoice = await createXeroDraftInvoice(session.token, { contactId, reference: job.reference, description, amount, vatRate });
 
       const created = await jsonOrError(await supabaseRequest("/rest/v1/mj_xero_invoices", {
         method: "POST",
@@ -95,7 +99,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         body: JSON.stringify({ job_id: job.id, source: "xero", external_id: invoice.InvoiceID, event_type: "invoice_created", payload: { invoice_number: invoice.InvoiceNumber || null, status: invoice.Status || "DRAFT", amount } }),
       }, session.token);
 
-      await supabaseRequest(`/rest/v1/mj_jobs?id=eq.${job.id}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ status: "awaiting_final_payment", next_action: "Collect outstanding balance", updated_at: new Date().toISOString() }) }, session.token);
+      const jobUpdate=await supabaseRequest(`/rest/v1/mj_jobs?id=eq.${job.id}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ status: "awaiting_final_payment", next_action: "Collect outstanding balance", updated_at: new Date().toISOString() }) }, session.token);
+      if(!jobUpdate.ok) throw new Error("Invoice was created in Xero, but the CRM job status could not be updated. Sync the job before creating anything else.");
       return NextResponse.json({ invoice: created[0] }, { status: 201 });
     }
 
