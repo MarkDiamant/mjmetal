@@ -30,6 +30,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if(!canPricing){delete safeJob.quoted_amount;delete safeJob.preliminary_estimate;delete safeJob.vat_rate;}
     if(!canPayments){delete safeJob.payment_method;delete safeJob.written_off_amount;delete safeJob.written_off_at;delete safeJob.write_off_reason;}
     if(!canCosts){delete safeJob.materials_ordered;delete safeJob.materials_ordered_at;}
+    if(!canCustomer){delete safeJob.site_address_line_1;delete safeJob.site_address_line_2;delete safeJob.site_city;delete safeJob.site_postcode;delete safeJob.customer_reference;}
     const safeAssignments=(items:any[])=>items.map((x:any)=>canCosts?x:({...x,agreed_cost:null,deposit_amount:null,paid_amount:null}));
     if (coreOnly) {
       const [customers, payments, costs, assignments] = await Promise.all([
