@@ -25,10 +25,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (!job) return NextResponse.json({ error: "Job not found" }, { status: 404 });
 
     const coreOnly = request.nextUrl.searchParams.get("mode") === "core";
-    const canPayments=session.permissions.includes("view_payments_invoices"), canCosts=session.permissions.includes("view_costs_profit"), canPricing=session.permissions.includes("view_pricing"), canFiles=session.permissions.includes("view_files"), canWorkforce=session.permissions.includes("view_workforce"), canHistory=session.permissions.includes("view_history");
+    const canPayments=session.permissions.includes("view_payments_invoices"), canCosts=session.permissions.includes("view_costs_profit"), canPricing=session.permissions.includes("view_pricing"), canFiles=session.permissions.includes("view_files"), canWorkforce=session.permissions.includes("view_workforce"), canHistory=session.permissions.includes("view_history"), canCustomer=session.permissions.includes("view_customer_details");
     if (coreOnly) {
       const [customers, payments, costs, assignments] = await Promise.all([
-        jsonOrError(await supabaseRequest(`/rest/v1/mj_customers?id=eq.${job.customer_id}&select=*`, {}, session.token)),
+        canCustomer?jsonOrError(await supabaseRequest(`/rest/v1/mj_customers?id=eq.${job.customer_id}&select=*`, {}, session.token)):Promise.resolve([]),
         canPayments?jsonOrError(await supabaseRequest(`/rest/v1/mj_payments?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)):Promise.resolve([]),
         canCosts?jsonOrError(await supabaseRequest(`/rest/v1/mj_job_costs?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)):Promise.resolve([]),
         canWorkforce?jsonOrError(await supabaseRequest(`/rest/v1/mj_job_subcontractors?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)):Promise.resolve([]),
@@ -41,13 +41,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const [customers, activities, payments, costs, quotes, files, assignments, subcontractors, materialOrders, auditEvents, suppliers, xeroInvoices] = await Promise.all([
-      jsonOrError(await supabaseRequest(`/rest/v1/mj_customers?id=eq.${job.customer_id}&select=*`, {}, session.token)),
+      canCustomer?jsonOrError(await supabaseRequest(`/rest/v1/mj_customers?id=eq.${job.customer_id}&select=*`, {}, session.token)):Promise.resolve([]),
       canHistory?jsonOrError(await supabaseRequest(`/rest/v1/mj_activities?job_id=eq.${job.id}&select=*&order=occurred_at.desc`, {}, session.token)):Promise.resolve([]),
-      jsonOrError(await supabaseRequest(`/rest/v1/mj_payments?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)),
-      jsonOrError(await supabaseRequest(`/rest/v1/mj_job_costs?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)),
+      canPayments?jsonOrError(await supabaseRequest(`/rest/v1/mj_payments?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)):Promise.resolve([]),
+      canCosts?jsonOrError(await supabaseRequest(`/rest/v1/mj_job_costs?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)):Promise.resolve([]),
       canPricing?jsonOrError(await supabaseRequest(`/rest/v1/mj_quotes?job_id=eq.${job.id}&select=*&order=version.desc`, {}, session.token)):Promise.resolve([]),
       canFiles?jsonOrError(await supabaseRequest(`/rest/v1/mj_files?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)):Promise.resolve([]),
-      jsonOrError(await supabaseRequest(`/rest/v1/mj_job_subcontractors?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)),
+      canWorkforce?jsonOrError(await supabaseRequest(`/rest/v1/mj_job_subcontractors?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)):Promise.resolve([]),
       canWorkforce?jsonOrError(await supabaseRequest(`/rest/v1/mj_subcontractors?active=eq.true&select=*&order=name.asc`, {}, session.token)):Promise.resolve([]),
       canCosts?jsonOrError(await supabaseRequest(`/rest/v1/mj_material_orders?job_id=eq.${job.id}&select=*&order=created_at.desc`, {}, session.token)):Promise.resolve([]),
       canHistory?jsonOrError(await supabaseRequest(`/rest/v1/mj_audit_events?job_id=eq.${job.id}&select=*&order=created_at.desc&limit=100`, {}, session.token)):Promise.resolve([]),
@@ -96,6 +96,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     if (body.job && Object.keys(body.job).length) {
       const patch = { ...body.job } as Record<string, unknown>;
+      if(!session.permissions.includes("view_pricing")) { delete patch.quoted_amount; delete patch.preliminary_estimate; delete patch.vat_rate; }
+      if(!session.permissions.includes("view_payments_invoices")) { delete patch.payment_method; delete patch.written_off_amount; delete patch.written_off_at; delete patch.write_off_reason; }
+      if(!session.permissions.includes("view_costs_profit")) { delete patch.materials_ordered; delete patch.materials_ordered_at; }
+      if(!session.permissions.includes("view_customer_details")) return NextResponse.json({error:"You do not have permission to edit customer details"},{status:403});
       if (["declined", "cancelled", "completed"].includes(String(patch.status || ""))) {
         patch.next_action = null;
         patch.next_action_at = null;
