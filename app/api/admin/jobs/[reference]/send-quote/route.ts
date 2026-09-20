@@ -51,6 +51,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ ref
     website: config.businessDetails.website,
     vatRegistered: config.businessDetails.vatRegistered,
     vatNumber: config.businessDetails.vatNumber,
+    template: config.quoteTemplate,
+    accentColour: config.accentColour,
     reference: job.reference,
     version: Number(quote.version || 1),
     date: displayDate(quote.created_at),
