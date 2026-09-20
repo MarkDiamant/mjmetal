@@ -24,7 +24,7 @@ export async function GET(request: Request) {
   const [jobsResponse, paymentsResponse, assignmentsResponse, peopleResponse, costsResponse, xeroInvoicesResponse] = await Promise.all([
     supabaseRequest(`/rest/v1/mj_jobs?${archiveFilter}&select=*,mj_customers(*)&order=sequence_number.asc`, { method: "GET" }, session.token),
     canPayments?supabaseRequest("/rest/v1/mj_payments?select=id,job_id,direction,payment_type,amount,payment_method,counterparty,paid_at,due_at,notes,created_at&order=created_at.desc", { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
-    canWorkforce?supabaseRequest("/rest/v1/mj_job_subcontractors?select=id,job_id,subcontractor_id,scope,agreed_cost,deposit_amount,paid_amount,status,scheduled_at,completed_at,materials_included,assignment_role&order=created_at.asc", { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
+    canWorkforce?supabaseRequest(`/rest/v1/mj_job_subcontractors?select=${canCosts?"id,job_id,subcontractor_id,scope,agreed_cost,deposit_amount,paid_amount,status,scheduled_at,completed_at,materials_included,assignment_role":"id,job_id,subcontractor_id,scope,status,scheduled_at,completed_at,materials_included,assignment_role"}&order=created_at.asc`, { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
     canWorkforce?supabaseRequest("/rest/v1/mj_subcontractors?active=eq.true&select=id,name,company,phone,email,capabilities,relationship_type&order=name.asc", { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
     canCosts?supabaseRequest("/rest/v1/mj_job_costs?select=id,job_id,category,supplier,estimated_amount,actual_amount,paid_amount,paid_at,due_at,notes,created_at&order=created_at.asc", { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
     canPayments?supabaseRequest("/rest/v1/mj_xero_invoices?select=job_id,status", { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
@@ -57,17 +57,15 @@ export async function GET(request: Request) {
   for (const assignment of assignments) {
     if (!assignmentsByJob.has(assignment.job_id)) assignmentsByJob.set(assignment.job_id, []);
     const person = personById.get(assignment.subcontractor_id) || {};
-    const agreed = Number(assignment.agreed_cost || 0);
-    const paid = Number(assignment.paid_amount || 0);
+    const agreed = canCosts ? Number(assignment.agreed_cost || 0) : 0;
+    const paid = canCosts ? Number(assignment.paid_amount || 0) : 0;
     assignmentsByJob.get(assignment.job_id)!.push({
       ...assignment,
       personName: person.name || "Person",
       personCompany: person.company || "",
       relationshipType: person.relationship_type || "subcontractor",
       assignmentRole: assignment.assignment_role || "subcontractor",
-      agreedCost: agreed,
-      paidAmount: paid,
-      outstanding: Math.max(0, agreed - paid),
+      ...(canCosts?{agreedCost: agreed,paidAmount: paid,outstanding: Math.max(0, agreed - paid)}:{}),
     });
   }
 
@@ -159,13 +157,7 @@ export async function GET(request: Request) {
       collectionRequired,
       customerPayments: canPayments ? customerPayments : [],
       workforceAssignments: jobAssignments,
-      subcontractorAgreed: subAgreed,
-      subcontractorPaid: subPaid,
-      subcontractorOutstanding: Math.max(0, subAgreed - subPaid),
-      commissions,
-      commissionAgreed,
-      commissionPaid,
-      commissionOutstanding: Math.max(0, commissionAgreed - commissionPaid),
+      ...(canCosts?{subcontractorAgreed:subAgreed,subcontractorPaid:subPaid,subcontractorOutstanding:Math.max(0,subAgreed-subPaid),commissions,commissionAgreed,commissionPaid,commissionOutstanding:Math.max(0,commissionAgreed-commissionPaid)}:{}),
       estimatedCost: canCosts && jobCostSummary?.estimated_amount != null ? Number(jobCostSummary.estimated_amount) : undefined,
       finalCost: canCosts && jobCostSummary?.actual_amount != null ? Number(jobCostSummary.actual_amount) : undefined,
       materialsOrdered: job.materials_ordered,
