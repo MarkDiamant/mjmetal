@@ -180,6 +180,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const session = await requirePermission("edit_jobs");
+  if(session&&!session.permissions.includes("view_customer_details")) return NextResponse.json({error:"You do not have permission to create customer jobs"},{status:403});
   if (!session) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   try {
     const body = await request.json() as Record<string, any>;
