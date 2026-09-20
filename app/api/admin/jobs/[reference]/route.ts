@@ -193,6 +193,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         }),
       }, session.token));
       if (String(body.category).toLowerCase() === "commission" && paidAmount > 0) {
+        if(!session.permissions.includes("view_payments_invoices")) return NextResponse.json({error:"You do not have permission to record commission payments"},{status:403});
         await supabaseRequest("/rest/v1/mj_payments", {
           method: "POST", headers: { Prefer: "return=minimal" },
           body: JSON.stringify({ job_id: job.id, direction: "commission_out", payment_type: "Commission", amount: paidAmount, payment_method: body.payment_method || "Bank transfer", counterparty: body.supplier || null, paid_at: body.paid_at || now, notes: `Commission cost ${created[0]?.id || ""}`.trim() }),
@@ -215,6 +216,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     if (body.type === "subcontractor") {
+      if((body.agreed_cost||body.deposit_amount||body.paid_amount)&&!session.permissions.includes("view_costs_profit")) return NextResponse.json({error:"You do not have permission to set workforce costs"},{status:403});
       let subcontractorId = body.subcontractor_id;
       if (!subcontractorId && body.name) {
         const createdSub = await jsonOrError(await supabaseRequest("/rest/v1/mj_subcontractors", {
