@@ -1,12 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import Link from "next/link";
 import CrmDashboardV4 from "@/components/admin/CrmDashboardV4";
-
-const coreNav=[["/admin","Dashboard"],["/admin/customers","Customers"],["/admin/jobs","Jobs"],["/admin/quotes","Quotes"],["/admin/invoices","Invoices"],["/admin/payments","Payments"],["/admin/files","Files"],["/admin/team","Team"]];
-
-function DashboardCoreNav(){return <div className="border-b border-black/10 bg-[#fffaf6] px-4 py-2.5 sm:px-5 lg:px-8 print:hidden"><nav className="mx-auto flex max-w-[1500px] items-center gap-1 overflow-x-auto" aria-label="Business software"><span className="mr-2 hidden text-[10px] font-black uppercase tracking-[.14em] text-[#e66a24] lg:inline">Manage</span>{coreNav.map(([href,label])=><Link key={href} href={href} className={"whitespace-nowrap rounded-lg px-3 py-2 text-xs font-black "+(href==="/admin"?"bg-[#e66a24] text-white":"border border-black/10 bg-white text-black/65 hover:border-[#e66a24]/40 hover:text-black")}>{label}</Link>)}</nav></div>}
 
 function MobileQuickEditFix() {
   useEffect(() => {
