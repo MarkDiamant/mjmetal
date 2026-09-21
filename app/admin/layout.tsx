@@ -1,31 +1,20 @@
 import type { Metadata } from "next";
 import AdminBrandBar from "@/components/admin/AdminBrandBar";
+import AdminPrimaryNav from "@/components/admin/AdminPrimaryNav";
 import DiamantCredit from "@/components/admin/DiamantCredit";
 import BillingAccessGate from "@/components/admin/BillingAccessGate";
 
 export const metadata: Metadata = {
   title: "Business Management Software",
   manifest: "/manifest.webmanifest",
-  robots: {
-    index: false,
-    follow: false,
-    nocache: true,
-    googleBot: {
-      index: false,
-      follow: false,
-      noimageindex: true,
-    },
-  },
+  robots: {index:false,follow:false,nocache:true,googleBot:{index:false,follow:false,noimageindex:true}},
 };
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <>
-      <AdminBrandBar />
-      <BillingAccessGate>{children}</BillingAccessGate>
-      <footer className="border-t border-black/10 bg-white px-4 py-2 text-center text-black/40 print:hidden">
-        <DiamantCredit />
-      </footer>
-    </>
-  );
+  return <>
+    <AdminBrandBar />
+    <AdminPrimaryNav />
+    <BillingAccessGate>{children}</BillingAccessGate>
+    <footer className="border-t border-black/10 bg-white px-4 py-2 text-center text-black/40 print:hidden"><DiamantCredit /></footer>
+  </>;
 }
