@@ -59,5 +59,5 @@ function LostRowHighlight() {
 }
 
 export default function CrmDashboardV5() {
-  return <><DashboardCoreNav/><CrmDashboardV4/><MobileQuickEditFix/><LostRowHighlight/></>;
+  return <><CrmDashboardV4/><MobileQuickEditFix/><LostRowHighlight/></>;
 }
