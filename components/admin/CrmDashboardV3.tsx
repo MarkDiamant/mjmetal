@@ -63,7 +63,8 @@ export default function CrmDashboardV3() {
   const [workTypesOpen,setWorkTypesOpen]=useState(false);
   const [sortMode,setSortMode]=useState<SortMode>("number_desc");
   const [admin,setAdmin]=useState<any>(null), [permissions,setPermissions]=useState<string[]>([]), [loading,setLoading]=useState(true), [error,setError]=useState(""), [flash,setFlash]=useState("");
-  const [query,setQuery]=useState(""), [status,setStatus]=useState<JobStatus|"all">("all"), [manager,setManager]=useState<Manager|"all">("all"), [type,setType]=useState("all");\n  const [pageSize,setPageSize]=useState(25), [page,setPage]=useState(1);
+  const [query,setQuery]=useState(""), [status,setStatus]=useState<JobStatus|"all">("all"), [manager,setManager]=useState<Manager|"all">("all"), [type,setType]=useState("all");
+  const [pageSize,setPageSize]=useState(25), [page,setPage]=useState(1);
   const [editingRef,setEditingRef]=useState<string|null>(null), [draft,setDraft]=useState<QuickDraft|null>(null), [savingRef,setSavingRef]=useState<string|null>(null), [customType,setCustomType]=useState("");
   const [editUpdatedAt,setEditUpdatedAt]=useState<string|null>(null), [remoteChanged,setRemoteChanged]=useState(false);
   const [assigningRef,setAssigningRef]=useState<string|null>(null), [removingAssignment,setRemovingAssignment]=useState<string|null>(null);
@@ -117,7 +118,12 @@ export default function CrmDashboardV3() {
     });
   },[jobs,status,manager,type,query,sortMode]);
 
-  const totalPages=Math.max(1,Math.ceil(filtered.length/pageSize));\n  const currentPage=Math.min(page,totalPages);\n  const paginated=useMemo(()=>filtered.slice((currentPage-1)*pageSize,currentPage*pageSize),[filtered,currentPage,pageSize]);\n  useEffect(()=>{setPage(1);},[query,status,manager,type,sortMode,pageSize]);\n\n  async function loadQuickFull(reference:string){const res=await fetch(`/api/admin/jobs/${encodeURIComponent(reference)}`,{cache:"no-store"});if(!res.ok)return;const body=await res.json().catch(()=>null);if(body)setQuickFull(body);}
+  const totalPages=Math.max(1,Math.ceil(filtered.length/pageSize));
+  const currentPage=Math.min(page,totalPages);
+  const paginated=useMemo(()=>filtered.slice((currentPage-1)*pageSize,currentPage*pageSize),[filtered,currentPage,pageSize]);
+  useEffect(()=>{setPage(1);},[query,status,manager,type,sortMode,pageSize]);
+
+  async function loadQuickFull(reference:string){const res=await fetch(`/api/admin/jobs/${encodeURIComponent(reference)}`,{cache:"no-store"});if(!res.ok)return;const body=await res.json().catch(()=>null);if(body)setQuickFull(body);}
   function openQuick(j:any){if(editingRef===j.reference){cancelQuick();return;}setEditingRef(j.reference);setEditUpdatedAt(j.updatedAt||null);setRemoteChanged(false);setCustomType("");setQuickFull(null);setQuoteOpen(false);setDraft({firstName:j.isPlaceholder?"":j.firstName||"",lastName:j.isPlaceholder?"":j.lastName||"",phone:j.phone||"",email:j.email||"",siteAddressLine1:j.siteAddressLine1||"",sitePostcode:j.sitePostcode||"",jobTypes:j.isPlaceholder?[]:(j.jobTypes||[j.jobType].filter(Boolean)),status:j.isPlaceholder?"awaiting_information":j.status,manager:j.isPlaceholder?"":j.manager||"",source:j.source||"",finishes:Array.isArray(j.finishes)?j.finishes:[],preliminaryEstimate:String(j.preliminaryEstimate??""),quotedAmount:String(j.quotedAmount??""),estimatedCost:String(j.estimatedCost??""),finalCost:String(j.finalCost??""),jobNotes:j.internalNotes||"",dimensions:j.dimensions||"",material:j.material||"",colour:j.colour||"",customerRequirements:j.customerRequirements||"",scheduledAt:localInput(j.scheduledAt),nextAction:j.collectionRequired?"Collect outstanding balance":closed(j.status)?"":(j.status==="awaiting_customer"&&j.nextAction==="Await customer decision"?"":j.nextAction)||"",nextActionAt:closed(j.status)?"":localInput(j.nextActionAt),nextActionAssignee:closed(j.status)?"":j.nextActionAssignee||""});void loadQuickFull(j.reference);}
   function cancelQuick(){setEditingRef(null);setDraft(null);setEditUpdatedAt(null);setRemoteChanged(false);setCustomType("");setQuickFull(null);setQuoteOpen(false);setWorkTypesOpen(false);setFlash("");}
   function setD<K extends keyof QuickDraft>(key:K,value:QuickDraft[K]){setDraft(d=>d?{...d,[key]:value}:d);}
