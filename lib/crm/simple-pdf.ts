@@ -116,16 +116,16 @@ export function buildQuotePdf(input: QuotePdfInput): Buffer {
 
   const logo=template==="mj-signature"?logoImage():null;
   if(logo){
-    const maxW=150,maxH=58,scale=Math.min(maxW/logo.width,maxH/logo.height),w=logo.width*scale,h=logo.height*scale;
-    page.commands.push(`q ${w.toFixed(1)} 0 0 ${h.toFixed(1)} 50 ${(792-h).toFixed(1)} cm /Im1 Do Q`);
+    const maxW=112,maxH=44,scale=Math.min(maxW/logo.width,maxH/logo.height),w=logo.width*scale,h=logo.height*scale;
+    page.commands.push(`q ${w.toFixed(1)} 0 0 ${h.toFixed(1)} 50 ${(810-h).toFixed(1)} cm /Im1 Do Q`);
   } else {
     page.commands.push(`BT /F2 ${template==="classic"?18:22} Tf ${accent} rg 50 800 Td (${esc((input.companyName || "Business").toUpperCase())}) Tj ET`);
   }
-  page.commands.push(`BT /F2 ${template==="mj-signature"?12:template==="classic"?16:18} Tf 0 0 0 rg ${template==="mj-signature"?300:420} 800 Td (${esc(template==="mj-signature"?"QUOTATION & PROJECT PROPOSAL":"QUOTATION")}) Tj ET`);
-  if(template==="mj-signature") page.commands.push(`BT /F2 9 Tf ${accent} rg 300 782 Td (${esc("Built Strong. Built to Last.")}) Tj ET`);
-  page.y = 768;
+  page.commands.push(`BT /F2 ${template==="mj-signature"?15:template==="classic"?16:18} Tf 0 0 0 rg ${template==="mj-signature"?330:420} 802 Td (${esc(template==="mj-signature"?"QUOTATION":"QUOTATION")}) Tj ET`);
+  if(template==="mj-signature") page.commands.push(`BT /F1 8 Tf 0.35 0.35 0.35 rg 330 786 Td (${esc("BESPOKE METALWORK PROPOSAL")}) Tj ET`);
+  page.y = template==="mj-signature"?750:768;
   rule();
-  line(`${input.reference} / V${input.version}`, 12, true);
+  line(template==="mj-signature"?input.reference:`${input.reference} / V${input.version}`, 12, true);
   line(`Date: ${input.date}`, 9);
   if (input.validUntil) line(`Valid until: ${input.validUntil}`, 9);
   else if (input.quoteValidityDays) line(`Validity: ${input.quoteValidityDays} days`, 9);
@@ -137,7 +137,7 @@ export function buildQuotePdf(input: QuotePdfInput): Buffer {
   if (input.customerPhone) line(input.customerPhone, 9);
   if (input.customerEmail) line(input.customerEmail, 9);
 
-  heading(template==="mj-signature" ? "Project Overview & Lead Times" : "Project");
+  heading(template==="mj-signature" ? "Project Details" : "Project");
   line(input.jobType, 11, true);
   if (input.dimensions) line(`Approx. dimensions: ${input.dimensions}`, 9);
   if (input.material) line(`Material: ${input.material}`, 9);
@@ -145,19 +145,19 @@ export function buildQuotePdf(input: QuotePdfInput): Buffer {
   else if (input.colour) line(`Colour: ${input.colour}`, 9);
   if (input.customerReference) line(`Customer reference: ${input.customerReference}`, 9);
 
-  heading(template==="mj-signature" ? "Scope of Works" : "Scope of works");
+  heading("Scope of Works");
   paragraph(input.scope, 24);
   if (input.exclusions) { heading(template==="mj-signature" ? "Project Specific Exclusions" : "Notes / exclusions"); paragraph(input.exclusions, 8); }
 
-  heading("Quotation total");
-  line(`GBP ${Number(input.amount || 0).toFixed(2)}`, 18, true, 50, 24);
+  gap(6); rule(); heading("Quotation");
+  line(`Total: GBP ${Number(input.amount || 0).toFixed(2)}`, 16, true, 50, 22);
   if (input.deposit) line(`Deposit: GBP ${Number(input.deposit).toFixed(2)}`, 10, true);
   else if (input.defaultDepositPercent) line(`Deposit: ${input.defaultDepositPercent}%`, 10, true);
   if (input.leadTime) line(`Estimated lead time: ${input.leadTime}`, 10);
 
   if (pages.length < 2) page = newPage();
   page.y=790;
-  line(template==="mj-signature" ? "PAYMENT TERMS & DETAILS" : "PAYMENT & KEY TERMS",14,true);
+  line(template==="mj-signature" ? "TERMS, PAYMENT & ACCEPTANCE" : "PAYMENT & KEY TERMS",14,true);
   rule();
   const cleanTerms=input.deposit&&input.paymentTerms?input.paymentTerms.replace(/^\s*\d+(?:\.\d+)?%\s+deposit\s*,?\s*/i,""):input.paymentTerms;
   if (cleanTerms) paragraph(`Payment terms: ${input.deposit?`Deposit GBP ${Number(input.deposit).toFixed(2)}. `:""}${cleanTerms}`,12);
