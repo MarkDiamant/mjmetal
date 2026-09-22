@@ -1,0 +1,5 @@
+import { NextResponse } from "next/server";
+import { requirePermission } from "@/lib/crm/supabase-server";
+import { disconnectGoogle,getStoredGoogleConnection } from "@/lib/crm/gmail";
+export async function GET(){const s=await requirePermission("manage_business_settings");if(!s)return NextResponse.json({error:"Unauthorised"},{status:401});try{const c=await getStoredGoogleConnection(s.token);return NextResponse.json({connected:Boolean(c),email:c?.email||null,connectedAt:c?.connectedAt||null});}catch(e){return NextResponse.json({error:e instanceof Error?e.message:"Unable to check Gmail"},{status:500});}}
+export async function DELETE(){const s=await requirePermission("manage_business_settings");if(!s)return NextResponse.json({error:"Unauthorised"},{status:401});try{await disconnectGoogle(s.token);return NextResponse.json({ok:true});}catch(e){return NextResponse.json({error:e instanceof Error?e.message:"Unable to disconnect Gmail"},{status:500});}}
