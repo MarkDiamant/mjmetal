@@ -37,7 +37,7 @@ export const M_AND_J_TENANT_CONFIG: CrmConfig = {
   quoteTemplate: "mj-signature",
   invoiceTemplate: "mj-signature",
   tenantKey: "mj-metal",
-  plan: { includedUsers:2, licensedUsers:2, additionalUserMonthly:10, aiAssistantMonthly:15, annualMonthsCharged:10, aiIncluded:false },
+  plan: { includedUsers:1, licensedUsers:2, additionalUserMonthly:10, aiAssistantMonthly:15, annualMonthsCharged:10, aiIncluded:true },
   ai: { enabled:true, textAssist:true, voiceAssist:false, includedTextActions:null, includedVoiceMinutes:null },
   billing: { mode:"free", interval:null, status:"active", resumeUrl:"", customerId:"", subscriptionId:"", currentPeriodEnd:"", cancelAtPeriodEnd:false },
   businessDetails: { phone:"020 3284 5045", email:"info@mjmetal.co.uk", website:"mjmetal.co.uk", companyNumber:"17330239", officeAddress:"Office 6, 1st Floor, Sutherland House, 70-78 West Hendon Broadway, London, NW9 7BT", registeredAddress:"4 Eastville Avenue, London NW11 0HD", bankName:"M&J Metal Ltd", accountNumber:"37245425", sortCode:"60-83-71", vatRegistered:false, vatNumber:"", defaultDepositPercent:50, quoteValidityDays:30, paymentTerms:"50% deposit, with the remaining balance due on completion.", defaultVatRate:20, emailSignatureName:"The M&J Metal Team", emailSignatureTagline:"| Built Strong. Built to last |" },
