@@ -14,7 +14,8 @@ export default function QuotePrint({ reference, quoteId }: { reference: string; 
   const [sentMessage, setSentMessage] = useState("");
   const [pdfBusy, setPdfBusy] = useState(false);
   const [crmConfig,setCrmConfig]=useState(DEFAULT_CRM_CONFIG);
-  const [connectedGmail,setConnectedGmail]=useState<string|null>(null);\n  const [drafting,setDrafting]=useState(false);
+  const [connectedGmail,setConnectedGmail]=useState<string|null>(null);
+  const [drafting,setDrafting]=useState(false);
   useEffect(()=>{fetch("/api/admin/settings",{cache:"no-store"}).then(async r=>{if(r.ok){const b=await r.json();if(b.settings)setCrmConfig(b.settings);}}).catch(()=>{});fetch("/api/integrations/google/status",{cache:"no-store"}).then(async r=>{if(r.ok){const b=await r.json();if(b.connected&&b.email)setConnectedGmail(String(b.email));}}).catch(()=>{});},[]);
   useEffect(() => {
     fetch(`/api/admin/jobs/${encodeURIComponent(reference)}`, { cache: "no-store" }).then(async (res) => {
@@ -33,8 +34,14 @@ export default function QuotePrint({ reference, quoteId }: { reference: string; 
   const name = [c.first_name, c.last_name].filter(Boolean).join(" ");
   const site = [j.site_address_line_1 || c.address_line_1, j.site_address_line_2 || c.address_line_2, j.site_city || c.city, j.site_postcode || c.postcode].filter(Boolean).join(", ");
   // Job photos/files stay internal to the job record. Quotes and invoices never depend on them.
-  const message = `Hi ${c.first_name || ""},\n\nPlease find our quotation ${j.reference} for ${String(j.job_type || "metalwork").toLowerCase()} at ${site}.\n\nQuotation: ${money(quote.amount)}\n\nKind regards,\n${crmConfig.businessName}`;
-  const mailSubject = `${crmConfig.businessName} quotation ${j.reference}`;
+  const message = `Hi ${c.first_name || ""},
+
+Please find our quotation ${j.reference} for ${String(j.job_type || "metalwork").toLowerCase()} at ${site}.
+
+Quotation: ${money(quote.amount)}
+
+Kind regards,
+${crmConfig.businessName}`;
   const template=crmConfig.quoteTemplate;
   const isClassic=template==="classic";
   const isMj=template==="mj-signature";
