@@ -91,12 +91,15 @@ export async function GET(request: Request) {
     const jobPayments = paymentsByJob.get(job.id) || [];
     const customerPayments = jobPayments.filter((p) => p.direction === "customer_in");
     const jobAssignments = assignmentsByJob.get(job.id) || [];
-    const assignmentDueTarget = (a: Record<string, any>) => job.status === "completed" ? Number(a.agreedCost || 0) : ["confirmed","deposit_requested","deposit_paid","materials_ordered","fabrication","installation_scheduled","in_progress","awaiting_final_payment"].includes(String(job.status)) ? Number(a.depositAmount ?? (Number(a.agreedCost || 0) * 0.5)) : 0;
+    const jobStage = String(job.status || "").toLowerCase();
+    const finalSubcontractorStages = new Set(["completed","invoiced","invoice_sent","awaiting_final_payment","final_payment_requested"]);
+    const depositSubcontractorStages = new Set(["confirmed","deposit_requested","deposit_paid","materials_ordered","fabrication","installation_scheduled","in_progress"]);
+    const assignmentDueTarget = (a: Record<string, any>) => finalSubcontractorStages.has(jobStage) ? Number(a.agreedCost || 0) : depositSubcontractorStages.has(jobStage) ? Number(a.depositAmount ?? (Number(a.agreedCost || 0) * 0.5)) : 0;
     for (const a of jobAssignments) if (a.relationshipType !== "employee") a.outstanding = Math.max(0, assignmentDueTarget(a) - Number(a.paidAmount || 0));
     const commissions = commissionsByJob.get(job.id) || [];
     const jobCostSummary = costs.find((c) => c.job_id === job.id && c.category === "Job total");
     const subAgreed = jobAssignments.filter((a) => a.relationshipType !== "employee").reduce((sum, a) => sum + Number(a.agreedCost || 0), 0);
-    const subDueNow = jobAssignments.filter((a) => a.relationshipType !== "employee").reduce((sum, a) => { const deposit = Number(a.depositAmount ?? (Number(a.agreedCost || 0) * 0.5)); const dueTarget = job.status === "completed" ? Number(a.agreedCost || 0) : ["confirmed","deposit_requested","deposit_paid","materials_ordered","fabrication","installation_scheduled","in_progress","awaiting_final_payment"].includes(String(job.status)) ? deposit : 0; return sum + Math.max(0, dueTarget - Number(a.paidAmount || 0)); }, 0);
+    const subDueNow = jobAssignments.filter((a) => a.relationshipType !== "employee").reduce((sum, a) => sum + Number(a.outstanding || 0), 0);
     const subPaid = jobAssignments.filter((a) => a.relationshipType !== "employee").reduce((sum, a) => sum + Number(a.paidAmount || 0), 0);
     const commissionAgreed = commissions.reduce((sum, c) => sum + Number(c.agreedAmount || 0), 0);
     const commissionPaid = commissions.reduce((sum, c) => sum + Number(c.paidAmount || 0), 0);
