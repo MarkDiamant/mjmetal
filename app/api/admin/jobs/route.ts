@@ -21,13 +21,14 @@ export async function GET(request: Request) {
   const canCosts=session.permissions.includes("view_costs_profit");
   const canPricing=session.permissions.includes("view_pricing");
   const canCustomer=session.permissions.includes("view_customer_details");
-  const [jobsResponse, paymentsResponse, assignmentsResponse, peopleResponse, costsResponse, xeroInvoicesResponse] = await Promise.all([
+  const [jobsResponse, paymentsResponse, assignmentsResponse, peopleResponse, costsResponse, xeroInvoicesResponse, auditResponse] = await Promise.all([
     supabaseRequest(`/rest/v1/mj_jobs?${archiveFilter}&select=*,mj_customers(*)&order=sequence_number.asc`, { method: "GET" }, session.token),
     canPayments?supabaseRequest("/rest/v1/mj_payments?select=id,job_id,direction,payment_type,amount,payment_method,counterparty,paid_at,due_at,notes,created_at&order=created_at.desc", { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
     canWorkforce?supabaseRequest(`/rest/v1/mj_job_subcontractors?select=${canCosts?"id,job_id,subcontractor_id,scope,agreed_cost,deposit_amount,paid_amount,status,scheduled_at,completed_at,materials_included,assignment_role":"id,job_id,subcontractor_id,scope,status,scheduled_at,completed_at,materials_included,assignment_role"}&order=created_at.asc`, { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
     canWorkforce?supabaseRequest("/rest/v1/mj_subcontractors?active=eq.true&select=id,name,company,phone,email,capabilities,relationship_type&order=name.asc", { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
     canCosts?supabaseRequest("/rest/v1/mj_job_costs?select=id,job_id,category,supplier,estimated_amount,actual_amount,paid_amount,paid_at,due_at,notes,created_at&order=created_at.asc", { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
     canPayments?supabaseRequest("/rest/v1/mj_xero_invoices?select=job_id,status", { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
+    supabaseRequest("/rest/v1/mj_audit_events?select=job_id,actor,created_at&order=created_at.desc&limit=500", { method: "GET" }, session.token),
   ]);
 
   if (!jobsResponse.ok) return NextResponse.json({ error: "Unable to load jobs" }, { status: 500 });
@@ -37,6 +38,9 @@ export async function GET(request: Request) {
   const people = peopleResponse.ok ? await peopleResponse.json() as Array<Record<string, any>> : [];
   const costs = costsResponse.ok ? await costsResponse.json() as Array<Record<string, any>> : [];
   const xeroInvoices = xeroInvoicesResponse.ok ? await xeroInvoicesResponse.json() as Array<Record<string, any>> : [];
+  const auditEvents = auditResponse.ok ? await auditResponse.json() as Array<Record<string, any>> : [];
+  const lastActorByJob = new Map<string,string>();
+  for (const event of auditEvents) if (!lastActorByJob.has(String(event.job_id))) lastActorByJob.set(String(event.job_id), event.actor==="MD"?"Mark":event.actor==="JB"?"Jonathan":String(event.actor||""));
   const personById = new Map(people.map((s) => [s.id, s]));
   const invoicedJobIds = new Set(
     xeroInvoices
@@ -175,7 +179,7 @@ export async function GET(request: Request) {
       archivedAt: job.archived_at ?? undefined,
       createdAt: job.created_at,
       updatedAt: job.updated_at,
-      lastChangedBy: null,
+      lastChangedBy: lastActorByJob.get(String(job.id)) || null,
     };
   });
 
