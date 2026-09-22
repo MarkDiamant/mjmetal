@@ -92,7 +92,8 @@ export function buildQuotePdf(input: QuotePdfInput): Buffer {
   const paragraph = (text: string, maxLines = 40) => { const lines=wrap(text,88); for (const l of lines.slice(0,maxLines)) line(l || " ", 10, false, 50, 14); if(lines.length>maxLines) line("Continued in project documentation.",9,false,50,13); };
 
   page.commands.push(`BT /F2 ${template==="classic"?18:22} Tf ${accent} rg 50 800 Td (${esc((input.companyName || "Business").toUpperCase())}) Tj ET`);
-  page.commands.push(`BT /F2 ${template==="classic"?16:18} Tf 0 0 0 rg 420 800 Td (${esc("QUOTATION")}) Tj ET`);
+  page.commands.push(`BT /F2 ${template==="classic"?16:18} Tf 0 0 0 rg ${template==="mj-signature"?285:420} 800 Td (${esc(template==="mj-signature"?"PROFESSIONAL QUOTATION & PROJECT PROPOSAL":"QUOTATION")}) Tj ET`);
+  if(template==="mj-signature") page.commands.push(`BT /F2 10 Tf ${accent} rg 50 782 Td (${esc("Built Strong. Built to Last.")}) Tj ET`);
   page.y = 768;
   rule();
   line(`${input.reference} / V${input.version}`, 12, true);
@@ -101,13 +102,13 @@ export function buildQuotePdf(input: QuotePdfInput): Buffer {
   else if (input.quoteValidityDays) line(`Validity: ${input.quoteValidityDays} days`, 9);
   gap(5);
 
-  heading("Prepared for");
+  heading(template==="mj-signature" ? "Client Information" : "Prepared for");
   line(input.customerName, 11, true);
   if (input.site) paragraph(input.site);
   if (input.customerPhone) line(input.customerPhone, 9);
   if (input.customerEmail) line(input.customerEmail, 9);
 
-  heading("Project");
+  heading(template==="mj-signature" ? "Project Overview & Lead Times" : "Project");
   line(input.jobType, 11, true);
   if (input.dimensions) line(`Approx. dimensions: ${input.dimensions}`, 9);
   if (input.material) line(`Material: ${input.material}`, 9);
@@ -115,9 +116,9 @@ export function buildQuotePdf(input: QuotePdfInput): Buffer {
   else if (input.colour) line(`Colour: ${input.colour}`, 9);
   if (input.customerReference) line(`Customer reference: ${input.customerReference}`, 9);
 
-  heading("Scope of works");
+  heading(template==="mj-signature" ? "Scope of Works" : "Scope of works");
   paragraph(input.scope, 24);
-  if (input.exclusions) { heading("Notes / exclusions"); paragraph(input.exclusions, 8); }
+  if (input.exclusions) { heading(template==="mj-signature" ? "Project Specific Exclusions" : "Notes / exclusions"); paragraph(input.exclusions, 8); }
 
   heading("Quotation total");
   line(`GBP ${Number(input.amount || 0).toFixed(2)}`, 18, true, 50, 24);
@@ -127,7 +128,7 @@ export function buildQuotePdf(input: QuotePdfInput): Buffer {
 
   if (pages.length < 2) page = newPage();
   page.y=790;
-  line("PAYMENT & KEY TERMS",14,true);
+  line(template==="mj-signature" ? "PAYMENT TERMS & DETAILS" : "PAYMENT & KEY TERMS",14,true);
   rule();
   const cleanTerms=input.deposit&&input.paymentTerms?input.paymentTerms.replace(/^\s*\d+(?:\.\d+)?%\s+deposit\s*,?\s*/i,""):input.paymentTerms;
   if (cleanTerms) paragraph(`Payment terms: ${input.deposit?`Deposit GBP ${Number(input.deposit).toFixed(2)}. `:""}${cleanTerms}`,12);
@@ -136,7 +137,16 @@ export function buildQuotePdf(input: QuotePdfInput): Buffer {
   paragraph("Scope: The price covers only the works specifically described in this quotation. Additional or changed works will be agreed separately.",6);
   paragraph("Measurements: Final site measurements take precedence over preliminary dimensions.",4);
   paragraph("Lead times: Dates and lead times are estimates and may change due to access, materials or circumstances outside our control.",6);
-  paragraph("Ownership: Fabricated items remain the property of the supplier until paid for in full.",4);
+  paragraph(template==="mj-signature" ? "Ownership: Fabricated items remain the property of M&J Metal Ltd until paid for in full." : "Ownership: Fabricated items remain the property of the supplier until paid for in full.",4);
+  if(template==="mj-signature"){
+    gap(8); heading("Assumptions & Quality");
+    paragraph("Unless specifically included in the scope, this quotation excludes electrical work, decorating, planning applications, unforeseen structural alterations and additional requested works. M&J Metal specialises in high-quality bespoke metalwork, delivering durable, secure and professionally fabricated products built to last.",10);
+    heading("Terms & Conditions");
+    paragraph(`This quotation remains valid for ${input.quoteValidityDays||30} days. Final site measurements take precedence over preliminary dimensions. Variations to specification, site conditions or access requirements may affect the price or programme.`,8);
+    heading("Acceptance of Quotation");
+    paragraph(`I/We accept this quotation and authorise ${input.companyName||"the supplier"} to proceed with the works described above.`,4);
+    gap(8); line("Client Name: ____________________   Signature: ____________________   Date: ____________",8);
+  }
   gap(14);
   rule();
   line((input.companyName || "Business").toUpperCase(), 9, true);
