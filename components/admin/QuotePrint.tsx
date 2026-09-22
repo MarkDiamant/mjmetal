@@ -74,8 +74,8 @@ export default function QuotePrint({ reference, quoteId }: { reference: string; 
 
     <article className={`quote-page ${pageClass} mx-auto flex min-h-[1120px] max-w-[900px] flex-col bg-white px-10 py-9 shadow-xl sm:px-14`}>
       <header className={`flex items-start justify-between gap-8 ${headerClass}`}>
-        <div><img src={crmConfig.logoUrl} alt={crmConfig.businessName} className="h-24 w-auto object-contain" />{isMj&&<p className="mt-2 text-xs font-black text-[var(--brand)]">Built Strong. Built to Last.</p>}</div>
-        <div className="text-right"><h1 className="text-3xl font-black uppercase tracking-tight">{isMj ? "Professional Quotation & Project Proposal" : "Quotation"}</h1><p className="mt-1 text-lg font-black text-[var(--brand)]">{j.reference} / V{quote.version}</p><p className="mt-1 text-xs text-black/55">Issued {new Date(quote.created_at).toLocaleDateString("en-GB")}{quote.valid_until ? ` · Valid until ${new Date(`${quote.valid_until}T12:00:00`).toLocaleDateString("en-GB")}` : ""}</p></div>
+        <div><img src={crmConfig.logoUrl} alt={crmConfig.businessName} className="h-20 w-auto object-contain" /></div>
+        <div className="text-right"><h1 className="text-3xl font-black uppercase tracking-tight">Quotation</h1><p className="mt-1 text-lg font-black text-[var(--brand)]">{j.reference} / V{quote.version}</p><p className="mt-1 text-xs text-black/55">Issued {new Date(quote.created_at).toLocaleDateString("en-GB")}{quote.valid_until ? ` · Valid until ${new Date(`${quote.valid_until}T12:00:00`).toLocaleDateString("en-GB")}` : ""}</p></div>
       </header>
 
       <section className="mt-6 grid gap-6 sm:grid-cols-2">
@@ -83,7 +83,7 @@ export default function QuotePrint({ reference, quoteId }: { reference: string; 
         <div><p className="text-[10px] font-black uppercase tracking-[0.12em] text-[var(--brand)]">Project</p><p className="mt-1 text-lg font-black">{j.job_type}</p>{j.dimensions && <p className="mt-1 text-sm text-black/65">Approx. dimensions: {j.dimensions}</p>}{j.material && <p className="text-sm text-black/65">Material: {j.material}</p>}{(j.finishes || []).length > 0 && <p className="text-sm text-black/65">Finish: {(j.finishes || []).join(" + ")}{j.colour ? `, ${j.colour}` : ""}</p>}</div>
       </section>
 
-      <section className="mt-6"><h2 className="border-b border-black/15 pb-1.5 text-base font-black">{isMj?"Project Overview & Lead Times":"Scope of works"}</h2><div className="mt-3 whitespace-pre-wrap text-[14px] leading-6 text-black/75">{quote.scope_text}</div></section>
+      <section className="mt-6"><h2 className="border-b border-black/15 pb-1.5 text-base font-black">Scope of works</h2><div className="mt-3 whitespace-pre-wrap text-[14px] leading-6 text-black/75">{quote.scope_text}</div></section>
 
       {photos.length > 0 && <section className="mt-6"><div className={`grid gap-3 ${photos.length===1?"grid-cols-1":photos.length===2?"grid-cols-2":"grid-cols-3"}`}>{photos.map((f: any) => <img key={f.id} src={f.signed_url} alt={f.file_name} className="h-48 w-full rounded-lg border border-black/10 object-cover" />)}</div></section>}
 
@@ -93,7 +93,7 @@ export default function QuotePrint({ reference, quoteId }: { reference: string; 
 
     <article className={`quote-page ${pageClass} mx-auto mt-6 flex min-h-[1120px] max-w-[900px] flex-col bg-white px-10 py-9 shadow-xl print:mt-0 sm:px-14`}>
       <header className={`flex items-center justify-between ${isClassic?"border-b border-black pb-4":isMj?"border-b-4 border-[var(--brand)] pb-4":"border-b-2 border-[var(--brand)] pb-4"}`}><img src={crmConfig.logoUrl} alt={crmConfig.businessName} className="h-14 w-auto object-contain"/><div className="text-right"><p className="font-black">{j.reference} / V{quote.version}</p><p className="text-xs text-black/45">Quotation details</p></div></header>
-      {quote.exclusions && <section className="mt-6"><h2 className="text-base font-black">{isMj?"Project Specific Exclusions":"Project notes"}</h2><div className="mt-2 whitespace-pre-wrap text-sm leading-5 text-black/70">{quote.exclusions}</div></section>}
+      {quote.exclusions && <section className="mt-6"><h2 className="text-base font-black">Project notes</h2><div className="mt-2 whitespace-pre-wrap text-sm leading-5 text-black/70">{quote.exclusions}</div></section>}
       <section className="mt-6"><h2 className="text-base font-black">Payment & key terms</h2><div className="mt-3 grid gap-x-8 gap-y-2 text-[12px] leading-5 text-black/65 sm:grid-cols-2">
         <p><b>Payment:</b> {quote.deposit_amount ? `${money(quote.deposit_amount)} deposit. ${crmConfig.businessDetails.paymentTerms.replace(/^\s*\d+(?:\.\d+)?%\s+deposit\s*,?\s*/i,"")}` : crmConfig.businessDetails.paymentTerms || (crmConfig.businessDetails.defaultDepositPercent>0 ? `${crmConfig.businessDetails.defaultDepositPercent}% deposit, with the remaining balance due on completion.` : "Payment terms as agreed for this project.")}</p>
         <p><b>Validity:</b> This quotation is valid for {crmConfig.businessDetails.quoteValidityDays} days unless another validity date is shown above.</p>
