@@ -27,7 +27,7 @@ export default function QuotePrint({ reference, quoteId }: { reference: string; 
   }, [reference]);
 
   const quote = useMemo(() => data?.quotes?.find((q: any) => q.id === quoteId), [data, quoteId]);
-  if (error) return <main className="p-10">{error}</main>;
+  if (error) return <><main className="p-10">{error}</main>;
   if (!data) return <main className="p-10">Loading quote...</main>;
   if (!quote) return <main className="p-10">Quote not found.</main>;
 
@@ -110,5 +110,5 @@ ${crmConfig.businessName}`;
       <footer className="mt-auto border-t border-black/10 pt-4 text-[10px] leading-4 text-black/45"><p className="font-bold text-black/60">{crmConfig.businessName.toUpperCase()}</p><p>{crmConfig.businessDetails.officeAddress}</p><p>{[crmConfig.businessDetails.phone,crmConfig.businessDetails.email,crmConfig.businessDetails.website,crmConfig.businessDetails.companyNumber?`Company No. ${crmConfig.businessDetails.companyNumber}`:"",crmConfig.businessDetails.vatRegistered&&crmConfig.businessDetails.vatNumber?`VAT ${crmConfig.businessDetails.vatNumber}`:""].filter(Boolean).join(" · ")}</p>{!isMj&&crmConfig.businessDetails.bankName&&<p className="mt-1">Payment: {crmConfig.businessDetails.bankName} · Sort code {crmConfig.businessDetails.sortCode} · Account {crmConfig.businessDetails.accountNumber}</p>}</footer>
     </article>
     <span className="hidden" data-pdf-status-listener onClick={() => setPdfBusy(false)} />
-  </main>;
+  </main>{draftNotice&&<div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 p-4 print:hidden"><div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"><div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand)] text-xl font-black text-white">✓</div><h2 className="text-xl font-black">Email draft created</h2><p className="mt-2 text-sm leading-6 text-black/60">Draft created in <strong className="text-black">{draftNotice.email}</strong> with the quotation PDF attached.</p><div className="mt-6 flex justify-end gap-2"><button type="button" onClick={()=>setDraftNotice(null)} className="rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-bold">Close</button><button type="button" onClick={()=>{window.open(`https://mail.google.com/mail/u/?authuser=${encodeURIComponent(draftNotice.email)}#drafts`,"_blank","noopener,noreferrer");setDraftNotice(null);}} className="rounded-xl bg-[var(--brand)] px-4 py-2.5 text-sm font-black text-white">Open Gmail</button></div></div></div>}</>;
 }
