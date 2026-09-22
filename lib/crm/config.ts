@@ -66,7 +66,9 @@ export const SHARED_BUSINESS_SOFTWARE_DEFAULTS: CrmConfig = {
   finishOptions: ["Standard","Other"],
   invoiceTemplate: "clean",
   tenantKey: "new-tenant",
-  plan: { ...M_AND_J_TENANT_CONFIG.plan, includedUsers:1, licensedUsers:1, aiIncluded:false },\n  ai: { ...M_AND_J_TENANT_CONFIG.ai, enabled:false, textAssist:false, voiceAssist:false },\n  billing: { ...M_AND_J_TENANT_CONFIG.billing, mode:"paid" },
+  plan: { ...M_AND_J_TENANT_CONFIG.plan, includedUsers:1, licensedUsers:1, aiIncluded:false },
+  ai: { ...M_AND_J_TENANT_CONFIG.ai, enabled:false, textAssist:false, voiceAssist:false },
+  billing: { ...M_AND_J_TENANT_CONFIG.billing, mode:"paid" },
   businessDetails: { ...M_AND_J_TENANT_CONFIG.businessDetails, phone:"", email:"", website:"", companyNumber:"", officeAddress:"", registeredAddress:"", bankName:"", accountNumber:"", sortCode:"", vatRegistered:false, vatNumber:"" },
 };
 
