@@ -80,7 +80,7 @@ export default function CrmDashboardV3() {
   useEffect(()=>{void load();},[load]);
   useEffect(()=>{const timer=window.setInterval(async()=>{if(savingRef)return;if(!editingRef){void load();return;}const res=await fetch("/api/admin/jobs",{cache:"no-store"});if(!res.ok)return;const body=await res.json().catch(()=>({}));const latest=(body.jobs||[]).find((x:any)=>x.reference===editingRef);if(latest&&editUpdatedAt&&latest.updatedAt&&latest.updatedAt!==editUpdatedAt)setRemoteChanged(true);},3000);return()=>window.clearInterval(timer);},[load,editingRef,savingRef,editUpdatedAt]);
   useEffect(()=>{const saved=window.sessionStorage.getItem("mj-crm-sort") as SortMode|null;if(saved)setSortMode(saved);},[]);
-  useEffect(()=>{window.sessionStorage.setItem("mj-crm-sort",sortMode);},[sortMode]);
+  useEffect(()=>{window.sessionStorage.setItem("mj-crm-sort",sortMode);},[sortMode]);\n  useEffect(()=>{if(loading)return;const params=new URLSearchParams(window.location.search);if(params.get("quick")==="1"){void openQuickAdd();window.history.replaceState({},"","/admin");}},[loading]);
 
   const typeOptions = useMemo(()=>{
     const items=[...jobTypeOptions];
