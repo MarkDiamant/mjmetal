@@ -14,7 +14,7 @@ export default function QuotePrint({ reference, quoteId }: { reference: string; 
   const [sentMessage, setSentMessage] = useState("");
   const [pdfBusy, setPdfBusy] = useState(false);
   const [crmConfig,setCrmConfig]=useState(DEFAULT_CRM_CONFIG);
-  const [connectedGmail,setConnectedGmail]=useState<string|null>(null);
+  const [connectedGmail,setConnectedGmail]=useState<string|null>(null);\n  const [drafting,setDrafting]=useState(false);
   useEffect(()=>{fetch("/api/admin/settings",{cache:"no-store"}).then(async r=>{if(r.ok){const b=await r.json();if(b.settings)setCrmConfig(b.settings);}}).catch(()=>{});fetch("/api/integrations/google/status",{cache:"no-store"}).then(async r=>{if(r.ok){const b=await r.json();if(b.connected&&b.email)setConnectedGmail(String(b.email));}}).catch(()=>{});},[]);
   useEffect(() => {
     fetch(`/api/admin/jobs/${encodeURIComponent(reference)}`, { cache: "no-store" }).then(async (res) => {
@@ -69,7 +69,7 @@ export default function QuotePrint({ reference, quoteId }: { reference: string; 
       {sentMessage && <span className="self-center rounded-lg bg-green-50 px-3 py-2 text-sm font-bold text-green-700">{sentMessage}</span>}
       <button onClick={() => { setPdfBusy(true); document.getElementById("save-quote-pdf")?.click(); }} disabled={pdfBusy} className="rounded-xl bg-[var(--brand)] px-4 py-2.5 text-sm font-black text-white disabled:opacity-60">{pdfBusy ? "Saving PDF..." : "Save PDF"}</button>
       <button onClick={() => void sendQuote()} disabled={sending} className="rounded-xl bg-[#141414] px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">{sending ? "Sending..." : "Send quote by email"}</button>
-      <a href={mailHref} target="_blank" rel="noopener noreferrer" className="rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-bold">Open email draft</a>
+      <button type="button" disabled={drafting} onClick={async()=>{setDrafting(true);try{const response=await fetch(`/api/admin/jobs/${encodeURIComponent(reference)}/draft-quote`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({quoteId:quote.id})});const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.error||"Could not create Gmail draft");alert(`Draft created in ${body.from||connectedGmail||"connected Gmail"} with the quotation PDF attached.`);if(body.from)window.open(`https://mail.google.com/mail/u/?authuser=${encodeURIComponent(body.from)}#drafts`,"_blank","noopener,noreferrer");}catch(error){alert(error instanceof Error?error.message:"Could not create Gmail draft");}finally{setDrafting(false);}}} className="rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-bold disabled:opacity-50">{drafting?"Creating Gmail draft...":"Open email draft"}</button>
       <button onClick={() => void copyWhatsApp()} className="rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-bold">Copy WhatsApp message</button>
       <a href={`/admin/jobs/${reference}`} className="rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-bold">Back to job</a><a href="/admin" className="rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-bold">Back to admin</a>
     </div>
