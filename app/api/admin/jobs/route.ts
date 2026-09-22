@@ -161,6 +161,7 @@ export async function GET(request: Request) {
       quotedAmount: quoted,
       quoteSentAt: job.quote_sent_at ?? undefined,
       latestQuote: latestQuoteByJob.get(String(job.id)) || undefined,
+      quoteDisplaySent: Boolean(job.quote_sent_at) || ["quote_sent","awaiting_customer","confirmed","deposit_requested","deposit_paid","materials_ordered","fabrication","installation_scheduled","in_progress","awaiting_final_payment","completed"].includes(String(job.status)),
       hasInvoice: invoicedJobIds.has(String(job.id)),
       paymentMethod: job.payment_method ?? undefined,
       nextAction: collectionRequired ? `Collect outstanding ${new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(balanceOutstanding)} or write off` : job.next_action ?? undefined,
