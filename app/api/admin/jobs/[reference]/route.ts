@@ -204,15 +204,30 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     if (body.type === "quote") {
-      const existing = await jsonOrError(await supabaseRequest(`/rest/v1/mj_quotes?job_id=eq.${job.id}&select=version&order=version.desc&limit=1`, {}, session.token));
-      const version = (existing[0]?.version || 0) + 1;
-      const created = await jsonOrError(await supabaseRequest("/rest/v1/mj_quotes", {
-        method: "POST", headers: { Prefer: "return=representation" },
-        body: JSON.stringify({ job_id: job.id, version, status: body.status || "draft", vat_rate: Number(body.vat_rate || 0), scope_text: body.scope_text, exclusions: body.exclusions || null, amount: Number(body.amount || 0), deposit_amount: body.deposit_amount ? Number(body.deposit_amount) : null, lead_time: body.lead_time || null, valid_until: body.valid_until || null, created_by: session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user" }),
-      }, session.token));
+      const quotePatch = { status: body.status || "draft", vat_rate: Number(body.vat_rate || 0), scope_text: body.scope_text, exclusions: body.exclusions || null, amount: Number(body.amount || 0), deposit_amount: body.deposit_amount ? Number(body.deposit_amount) : null, lead_time: body.lead_time || null, valid_until: body.valid_until || null };
+      let item:any;
+      let version:number;
+      if (body.quote_id) {
+        const existingQuote = await jsonOrError(await supabaseRequest(`/rest/v1/mj_quotes?id=eq.${encodeURIComponent(body.quote_id)}&job_id=eq.${job.id}&select=*&limit=1`, {}, session.token));
+        if (!existingQuote[0]) return NextResponse.json({ error: "Quote not found" }, { status: 404 });
+        version = Number(existingQuote[0].version || 1);
+        const updated = await jsonOrError(await supabaseRequest(`/rest/v1/mj_quotes?id=eq.${encodeURIComponent(body.quote_id)}&job_id=eq.${job.id}`, {
+          method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify(quotePatch),
+        }, session.token));
+        item = updated[0];
+        await audit(session.token, session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user", job.id, "updated", "quote", item?.id, { version, amount: body.amount });
+      } else {
+        const existing = await jsonOrError(await supabaseRequest(`/rest/v1/mj_quotes?job_id=eq.${job.id}&select=version&order=version.desc&limit=1`, {}, session.token));
+        version = (existing[0]?.version || 0) + 1;
+        const created = await jsonOrError(await supabaseRequest("/rest/v1/mj_quotes", {
+          method: "POST", headers: { Prefer: "return=representation" },
+          body: JSON.stringify({ job_id: job.id, version, ...quotePatch, created_by: session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user" }),
+        }, session.token));
+        item = created[0];
+        await audit(session.token, session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user", job.id, "created", "quote", item?.id, { version, amount: body.amount });
+      }
       await supabaseRequest(`/rest/v1/mj_jobs?id=eq.${job.id}`, { method: "PATCH", body: JSON.stringify({ quoted_amount: Number(body.amount || 0), vat_rate: Number(body.vat_rate || 0), status: "quote_preparing", next_action: "Send quote", updated_at: now }) }, session.token);
-      await audit(session.token, session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user", job.id, "created", "quote", created[0]?.id, { version, amount: body.amount });
-      return NextResponse.json({ item: created[0] });
+      return NextResponse.json({ item });
     }
 
     if (body.type === "subcontractor") {
