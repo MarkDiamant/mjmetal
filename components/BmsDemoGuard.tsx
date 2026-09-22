@@ -25,6 +25,22 @@ export default function BmsDemoGuard(){
       return originalFetch(input,init);
     }) as typeof window.fetch;
 
+    const originalPush=history.pushState.bind(history);
+    const originalReplace=history.replaceState.bind(history);
+    const demoUrl=(value:string|URL|null|undefined)=>{
+      if(value==null)return value as any;
+      const url=new URL(String(value),window.location.href);
+      if(url.origin===window.location.origin&&(url.pathname==="/admin"||url.pathname.startsWith("/admin/"))){
+        const sample=new URLSearchParams(window.location.search).get("sample");
+        url.pathname="/demo"+url.pathname.slice("/admin".length);
+        if(sample&&!url.searchParams.has("sample"))url.searchParams.set("sample",sample);
+        return url.pathname+url.search+url.hash;
+      }
+      return value as any;
+    };
+    history.pushState=((data:any,unused:string,url?:string|URL|null)=>originalPush(data,unused,demoUrl(url))) as typeof history.pushState;
+    history.replaceState=((data:any,unused:string,url?:string|URL|null)=>originalReplace(data,unused,demoUrl(url))) as typeof history.replaceState;
+
     const click=(event:MouseEvent)=>{
       const target=event.target as Element|null;
       const anchor=target?.closest?.("a") as HTMLAnchorElement|null;
@@ -33,8 +49,10 @@ export default function BmsDemoGuard(){
       if(url.origin!==window.location.origin) return;
       if(url.pathname==="/admin"||url.pathname.startsWith("/admin/")){
         event.preventDefault();
-        const next="/demo"+url.pathname.slice("/admin".length)+url.search+url.hash;
-        window.location.assign(next);
+        const sample=new URLSearchParams(window.location.search).get("sample");
+        url.pathname="/demo"+url.pathname.slice("/admin".length);
+        if(sample&&!url.searchParams.has("sample"))url.searchParams.set("sample",sample);
+        window.location.assign(url.pathname+url.search+url.hash);
         return;
       }
       if(url.pathname.startsWith("/api/integrations")){
@@ -43,7 +61,7 @@ export default function BmsDemoGuard(){
       }
     };
     document.addEventListener("click",click,true);
-    return ()=>{window.fetch=originalFetch;document.removeEventListener("click",click,true);};
+    return ()=>{window.fetch=originalFetch;history.pushState=originalPush as typeof history.pushState;history.replaceState=originalReplace as typeof history.replaceState;document.removeEventListener("click",click,true);};
   },[]);
   return null;
 }
