@@ -91,6 +91,8 @@ export async function GET(request: Request) {
     const jobPayments = paymentsByJob.get(job.id) || [];
     const customerPayments = jobPayments.filter((p) => p.direction === "customer_in");
     const jobAssignments = assignmentsByJob.get(job.id) || [];
+    const assignmentDueTarget = (a: Record<string, any>) => job.status === "completed" ? Number(a.agreedCost || 0) : ["confirmed","deposit_requested","deposit_paid","materials_ordered","fabrication","installation_scheduled","in_progress","awaiting_final_payment"].includes(String(job.status)) ? Number(a.depositAmount ?? (Number(a.agreedCost || 0) * 0.5)) : 0;
+    for (const a of jobAssignments) if (a.relationshipType !== "employee") a.outstanding = Math.max(0, assignmentDueTarget(a) - Number(a.paidAmount || 0));
     const commissions = commissionsByJob.get(job.id) || [];
     const jobCostSummary = costs.find((c) => c.job_id === job.id && c.category === "Job total");
     const subAgreed = jobAssignments.filter((a) => a.relationshipType !== "employee").reduce((sum, a) => sum + Number(a.agreedCost || 0), 0);
