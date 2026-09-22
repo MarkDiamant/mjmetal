@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission, supabaseRequest } from "@/lib/crm/supabase-server";
 import { DEFAULT_CRM_CONFIG, normaliseCrmConfig } from "@/lib/crm/config";
+import { resolveCentralTenant } from "@/lib/crm/product";
 
 const SETTINGS_PATH = "_crm/settings.json";
 const LOGO_PREFIX = "_crm/logo";
@@ -25,7 +26,9 @@ async function writeSettings(token: string, settings: unknown) {
 export async function GET() {
   const session = await requirePermission("view_jobs");
   if (!session) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-  return NextResponse.json({ settings: await readSettings(session.token) });
+  const settings = await readSettings(session.token);
+  const centralTenant = await resolveCentralTenant({ slug: "mjmetal" });
+  return NextResponse.json({ settings, tenant: centralTenant });
 }
 
 export async function PUT(request: NextRequest) {
