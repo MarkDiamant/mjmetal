@@ -152,7 +152,8 @@ export default function CrmDashboardV3() {
       "Confirm final payment":"completed",
     };
     if(statusForAction[value])status=statusForAction[value];
-    return {...d,nextAction:value,status};
+    const followUpDays:Record<string,number>={"Follow up quote":3,"Follow up customer":3,"Request more information":3};
+    return {...d,nextAction:value,status,...(followUpDays[value]?{nextActionAt:suggestedDue(followUpDays[value])}:{})};
   });}
   function setStatusAndSuggestedAction(value:string){setDraft(d=>{if(!d)return d;const suggested:Record<string,string>={
     new_enquiry:"Call customer",
