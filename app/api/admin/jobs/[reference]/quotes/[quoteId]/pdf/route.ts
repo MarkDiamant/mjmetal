@@ -119,7 +119,11 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
 
     const signed = await supabaseRequest(`/storage/v1/object/sign/mj-job-files/${encodedPath}`, { method: "POST", body: JSON.stringify({ expiresIn: 3600 }) }, session.token);
     const signedBody = signed.ok ? await signed.json() : null;
-    return NextResponse.json({ file, url: signedBody?.signedURL || signedBody?.signedUrl || null });
+    const signedPath = signedBody?.signedURL || signedBody?.signedUrl || null;
+    const url = signedPath
+      ? (String(signedPath).startsWith("http") ? String(signedPath) : `${process.env.NEXT_PUBLIC_SUPABASE_URL || ""}/storage/v1${String(signedPath).startsWith("/") ? "" : "/"}${signedPath}`)
+      : null;
+    return NextResponse.json({ file, url });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Could not generate PDF" }, { status: 500 });
   }
