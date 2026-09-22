@@ -11,7 +11,7 @@ const STORAGE_PATH="_crm/gmail.json";
 type GoogleToken={access_token:string;refresh_token?:string;expires_in:number;scope?:string};
 type Stored={email:string;accessToken:string;refreshToken:string;expiresAt:string;connectedAt:string;connectedBy:string};
 
-function cfg(){const clientId=process.env.GOOGLE_CLIENT_ID,clientSecret=process.env.GOOGLE_CLIENT_SECRET,redirectUri=process.env.GOOGLE_GMAIL_REDIRECT_URI;if(!clientId||!clientSecret||!redirectUri)throw new Error("Google / Gmail integration is not configured");return{clientId,clientSecret,redirectUri};}
+function cfg(){const clientId=process.env.GOOGLE_CLIENT_ID,clientSecret=process.env.GOOGLE_CLIENT_SECRET;const base=(process.env.DS_INTEGRATIONS_BASE_URL||"https://diamantsolutions.co.uk").replace(/\/$/,"");const redirectUri=process.env.GOOGLE_GMAIL_REDIRECT_URI||`${base}/api/integrations/google/callback`;if(!clientId||!clientSecret)throw new Error("Gmail integration is not configured");return{clientId,clientSecret,redirectUri};}
 function key(){return crypto.createHash("sha256").update(cfg().clientSecret).digest();}
 function enc(v:string){const iv=crypto.randomBytes(12),cipher=crypto.createCipheriv("aes-256-gcm",key(),iv),out=Buffer.concat([cipher.update(v,"utf8"),cipher.final()]);return[iv.toString("base64url"),cipher.getAuthTag().toString("base64url"),out.toString("base64url")].join(".");}
 function dec(v:string){const[a,b,c]=v.split(".");if(!a||!b||!c)throw new Error("Invalid encrypted Google token");const d=crypto.createDecipheriv("aes-256-gcm",key(),Buffer.from(a,"base64url"));d.setAuthTag(Buffer.from(b,"base64url"));return Buffer.concat([d.update(Buffer.from(c,"base64url")),d.final()]).toString("utf8");}
