@@ -3,6 +3,7 @@ import { ROLE_PERMISSIONS, type PermissionKey, type UserRole } from "@/lib/crm/p
 
 const ACCESS_COOKIE = "mj_admin_access";
 const REFRESH_COOKIE = "mj_admin_refresh";
+const BUSINESS_SESSION_COOKIE = "ds_business_session";
 
 function config() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -35,6 +36,18 @@ function decodeJwtPayload(token: string) {
   }
 }
 
+async function activeBusinessSession(email:string){
+  const store=await cookies(),sessionToken=store.get(BUSINESS_SESSION_COOKIE)?.value;
+  if(!sessionToken)return false;
+  try{
+    const { signedTenantHandoff }=await import("@/lib/crm/tenant-handoff");
+    const origin=process.env.NEXT_PUBLIC_BMS_ORIGIN||"https://mjmetal.diamantsolutions.co.uk";
+    const {ts,sig}=signedTenantHandoff("mjmetal",origin,email);
+    const r=await fetch("https://diamantsolutions.co.uk/api/business-software/tenants/mjmetal/session",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"validate",origin,email,ts,sig,sessionToken}),cache:"no-store"});
+    return r.ok;
+  }catch{return false;}
+}
+
 export async function requireAdminToken() {
   const token = await getAccessToken();
   if (!token) return null;
@@ -42,6 +55,7 @@ export async function requireAdminToken() {
   const payload = decodeJwtPayload(token);
   if (!payload?.sub) return null;
   if (payload.exp && payload.exp * 1000 <= Date.now()) return null;
+  if (!payload.email || !(await activeBusinessSession(payload.email.toLowerCase()))) return null;
 
   const adminResponse = await supabaseRequest(
     `/rest/v1/mj_admin_users?user_id=eq.${encodeURIComponent(payload.sub)}&select=display_name,initials&limit=1`,
@@ -61,7 +75,7 @@ export async function requireAdminToken() {
   return { token, user: { id: payload.sub, email: payload.email }, admin: { display_name: invited.name, initials: invited.initials as "MD" | "JB" } };
 }
 
-export async function setSessionCookies(accessToken: string, refreshToken: string, expiresIn: number) {
+export async function setSessionCookies(accessToken: string, refreshToken: string, expiresIn: number, businessSessionToken?: string) {
   const store = await cookies();
   store.set(ACCESS_COOKIE, accessToken, {
     httpOnly: true,
@@ -70,6 +84,7 @@ export async function setSessionCookies(accessToken: string, refreshToken: strin
     path: "/",
     maxAge: Math.max(60, expiresIn - 30),
   });
+  if(businessSessionToken) store.set(BUSINESS_SESSION_COOKIE,businessSessionToken,{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/",maxAge:60*60*24*30});
   store.set(REFRESH_COOKIE, refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -83,6 +98,7 @@ export async function clearSessionCookies() {
   const store = await cookies();
   store.delete(ACCESS_COOKIE);
   store.delete(REFRESH_COOKIE);
+  store.delete(BUSINESS_SESSION_COOKIE);
 }
 
 export async function requirePermission(permission: PermissionKey) {
