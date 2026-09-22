@@ -13,7 +13,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const form = await request.formData();
   const file = form.get("file");
   const category = String(form.get("category") || "other");
-  const includeInQuote = String(form.get("include_in_quote") || "false") === "true";
+  const includeInQuote = false;
   if (!(file instanceof File)) return NextResponse.json({ error: "Choose a file" }, { status: 400 });
   if (file.size > 20 * 1024 * 1024) return NextResponse.json({ error: "Maximum file size is 20 MB" }, { status: 400 });
 
