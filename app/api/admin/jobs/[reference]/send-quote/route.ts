@@ -3,7 +3,7 @@ import { Resend } from "resend";
 import { requirePermission, supabaseRequest } from "@/lib/crm/supabase-server";
 import { buildQuotePdf } from "@/lib/crm/simple-pdf";
 import { DEFAULT_CRM_CONFIG, normaliseCrmConfig } from "@/lib/crm/config";
-import { getValidGoogleConnection, sendGmail } from "@/lib/crm/gmail";
+import { signedTenantHandoff } from "@/lib/crm/tenant-handoff";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 async function crmSettings(token:string){const p="_crm/settings.json".split("/").map(encodeURIComponent).join("/");const r=await supabaseRequest(`/storage/v1/object/mj-job-files/${p}`,{method:"GET"},token);return r.ok?normaliseCrmConfig(await r.json().catch(()=>null)):DEFAULT_CRM_CONFIG;}
@@ -111,11 +111,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ ref
       </div>`;
   const subject=`${config.businessName} quotation ${job.reference}`;
   let sentVia="resend", sentFrom="";
-  const google=await getValidGoogleConnection(session.token).catch(()=>null);
-  if(google){
-    await sendGmail(google.accessToken,{fromName:config.businessName,fromEmail:google.email,to:customer.email,replyTo:google.email,subject,html:emailHtml,attachment:{filename:fileName,content:pdf,mimeType:"application/pdf"}});
-    sentVia="gmail";sentFrom=google.email;
-  }else{
+  try{
+    const actorEmail=String(session.accessUser?.email||"").toLowerCase(),origin=new URL(request.url).origin;
+    if(actorEmail){
+      const {ts,sig}=signedTenantHandoff("mjmetal",origin,actorEmail);
+      const central=await fetch("https://diamantsolutions.co.uk/api/business-software/tenants/mjmetal/gmail/send",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({origin,actorEmail,ts,sig,fromName:config.businessName,to:customer.email,replyTo:config.businessDetails.email,subject,html:emailHtml,attachment:{filename:fileName,mimeType:"application/pdf",contentBase64:pdf.toString("base64")}}),cache:"no-store"});
+      if(central.ok){const b=await central.json();sentVia="gmail";sentFrom=b.from||"";}else throw new Error("Central Gmail unavailable");
+    }else throw new Error("No signed-in email");
+  }catch{
     const verifiedSender=process.env.CRM_VERIFIED_FROM_EMAIL?.trim();
     if(!verifiedSender&&config.tenantKey!=="mj-metal") return NextResponse.json({error:"Connect Google / Gmail in Integrations before sending email."},{status:503});
     const senderEmail=verifiedSender||"info@mjmetal.co.uk"; sentFrom=senderEmail;
