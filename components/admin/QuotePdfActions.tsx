@@ -25,7 +25,7 @@ function pdfFromPages(images:{data:Uint8Array;width:number;height:number}[]){
 }
 async function ensureRenderer(){
   if(window.html2canvas)return;
-  await new Promise<void>((resolve,reject)=>{const s=document.createElement("script");s.src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";s.onload=()=>resolve();s.onerror=()=>reject(new Error("Could not load PDF renderer"));document.head.appendChild(s);});
+  await new Promise<void>((resolve,reject)=>{const s=document.createElement("script");s.src="https://cdn.jsdelivr.net/npm/html2canvas-pro@2.4.3/dist/html2canvas-pro.min.js";s.onload=()=>resolve();s.onerror=()=>reject(new Error("Could not load PDF renderer"));document.head.appendChild(s);});
 }
 
 export default function QuotePdfActions({ reference, quoteId }: { reference: string; quoteId: string }) {
