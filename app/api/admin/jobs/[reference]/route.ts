@@ -226,7 +226,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         item = created[0];
         await audit(session.token, session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user", job.id, "created", "quote", item?.id, { version, amount: body.amount });
       }
-      await jsonOrError(await supabaseRequest(`/rest/v1/mj_jobs?id=eq.${job.id}`, { method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify({ quoted_amount: Number(body.amount || 0), status: "quote_preparing", next_action: "Send quote", updated_at: now }) }, session.token));
+      await jsonOrError(await supabaseRequest(`/rest/v1/mj_jobs?id=eq.${job.id}`, { method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify({ quoted_amount: Number(body.amount || 0), status: "quote_preparing", next_action: "Review / send quote", updated_at: now }) }, session.token));
       return NextResponse.json({ item });
     }
 
