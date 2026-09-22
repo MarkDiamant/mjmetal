@@ -226,7 +226,7 @@ function DashboardEnhancer() {
         const amountCell = row.children.item(5) as HTMLElement | null;
         if (!amountCell) continue;
 
-        const due = Number(job.subcontractorOutstanding || 0);
+        const subcontractorDueStatuses = new Set(["deposit_requested","deposit_paid","materials_ordered","fabrication","installation_scheduled","in_progress","awaiting_final_payment","completed"]);\n        const due = subcontractorDueStatuses.has(String(job.status || "")) ? Number(job.subcontractorOutstanding || 0) : 0;
         let line = amountCell.querySelector<HTMLElement>(
           `[data-sub-due="${job.reference}"]`,
         );
