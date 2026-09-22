@@ -1,1 +1,2 @@
-export {default} from "@/app/admin/invoices/page";
+import BusinessDirectory from "@/components/demo/BusinessDirectory";
+export default function Page(){return <BusinessDirectory view="invoices"/>;}
