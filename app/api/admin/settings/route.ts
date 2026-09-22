@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requirePermission, supabaseRequest } from "@/lib/crm/supabase-server";
 import { DEFAULT_CRM_CONFIG, normaliseCrmConfig } from "@/lib/crm/config";
 import { resolveCentralTenant } from "@/lib/crm/product";
+import { signedTenantHandoff } from "@/lib/crm/tenant-handoff";
 
 const SETTINGS_PATH = "_crm/settings.json";
 const LOGO_PREFIX = "_crm/logo";
@@ -14,6 +15,13 @@ async function readSettings(token: string) {
   return normaliseCrmConfig(body);
 }
 
+
+async function centralSettings(request:Request,email:string,appConfig?:unknown){
+  const origin=new URL(request.url).origin,{ts,sig}=signedTenantHandoff("mjmetal",origin,email.toLowerCase());
+  const url="https://diamantsolutions.co.uk/api/business-software/tenants/mjmetal/settings";
+  return fetch(url,{method:appConfig?"PUT":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({origin,email:email.toLowerCase(),ts,sig,...(appConfig?{appConfig}: {})}),cache:"no-store"});
+}
+
 async function writeSettings(token: string, settings: unknown) {
   const encoded = SETTINGS_PATH.split("/").map(encodeURIComponent).join("/");
   return supabaseRequest(`/storage/v1/object/mj-job-files/${encoded}`, {
@@ -23,7 +31,7 @@ async function writeSettings(token: string, settings: unknown) {
   }, token);
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const session = await requirePermission("view_jobs");
   if (!session) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   const settings = await readSettings(session.token);
