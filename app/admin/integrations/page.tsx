@@ -10,7 +10,7 @@ export default function IntegrationsPage() {
   const [error, setError] = useState("");
   const [crmConfig,setCrmConfig]=useState<CrmConfig>(DEFAULT_CRM_CONFIG);
   const [organisations,setOrganisations]=useState<Array<{tenantId:string;tenantName?:string}>>([]);
-  const [choosing,setChoosing]=useState(false);
+  const [choosing,setChoosing]=useState(false);\n  const [googleConnected,setGoogleConnected]=useState(false),[googleEmail,setGoogleEmail]=useState<string|null>(null),[googleLoading,setGoogleLoading]=useState(true);
 
   async function load() {
     setLoading(true);
@@ -22,7 +22,7 @@ export default function IntegrationsPage() {
     setLoading(false);
   }
 
-  useEffect(() => { void load(); const q=new URLSearchParams(window.location.search); if(q.get("xero")==="choose_org"){setChoosing(true);fetch("/api/integrations/xero/organisations",{cache:"no-store"}).then(async r=>{const b=await r.json();if(r.ok)setOrganisations(b.organisations||[]);else {setChoosing(false);setError(b.error||"Unable to load Xero organisations");}}).catch(()=>setError("Unable to load Xero organisations"));} fetch("/api/admin/settings",{cache:"no-store"}).then(async r=>{if(r.ok){const b=await r.json();setCrmConfig(b.settings||DEFAULT_CRM_CONFIG);}}).catch(()=>{}); }, []);
+  useEffect(() => { void load(); const q=new URLSearchParams(window.location.search); if(q.get("xero")==="choose_org"){setChoosing(true);fetch("/api/integrations/xero/organisations",{cache:"no-store"}).then(async r=>{const b=await r.json();if(r.ok)setOrganisations(b.organisations||[]);else {setChoosing(false);setError(b.error||"Unable to load Xero organisations");}}).catch(()=>setError("Unable to load Xero organisations"));} fetch("/api/admin/settings",{cache:"no-store"}).then(async r=>{if(r.ok){const b=await r.json();setCrmConfig(b.settings||DEFAULT_CRM_CONFIG);}}).catch(()=>{}); fetch("/api/integrations/google/status",{cache:"no-store"}).then(async r=>{const b=await r.json().catch(()=>({}));if(r.ok){setGoogleConnected(Boolean(b.connected));setGoogleEmail(b.email||null);}setGoogleLoading(false);}).catch(()=>setGoogleLoading(false)); }, []);
 
   async function chooseOrganisation(tenantId:string){setError("");const r=await fetch("/api/integrations/xero/organisations",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({tenantId})});const b=await r.json().catch(()=>({}));if(!r.ok){setError(b.error||"Unable to connect Xero");return;}setChoosing(false);setOrganisations([]);window.history.replaceState({},"","/admin/integrations");await load();}
 
@@ -54,6 +54,8 @@ export default function IntegrationsPage() {
             {!connected ? <a href="/api/integrations/xero/connect" className="rounded-xl bg-[#e66a24] px-5 py-3 text-sm font-black text-white">Connect Xero</a> : <button onClick={() => void disconnect()} className="rounded-xl border border-black/15 px-5 py-3 text-sm font-black">Disconnect Xero</button>}
           </div>
         </section>
+
+        <section className="mt-5 rounded-2xl border border-black/10 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]"><div className="flex flex-wrap items-center justify-between gap-4"><div><p className="text-[10px] font-black uppercase tracking-[0.12em] text-black/35">Email</p><h2 className="mt-1 text-xl font-black">Google / Gmail</h2><p className="mt-1 text-sm text-black/55">Send quotes, invoices and CRM emails from your connected business Gmail account.</p></div>{googleLoading?<span className="text-sm font-bold text-black/45">Checking...</span>:googleConnected?<span className="rounded-full bg-green-50 px-3 py-1.5 text-sm font-black text-green-700">Connected</span>:<span className="rounded-full bg-orange-50 px-3 py-1.5 text-sm font-black text-orange-700">Not connected</span>}</div>{googleConnected&&<div className="mt-5 rounded-xl bg-[#f5f5f2] p-4"><p className="text-xs font-bold uppercase tracking-[0.08em] text-black/45">Sending account</p><p className="mt-1 font-black">{googleEmail}</p><p className="mt-1 text-xs text-black/45">Quotes and CRM emails sent through Google will come from this mailbox on phone and desktop.</p></div>}<div className="mt-5">{googleConnected?<button onClick={async()=>{if(!confirm(`Disconnect ${googleEmail||"Google Gmail"}?`))return;const r=await fetch("/api/integrations/google/status",{method:"DELETE"});if(r.ok){setGoogleConnected(false);setGoogleEmail(null);}}} className="rounded-xl border border-black/15 px-5 py-3 text-sm font-black">Disconnect Gmail</button>:<a href="/api/integrations/google/connect" className="rounded-xl bg-[#e66a24] px-5 py-3 text-sm font-black text-white">Connect Google / Gmail</a>}</div>{new URLSearchParams(typeof window!=="undefined"?window.location.search:"").get("google")==="config_error"&&<p className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">Google OAuth needs to be configured for this CRM before the account can be connected.</p>}</section>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           {[
