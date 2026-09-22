@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     canCosts?supabaseRequest("/rest/v1/mj_job_costs?select=id,job_id,category,supplier,estimated_amount,actual_amount,paid_amount,paid_at,due_at,notes,created_at&order=created_at.asc", { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
     canPayments?supabaseRequest("/rest/v1/mj_xero_invoices?select=job_id,status", { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
     supabaseRequest("/rest/v1/mj_audit_events?select=job_id,actor,created_at&order=created_at.desc&limit=500", { method: "GET" }, session.token),
-    canPricing?supabaseRequest("/rest/v1/mj_quotes?select=id,job_id,version,status,created_at&order=version.desc", { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
+    canPricing?supabaseRequest("/rest/v1/mj_quotes?select=id,job_id,version,status,sent_at,amount,created_at&order=version.desc", { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
   ]);
 
   if (!jobsResponse.ok) return NextResponse.json({ error: "Unable to load jobs" }, { status: 500 });
