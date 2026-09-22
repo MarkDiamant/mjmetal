@@ -80,7 +80,7 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
       paymentTerms: config.businessDetails.paymentTerms,
     });
 
-    const fileName = `${job.reference}-V${quote.version}-quotation.pdf`;
+    const fileName = `${job.reference}-Quote.pdf`;
     const storagePath = `${job.id}/quotes/${fileName}`;
     const encodedPath = storagePath.split("/").map(encodeURIComponent).join("/");
     const pdfBody = new Blob([new Uint8Array(pdf)], { type: "application/pdf" });
