@@ -1,2 +1,1 @@
-import BusinessDirectory from "@/components/demo/BusinessDirectory";
-export default function Page(){return <BusinessDirectory view="files"/>;}
+export {default} from "@/app/admin/files/page.tsx";
