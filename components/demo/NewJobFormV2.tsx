@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { DEFAULT_CRM_CONFIG, type CrmConfig } from "@/lib/crm/config";
+import { DEFAULT_CRM_CONFIG, type CrmConfig } from "@/lib/demo-config";
 
 type CustomerOption={id:string;firstName:string;lastName:string;phone:string;email:string;addressLine1:string;addressLine2:string;city:string;postcode:string};
 type JobTypeOption={name:string;count:number};
