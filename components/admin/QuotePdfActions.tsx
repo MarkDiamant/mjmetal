@@ -29,9 +29,9 @@ async function ensureRenderer(){
 }
 
 export default function QuotePdfActions({ reference, quoteId }: { reference: string; quoteId: string }) {
-  const [busy,setBusy]=useState(false); const [message,setMessage]=useState("");
+  const [busy,setBusy]=useState(false);
   async function generate(){
-    setBusy(true);setMessage("Creating PDF...");
+    setBusy(true);
     try{
       await ensureRenderer();
       const pages=Array.from(document.querySelectorAll<HTMLElement>(".quote-page")).filter(el=>getComputedStyle(el).display!=="none");
@@ -39,13 +39,13 @@ export default function QuotePdfActions({ reference, quoteId }: { reference: str
       const images=[] as {data:Uint8Array;width:number;height:number}[];
       for(const page of pages){const canvas=await window.html2canvas(page,{scale:2,useCORS:true,backgroundColor:"#ffffff",logging:false});images.push({data:await jpegBytes(canvas),width:canvas.width,height:canvas.height});}
       const pdf=pdfFromPages(images),blob=new Blob([pdf],{type:"application/pdf"});
-      setMessage("Saving PDF to job...");
+
       const response=await fetch(`/api/admin/jobs/${encodeURIComponent(reference)}/quotes/${encodeURIComponent(quoteId)}/pdf`,{method:"POST",headers:{"Content-Type":"application/pdf"},body:blob});
       const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.error||"Could not save PDF");
       const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`${reference}-Quote.pdf`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
-      setMessage("PDF saved and downloaded");setTimeout(()=>setMessage(""),3500);
-    }catch(e){setMessage(e instanceof Error?e.message:"Could not create PDF");}
-    finally{setBusy(false);}
+
+    }catch(e){alert(e instanceof Error?e.message:"Could not create PDF");}
+    finally{setBusy(false);document.querySelector<HTMLElement>("[data-pdf-status-listener]")?.click();}
   }
-  return <div className="fixed bottom-5 left-5 z-50 flex items-center gap-2 print:hidden"><button id="save-quote-pdf" onClick={()=>void generate()} disabled={busy} className="hidden">{busy?"Creating...":"Save PDF"}</button>{message&&<span className="rounded-xl bg-white px-3 py-2 text-xs font-bold shadow">{message}</span>}</div>;
+  return <button id="save-quote-pdf" onClick={()=>void generate()} disabled={busy} className="hidden">{busy?"Saving...":"Save PDF"}</button>;
 }
