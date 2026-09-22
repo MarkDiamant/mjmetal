@@ -21,7 +21,7 @@ export async function supabaseRequest(path: string, init: RequestInit = {}, acce
 }
 
 export async function getAccessToken() {
-  return (await cookies()).get(ACCESS_COOKIE)?.value ?? null;
+  const store=await cookies();\n  return store.get(ACCESS_COOKIE)?.value ?? store.get(LEGACY_ACCESS_COOKIE)?.value ?? null;
 }
 
 function decodeJwtPayload(token: string) {
