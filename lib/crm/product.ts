@@ -1,6 +1,6 @@
 export const BUSINESS_SOFTWARE = {
   name: "DS Business Software",
-  provider: "Diamant Solutions",
+  provider: "Diamant Solutions",\n  tenantModel: "shared-product" as const,
   integrationBaseUrl: (process.env.DS_INTEGRATIONS_BASE_URL || "https://diamantsolutions.co.uk").replace(/\/$/, ""),
 } as const;
 
