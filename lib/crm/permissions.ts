@@ -2,7 +2,7 @@ export type PermissionKey =
   | "view_jobs" | "edit_jobs" | "view_completed_jobs" | "view_history"
   | "view_customer_details" | "view_pricing" | "view_costs_profit"
   | "view_money_overview" | "view_payments_invoices" | "view_files"
-  | "view_workforce" | "manage_users" | "manage_business_settings" | "manage_subscription";
+  | "view_workforce" | "manage_workforce" | "manage_users" | "manage_business_settings" | "manage_subscription";
 
 export type UserRole = "owner" | "admin" | "manager" | "office" | "sales" | "field" | "custom";
 
@@ -11,7 +11,7 @@ export const PERMISSION_LABELS: Record<PermissionKey,string> = {
  view_history:"View job history & activity", view_customer_details:"View customer contact details",
  view_pricing:"View quotes & customer pricing", view_costs_profit:"View costs & profit",
  view_money_overview:"View money overview", view_payments_invoices:"View payments & invoices",
- view_files:"View photos & files", view_workforce:"View assigned team / contractors",
+ view_files:"View photos & files", view_workforce:"View assigned team / contractors", manage_workforce:"Add & remove team / contractors",
  manage_users:"Add users & change permissions", manage_business_settings:"Change business & CRM settings",
  manage_subscription:"Manage subscription & billing",
 };
