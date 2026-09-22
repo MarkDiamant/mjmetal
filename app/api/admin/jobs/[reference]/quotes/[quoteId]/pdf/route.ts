@@ -16,7 +16,7 @@ function date(value: string | null | undefined) {
   return new Date(value).toLocaleDateString("en-GB");
 }
 
-export async function POST(_request: NextRequest, { params }: { params: Promise<{ reference: string; quoteId: string }> }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ reference: string; quoteId: string }> }) {
   const session = await requirePermission("view_pricing");
   if(session&&!session.permissions.includes("edit_jobs")) return NextResponse.json({error:"You do not have permission to generate quote files"},{status:403});
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -41,7 +41,8 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     const finish = Array.isArray(job.finishes) ? job.finishes.join(" + ") : "";
     if (!quote.scope_text?.trim() || Number(quote.amount||0)<=0) return NextResponse.json({ error: "Add the quote scope and final price before generating the PDF." }, { status: 400 });
 
-    const pdf = buildQuotePdf({
+    const uploadedPdf = request.headers.get("content-type")?.includes("application/pdf") ? Buffer.from(await request.arrayBuffer()) : null;
+    const pdf = uploadedPdf || buildQuotePdf({
       companyName: config.businessName,
       companyNumber: config.businessDetails.companyNumber,
       phone: config.businessDetails.phone,
