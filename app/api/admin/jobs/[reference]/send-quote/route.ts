@@ -45,57 +45,58 @@ export async function POST(request: Request, { params }: { params: Promise<{ ref
   const finish = Array.isArray(job.finishes) ? job.finishes.join(" + ") : "";
   if (!quote.scope_text?.trim() || Number(quote.amount||0)<=0) return NextResponse.json({ error: "Add the quote scope and final price before sending." }, { status: 400 });
 
-  const pdf = buildQuotePdf({
-    companyName: config.businessName,
-    companyNumber: config.businessDetails.companyNumber,
-    phone: config.businessDetails.phone,
-    email: config.businessDetails.email,
-    website: config.businessDetails.website,
-    vatRegistered: config.businessDetails.vatRegistered,
-    vatNumber: config.businessDetails.vatNumber,
-    template: config.quoteTemplate,
-    accentColour: config.accentColour,
-    reference: job.reference,
-    version: Number(quote.version || 1),
-    date: displayDate(quote.created_at),
-    validUntil: quote.valid_until ? displayDate(`${quote.valid_until}T12:00:00`) : null,
-    customerName: name,
-    customerEmail: customer.email,
-    customerPhone: customer.phone,
-    site,
-    jobType: job.job_type,
-    dimensions: job.dimensions,
-    material: job.material,
-    finish,
-    colour: job.colour,
-    customerReference: job.customer_reference,
-    scope: quote.scope_text,
-    exclusions: quote.exclusions,
-    amount: Number(quote.amount || 0),
-    deposit: quote.deposit_amount === null ? null : Number(quote.deposit_amount),
-    leadTime: quote.lead_time,
-    companyAddress: config.businessDetails.officeAddress,
-    bankName: config.businessDetails.bankName,
-    accountNumber: config.businessDetails.accountNumber,
-    sortCode: config.businessDetails.sortCode,
-    defaultDepositPercent: config.businessDetails.defaultDepositPercent,
-    quoteValidityDays: config.businessDetails.quoteValidityDays,
-      paymentTerms: config.businessDetails.paymentTerms,
-  });
-
-  const fileName = `${job.reference}-V${quote.version}-quotation.pdf`;
-  const storagePath = `${job.id}/quotes/${fileName}`;
-  const encodedPath = storagePath.split("/").map(encodeURIComponent).join("/");
-  const pdfBody = new Blob([new Uint8Array(pdf)], { type: "application/pdf" });
-  const upload = await supabaseRequest(`/storage/v1/object/mj-job-files/${encodedPath}`, { method: "POST", headers: { "Content-Type": "application/pdf", "x-upsert": "true" }, body: pdfBody }, session.token);
-  if (!upload.ok) return NextResponse.json({ error: "Could not generate/store quotation PDF" }, { status: 500 });
-
-  const existingMetaResponse = await supabaseRequest(`/rest/v1/mj_files?job_id=eq.${job.id}&storage_path=eq.${encodeURIComponent(storagePath)}&select=id&limit=1`, {}, session.token);
-  const existingMeta = existingMetaResponse.ok ? await existingMetaResponse.json() as Array<{id:string}> : [];
-  if (!existingMeta.length) {
-    await supabaseRequest("/rest/v1/mj_files", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ job_id: job.id, category: "quote", storage_path: storagePath, file_name: fileName, mime_type: "application/pdf", include_in_quote: false, uploaded_by: session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user" }) }, session.token);
+  let pdf:Buffer|null=null;
+  let storagePath=String(quote.pdf_path||"").trim();
+  if(storagePath){
+    const storedPath=storagePath.split("/").map(encodeURIComponent).join("/");
+    const stored=await supabaseRequest(`/storage/v1/object/mj-job-files/${storedPath}`,{method:"GET"},session.token);
+    if(stored.ok) pdf=Buffer.from(await stored.arrayBuffer());
   }
-  await supabaseRequest(`/rest/v1/mj_quotes?id=eq.${encodeURIComponent(quote.id)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ pdf_path: storagePath }) }, session.token);
+  if(!pdf){
+    pdf=buildQuotePdf({
+      companyName: config.businessName,
+      companyNumber: config.businessDetails.companyNumber,
+      phone: config.businessDetails.phone,
+      email: config.businessDetails.email,
+      website: config.businessDetails.website,
+      vatRegistered: config.businessDetails.vatRegistered,
+      vatNumber: config.businessDetails.vatNumber,
+      template: config.quoteTemplate,
+      accentColour: config.accentColour,
+      reference: job.reference,
+      version: Number(quote.version || 1),
+      date: displayDate(quote.created_at),
+      validUntil: quote.valid_until ? displayDate(`${quote.valid_until}T12:00:00`) : null,
+      customerName: name,
+      customerEmail: customer.email,
+      customerPhone: customer.phone,
+      site,
+      jobType: job.job_type,
+      dimensions: job.dimensions,
+      material: job.material,
+      finish,
+      colour: job.colour,
+      customerReference: job.customer_reference,
+      scope: quote.scope_text,
+      exclusions: quote.exclusions,
+      amount: Number(quote.amount || 0),
+      deposit: quote.deposit_amount === null ? null : Number(quote.deposit_amount),
+      leadTime: quote.lead_time,
+      companyAddress: config.businessDetails.officeAddress,
+      bankName: config.businessDetails.bankName,
+      accountNumber: config.businessDetails.accountNumber,
+      sortCode: config.businessDetails.sortCode,
+      defaultDepositPercent: config.businessDetails.defaultDepositPercent,
+      quoteValidityDays: config.businessDetails.quoteValidityDays,
+      paymentTerms: config.businessDetails.paymentTerms,
+    });
+    storagePath=`${job.id}/quotes/${job.reference}-V${quote.version}-quotation.pdf`;
+    const encodedPath=storagePath.split("/").map(encodeURIComponent).join("/");
+    const upload=await supabaseRequest(`/storage/v1/object/mj-job-files/${encodedPath}`,{method:"POST",headers:{"Content-Type":"application/pdf","x-upsert":"true"},body:new Blob([new Uint8Array(pdf)],{type:"application/pdf"})},session.token);
+    if(!upload.ok)return NextResponse.json({error:"Could not generate/store quotation PDF"},{status:500});
+    await supabaseRequest(`/rest/v1/mj_quotes?id=eq.${encodeURIComponent(quote.id)}`,{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify({pdf_path:storagePath})},session.token);
+  }
+  const fileName=storagePath.split("/").pop()||`${job.reference}-Quote.pdf`;
 
   const emailHtml=`
       <div style="font-family:Arial,sans-serif;max-width:680px;margin:auto;color:#171717;line-height:1.6">
