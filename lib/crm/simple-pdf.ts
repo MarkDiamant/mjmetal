@@ -122,7 +122,7 @@ export function buildQuotePdf(input: QuotePdfInput): Buffer {
   page=newPage(); drawHeader(isMj?"QUOTATION":"PAYMENT & KEY TERMS",isMj?"SCOPE, PRICE & TERMS":undefined);
   line(isMj?input.reference:`${input.reference} / V${input.version}`,11,true);
   if(isMj){heading("Quotation");line(`Total: GBP ${Number(input.amount||0).toFixed(2)}`,17,true,50,22);if(input.deposit)line(`Deposit: GBP ${Number(input.deposit).toFixed(2)}`,10,true);else if(input.defaultDepositPercent)line(`Deposit: ${input.defaultDepositPercent}%`,10,true);if(input.leadTime)line(`Estimated lead time: ${input.leadTime}`,10);heading("Scope of Works");paragraph(input.scope,18);if(input.exclusions){heading("Project Specific Exclusions");paragraph(input.exclusions,7);}}
-  const cleanTerms=input.deposit&&input.paymentTerms?input.paymentTerms.replace(/^\s*\d+(?:\.\d+)?%\s+deposit\s*,?\s*/i,""):input.paymentTerms;
+  const cleanTerms=input.deposit&&input.paymentTerms?input.paymentTerms.replace(new RegExp("^\\s*\\d+(?:\\.\\d+)?%\\s+deposit\\s*,?\\s*","i"),""):input.paymentTerms;
   heading("Payment Terms & Details"); if(cleanTerms)paragraph(`Payment: ${input.deposit?`Deposit GBP ${Number(input.deposit).toFixed(2)}. `:""}${cleanTerms}`,7); else if(input.deposit)paragraph(`Payment: Deposit GBP ${Number(input.deposit).toFixed(2)}. Remaining balance due as agreed.`,7);
   paragraph(`Validity: This quotation is valid for ${input.quoteValidityDays||30} days unless another validity date is shown.`,4);
   paragraph("Scope: The price covers only the works specifically described above. Additional or changed works will be agreed separately.",4);
