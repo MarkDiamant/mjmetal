@@ -36,6 +36,7 @@ export type QuotePdfInput = {
   email?: string;
   website?: string;
   vatRegistered?: boolean;
+  vatRate?: number;
   vatNumber?: string;
   reference: string;
   version: number;
