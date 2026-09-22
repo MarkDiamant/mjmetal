@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     if (!admins.length) {
       const users = await loadCrmUsers(session.access_token);
       const allowed = users.some((u) => u.status !== "disabled" && (u.userId === session.user.id || (!!session.user.email && u.email?.toLowerCase() === session.user.email.toLowerCase())));
-      if (!allowed) return NextResponse.json({ error: "This account is not authorised for M&J Admin" }, { status: 403 });
+      if (!allowed) return NextResponse.json({ error: "This account is not authorised for this business" }, { status: 403 });
     }
 
     await setSessionCookies(session.access_token, session.refresh_token, session.expires_in);
