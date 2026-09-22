@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requirePermission, supabaseRequest } from "@/lib/crm/supabase-server";
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await requirePermission("view_customer_details");
   if (!session) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
 
