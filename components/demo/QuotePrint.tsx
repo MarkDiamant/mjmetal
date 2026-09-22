@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { DEFAULT_CRM_CONFIG } from "@/lib/crm/config";
+import { DEFAULT_CRM_CONFIG } from "@/lib/demo-config";
 
 function money(value: number | string | null | undefined) {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(Number(value || 0));
