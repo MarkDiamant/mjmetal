@@ -91,7 +91,37 @@ function logoImage() {
   } catch { return null; }
 }
 
+function buildMjSignatureQuotePdf(input: QuotePdfInput): Buffer {
+  const logo=logoImage(); const hex=String(input.accentColour||"#e66a24").replace("#",""); const rgb=/^[0-9a-fA-F]{6}$/.test(hex)?[0,2,4].map(i=>parseInt(hex.slice(i,i+2),16)/255):[0.90,0.36,0.10]; const accent=rgb.map(x=>x.toFixed(3)).join(" ");
+  const cmd:string[]=[]; let y=782;
+  const txt=(s:string,size=8,bold=false,x=50,colour="0 0 0")=>cmd.push(`BT /${bold?"F2":"F1"} ${size} Tf ${colour} rg ${x} ${y} Td (${esc(s)}) Tj ET`);
+  const at=(s:string,size:number,bold:boolean,x:number,yy:number,colour="0 0 0")=>cmd.push(`BT /${bold?"F2":"F1"} ${size} Tf ${colour} rg ${x} ${yy} Td (${esc(s)}) Tj ET`);
+  const para=(s:string,max=92,size=7.4,leading=11,x=50)=>{for(const l of wrap(s,max)){txt(l||" ",size,false,x);y-=leading;}};
+  const label=(s:string)=>{y-=4;txt(s.toUpperCase(),6.2,true,50,accent);y-=13;};
+  const rule=(yy:number)=>cmd.push(`${accent} rg 50 ${yy} 495 2 re f`);
+  if(logo){const maxW=76,maxH=34,scale=Math.min(maxW/logo.width,maxH/logo.height),w=logo.width*scale,h=logo.height*scale;cmd.push(`q ${w.toFixed(1)} 0 0 ${h.toFixed(1)} 50 ${(800-h).toFixed(1)} cm /Im1 Do Q`);}
+  at("PROJECT PROPOSAL",12,true,405,805); at(input.reference,8,true,508,789,accent); at(`Issued ${input.date}`,5.8,false,430,779,"0.38 0.38 0.38"); if(input.validUntil)at(`Valid until ${input.validUntil}`,5.8,false,490,779,"0.38 0.38 0.38"); rule(765);
+  at("Built Strong. Built to Last.",6.2,true,50,750,accent);
+  y=730; label("Client Information"); txt(input.customerName,8.5,true); y-=12; if(input.site){para(input.site,62,6.8,10);}; if(input.customerPhone){txt(input.customerPhone,6.8);y-=10;} if(input.customerEmail){txt(input.customerEmail,6.8);y-=10;}
+  at("PROJECT OVERVIEW & JOB TYPE",6.2,true,340,730,accent); at(input.jobType||"Project",9,true,340,712);
+  y=Math.min(y-8,675); label("Scope of Work"); para(input.scope,105,7.2,12); if(input.exclusions){y-=4;txt("Project Specific Exclusions",7.5,true);y-=12;para(input.exclusions,105,7,11);}
+  y-=8; cmd.push("0.965 0.965 0.95 rg 50 "+(y-42)+" 495 52 re f"); txt("QUOTATION TOTAL",6.2,true,58,"0.45 0.45 0.45"); y-=18; txt(`GBP ${Number(input.amount||0).toFixed(2)}`,15,true,58); if(input.deposit){at(`Deposit: GBP ${Number(input.deposit).toFixed(2)}`,6.5,false,455,y+1,"0.35 0.35 0.35");} y-=38;
+  txt("Scope of Works",8.5,true);y-=14;para(input.scope,108,6.7,10); if(input.exclusions){y-=2;txt("Project Specific Exclusions",7.2,true);y-=11;para(input.exclusions,108,6.5,9);}
+  y-=4;txt("Payment Terms & Details",8.5,true);y-=13;
+  const payment=input.deposit?`Deposit GBP ${Number(input.deposit).toFixed(2)} with the remaining balance due on completion.`:(input.paymentTerms||"Payment terms as agreed.");
+  para(payment,110,6.2,9); para("VAT: No VAT charge.",110,6.2,9); para("Ownership: Fabricated items remain the property of M&J Metal Ltd until paid for in full.",110,6.2,9);
+  if(input.bankName)para(`Bank: ${input.bankName}   Sort code: ${input.sortCode||""}   Account: ${input.accountNumber||""}`,110,6.2,9);
+  y-=3;txt("Assumptions & Quality",8.5,true);y-=12;para("Unless specifically included in the scope, this quotation excludes electrical work, decorating, planning applications, unforeseen structural alterations and additional requested works. M&J Metal specialises in high-quality bespoke metalwork, delivering durable, secure and professionally fabricated products built to last.",118,5.8,8.5);
+  y-=3;txt("Acceptance of Quotation",8.5,true);y-=12;para(`I/We accept this quotation and authorise ${input.companyName||"M&J Metal"} to proceed with the works described above.`,118,5.8,8.5);y-=6;cmd.push(`0.65 0.65 0.65 RG 50 ${y} m 545 ${y} l S`);y-=11;txt("Name                                      Signature                                      Date",5.5,false,50,"0.35 0.35 0.35");
+  at((input.companyName||"M&J Metal").toUpperCase(),5.8,true,50,34,"0.4 0.4 0.4"); at(`Company No. ${input.companyNumber||""}   ${input.companyAddress||""}`,4.8,false,50,24,"0.55 0.55 0.55"); at(`${input.phone||""}   ${input.email||""}   ${input.website||""}`,4.8,false,50,15,"0.55 0.55 0.55");
+  const objects:(string|Buffer)[]=[];objects[1]="<< /Type /Catalog /Pages 2 0 R >>";objects[2]="<< /Type /Pages /Kids [6 0 R] /Count 1 >>";objects[3]="<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>";objects[4]="<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>";
+  if(logo)objects[5]=Buffer.concat([Buffer.from(`<< /Type /XObject /Subtype /Image /Width ${logo.width} /Height ${logo.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode /Length ${logo.data.length} >>\nstream\n`,"ascii"),logo.data,Buffer.from("\nendstream","ascii")]);else objects[5]="<< >>";
+  const stream=cmd.join("\n");objects[7]=`<< /Length ${Buffer.byteLength(stream,"ascii")} >>\nstream\n${stream}\nendstream`;objects[6]=`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R >>${logo?" /XObject << /Im1 5 0 R >>":""} >> /Contents 7 0 R >>`;
+  const parts:Buffer[]=[Buffer.from("%PDF-1.4\n%CRMQuote\n","ascii")],offsets:number[]=[0];let length=parts[0].length;for(let i=1;i<objects.length;i++){offsets[i]=length;const h=Buffer.from(`${i} 0 obj\n`,"ascii"),b=Buffer.isBuffer(objects[i])?objects[i] as Buffer:Buffer.from(String(objects[i]),"ascii"),t=Buffer.from("\nendobj\n","ascii");parts.push(h,b,t);length+=h.length+b.length+t.length;}const xref=length;let trailer=`xref\n0 ${objects.length}\n0000000000 65535 f \n`;for(let i=1;i<objects.length;i++)trailer+=`${String(offsets[i]).padStart(10,"0")} 00000 n \n`;trailer+=`trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;parts.push(Buffer.from(trailer,"ascii"));return Buffer.concat(parts);
+}
+
 export function buildQuotePdf(input: QuotePdfInput): Buffer {
+  if(input.template==="mj-signature") return buildMjSignatureQuotePdf(input);
   const template=input.template==="mj-signature"||input.template==="classic"?input.template:"clean";
   const hex=String(input.accentColour||"#e66a24").replace("#",""); const rgb=/^[0-9a-fA-F]{6}$/.test(hex)?[0,2,4].map(i=>parseInt(hex.slice(i,i+2),16)/255):[0.90,0.36,0.10]; const accent=template==="classic"?"0 0 0":template==="mj-signature"?rgb.map(x=>x.toFixed(3)).join(" "):"0.18 0.18 0.18";
   type Page = { commands: string[]; y: number };
