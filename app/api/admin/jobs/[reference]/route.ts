@@ -204,7 +204,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     if (body.type === "quote") {
-      const quotePatch = { status: body.status || "draft", vat_rate: Number(body.vat_rate || 0), scope_text: body.scope_text, exclusions: body.exclusions || null, amount: Number(body.amount || 0), deposit_amount: body.deposit_amount ? Number(body.deposit_amount) : null, lead_time: body.lead_time || null, valid_until: body.valid_until || null };
+      const quotePatch = { status: body.status || "draft", vat_rate: Number(body.vat_rate || 0), scope_text: String(body.scope_text || "").trim(), exclusions: String(body.exclusions || "").trim() || null, amount: Number(body.amount || 0), deposit_amount: body.deposit_amount !== null && body.deposit_amount !== undefined && body.deposit_amount !== "" ? Number(body.deposit_amount) : null, lead_time: String(body.lead_time || "").trim() || null, valid_until: body.valid_until || null };
       let item:any;
       let version:number;
       if (body.quote_id) {
