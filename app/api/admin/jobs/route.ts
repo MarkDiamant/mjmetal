@@ -65,7 +65,7 @@ export async function GET(request: Request) {
       personCompany: person.company || "",
       relationshipType: person.relationship_type || "subcontractor",
       assignmentRole: assignment.assignment_role || "subcontractor",
-      ...(canCosts?{agreedCost: agreed,paidAmount: paid,outstanding: Math.max(0, agreed - paid)}:{}),
+      ...(canCosts?{agreedCost: agreed,depositAmount: deposit,paidAmount: paid,outstanding: Math.max(0, agreed - paid)}:{}),
     });
   }
 
@@ -90,7 +90,7 @@ export async function GET(request: Request) {
     const jobAssignments = assignmentsByJob.get(job.id) || [];
     const commissions = commissionsByJob.get(job.id) || [];
     const jobCostSummary = costs.find((c) => c.job_id === job.id && c.category === "Job total");
-    const subAgreed = jobAssignments.filter((a) => a.relationshipType !== "employee").reduce((sum, a) => sum + Number(a.agreedCost || 0), 0);
+    const subAgreed = jobAssignments.filter((a) => a.relationshipType !== "employee").reduce((sum, a) => sum + Number(a.agreedCost || 0), 0);\n    const subDueNow = jobAssignments.filter((a) => a.relationshipType !== "employee").reduce((sum, a) => { const deposit = Number(a.depositAmount ?? (Number(a.agreedCost || 0) * 0.5)); const dueTarget = job.status === "completed" ? Number(a.agreedCost || 0) : ["confirmed","deposit_requested","deposit_paid","materials_ordered","fabrication","installation_scheduled","in_progress","awaiting_final_payment"].includes(String(job.status)) ? deposit : 0; return sum + Math.max(0, dueTarget - Number(a.paidAmount || 0)); }, 0);
     const subPaid = jobAssignments.filter((a) => a.relationshipType !== "employee").reduce((sum, a) => sum + Number(a.paidAmount || 0), 0);
     const commissionAgreed = commissions.reduce((sum, c) => sum + Number(c.agreedAmount || 0), 0);
     const commissionPaid = commissions.reduce((sum, c) => sum + Number(c.paidAmount || 0), 0);
@@ -159,7 +159,7 @@ export async function GET(request: Request) {
       collectionRequired,
       customerPayments: canPayments ? customerPayments : [],
       workforceAssignments: jobAssignments,
-      ...(canCosts?{subcontractorAgreed:subAgreed,subcontractorPaid:subPaid,subcontractorOutstanding:Math.max(0,subAgreed-subPaid),commissions,commissionAgreed,commissionPaid,commissionOutstanding:Math.max(0,commissionAgreed-commissionPaid)}:{}),
+      ...(canCosts?{subcontractorAgreed:subAgreed,subcontractorPaid:subPaid,subcontractorOutstanding:subDueNow,commissions,commissionAgreed,commissionPaid,commissionOutstanding:Math.max(0,commissionAgreed-commissionPaid)}:{}),
       estimatedCost: canCosts && jobCostSummary?.estimated_amount != null ? Number(jobCostSummary.estimated_amount) : undefined,
       finalCost: canCosts && jobCostSummary?.actual_amount != null ? Number(jobCostSummary.actual_amount) : undefined,
       materialsOrdered: job.materials_ordered,
