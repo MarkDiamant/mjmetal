@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { setSessionCookies, supabaseRequest } from "@/lib/crm/supabase-server";
 import { loadCrmUsers } from "@/lib/crm/user-access";
+import { signedTenantHandoff } from "@/lib/crm/tenant-handoff";
 
 export async function POST(request: Request) {
   try {
@@ -36,7 +37,12 @@ export async function POST(request: Request) {
       if (!allowed) return NextResponse.json({ error: "This account is not authorised for this business" }, { status: 403 });
     }
 
-    await setSessionCookies(session.access_token, session.refresh_token, session.expires_in);
+    const actorEmail=String(session.user.email||email).toLowerCase(),origin=new URL(request.url).origin;
+    const {ts,sig}=signedTenantHandoff("mjmetal",origin,actorEmail);
+    const central=await fetch("https://diamantsolutions.co.uk/api/business-software/tenants/mjmetal/session",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"issue",origin,email:actorEmail,ts,sig}),cache:"no-store"});
+    const centralBody=await central.json().catch(()=>({}));
+    if(!central.ok||!centralBody.sessionToken)return NextResponse.json({error:"Unable to start secure business session"},{status:503});
+    await setSessionCookies(session.access_token, session.refresh_token, session.expires_in,centralBody.sessionToken);
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: "Unable to sign in" }, { status: 500 });
