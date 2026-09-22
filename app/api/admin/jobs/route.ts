@@ -175,6 +175,7 @@ export async function GET(request: Request) {
       archivedAt: job.archived_at ?? undefined,
       createdAt: job.created_at,
       updatedAt: job.updated_at,
+      lastChangedBy: null,
     };
   });
 
