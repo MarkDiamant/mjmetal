@@ -9,7 +9,9 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   applicationName: "M&J Metal Business Software",
   appleWebApp: { capable: true, title: "M&J", statusBarStyle: "default" },
+  alternates: { canonical: "https://mjmetal.diamantsolutions.co.uk/admin" },
   robots: {index:false,follow:false,nocache:true,googleBot:{index:false,follow:false,noimageindex:true}},
+  openGraph: { title: "M&J Metal Business Software", url: "https://mjmetal.diamantsolutions.co.uk/admin" },
 };
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
