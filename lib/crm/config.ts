@@ -55,7 +55,9 @@ export const M_AND_J_TENANT_CONFIG: CrmConfig = {
   },
 };
 
-export const DEFAULT_CRM_CONFIG = M_AND_J_TENANT_CONFIG;\n\nexport function normaliseCrmConfig(value: Partial<CrmConfig> | null | undefined): CrmConfig {
+export const DEFAULT_CRM_CONFIG = M_AND_J_TENANT_CONFIG;
+
+export function normaliseCrmConfig(value: Partial<CrmConfig> | null | undefined): CrmConfig {
   const tenantKey = value?.tenantKey || DEFAULT_CRM_CONFIG.tenantKey;
   const quoteTemplate = value?.quoteTemplate || DEFAULT_CRM_CONFIG.quoteTemplate;
   const invoiceTemplate = value?.invoiceTemplate === "mj-signature" && tenantKey !== "mj-metal" ? "clean" : (value?.invoiceTemplate || DEFAULT_CRM_CONFIG.invoiceTemplate);
