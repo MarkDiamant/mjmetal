@@ -40,8 +40,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ref
 
   const name = [customer.first_name, customer.last_name].filter(Boolean).join(" ") || "Customer";
   const site = [job.site_address_line_1 || customer.address_line_1, job.site_address_line_2 || customer.address_line_2, job.site_city || customer.city, job.site_postcode || customer.postcode].filter(Boolean).join(", ");
-  const scopeHtml = esc(quote.scope_text).replaceAll("
-", "<br>");
+  const scopeHtml = esc(quote.scope_text).replaceAll("\\n", "<br>");
   const exclusionsHtml = quote.exclusions ? esc(quote.exclusions).replaceAll("
 ", "<br>") : "";
   const finish = Array.isArray(job.finishes) ? job.finishes.join(" + ") : "";
