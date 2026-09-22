@@ -122,8 +122,8 @@ function buildMjSignatureQuotePdf(input: QuotePdfInput): Buffer {
 
 export function buildQuotePdf(input: QuotePdfInput): Buffer {
   if(input.template==="mj-signature") return buildMjSignatureQuotePdf(input);
-  const template=input.template==="mj-signature"||input.template==="classic"?input.template:"clean";
-  const hex=String(input.accentColour||"#e66a24").replace("#",""); const rgb=/^[0-9a-fA-F]{6}$/.test(hex)?[0,2,4].map(i=>parseInt(hex.slice(i,i+2),16)/255):[0.90,0.36,0.10]; const accent=template==="classic"?"0 0 0":template==="mj-signature"?rgb.map(x=>x.toFixed(3)).join(" "):"0.18 0.18 0.18";
+  const template=input.template==="classic"?"classic":"clean";
+  const hex=String(input.accentColour||"#e66a24").replace("#",""); const rgb=/^[0-9a-fA-F]{6}$/.test(hex)?[0,2,4].map(i=>parseInt(hex.slice(i,i+2),16)/255):[0.90,0.36,0.10]; const accent=template==="classic"?"0 0 0":"0.18 0.18 0.18";
   type Page = { commands: string[]; y: number };
   const maxPages=2;
   const pages: Page[] = [];
