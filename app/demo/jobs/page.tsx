@@ -1,2 +1,1 @@
-import BusinessDirectory from "@/components/demo/BusinessDirectory";
-export default function Page(){return <BusinessDirectory view="jobs"/>;}
+export {default} from "@/app/admin/jobs/page.tsx";
