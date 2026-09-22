@@ -97,7 +97,7 @@ export async function GET(request: Request) {
     const jobTypes = Array.isArray(job.job_types) && job.job_types.length ? job.job_types : [job.job_type].filter(Boolean);
     const stopped = ["declined", "cancelled"].includes(String(job.status));
     const completedWithFinance = job.status === "completed" && (paid > 0 || writtenOff > 0 || invoicedJobIds.has(String(job.id)));
-    const balanceActive = !stopped && (job.status === "awaiting_final_payment" || completedWithFinance);
+    const finalQuoteExists = quoted !== undefined && quoted !== null;\n    const progressedToBilling = ["confirmed","deposit_requested","deposit_paid","materials_ordered","fabrication","installation_scheduled","in_progress","awaiting_final_payment","completed"].includes(String(job.status));\n    const balanceActive = !stopped && finalQuoteExists && progressedToBilling && (job.status === "awaiting_final_payment" || completedWithFinance);
     const balanceOutstanding = balanceActive ? Math.max(0, value - paid - writtenOff) : 0;
     const collectionRequired = job.status === "completed" && balanceOutstanding > 0;
 
