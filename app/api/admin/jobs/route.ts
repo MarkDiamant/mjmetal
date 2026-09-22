@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     canWorkforce?supabaseRequest(`/rest/v1/mj_job_subcontractors?select=${canCosts?"id,job_id,subcontractor_id,scope,agreed_cost,deposit_amount,paid_amount,status,scheduled_at,completed_at,materials_included,assignment_role":"id,job_id,subcontractor_id,scope,status,scheduled_at,completed_at,materials_included,assignment_role"}&order=created_at.asc`, { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
     canWorkforce?supabaseRequest("/rest/v1/mj_subcontractors?active=eq.true&select=id,name,company,phone,email,capabilities,relationship_type&order=name.asc", { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
     canCosts?supabaseRequest("/rest/v1/mj_job_costs?select=id,job_id,category,supplier,estimated_amount,actual_amount,paid_amount,paid_at,due_at,notes,created_at&order=created_at.asc", { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
-    canPayments?supabaseRequest("/rest/v1/mj_xero_invoices?select=job_id,status", { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
+    canPayments?supabaseRequest("/rest/v1/mj_xero_invoices?select=job_id,status,invoice_number,total,amount_due,amount_paid,invoice_date,due_date,xero_invoice_id,updated_at", { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
     supabaseRequest("/rest/v1/mj_audit_events?select=job_id,actor,created_at&order=created_at.desc&limit=500", { method: "GET" }, session.token),
     canPricing?supabaseRequest("/rest/v1/mj_quotes?select=id,job_id,version,status,amount,created_at&order=version.desc", { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
   ]);
@@ -46,6 +46,8 @@ export async function GET(request: Request) {
   const lastActorByJob = new Map<string,string>();
   for (const event of auditEvents) if (!lastActorByJob.has(String(event.job_id))) lastActorByJob.set(String(event.job_id), event.actor==="MD"?"Mark":event.actor==="JB"?"Jonathan":String(event.actor||""));
   const personById = new Map(people.map((s) => [s.id, s]));
+  const invoiceByJob = new Map<string,Record<string,any>>();
+  for (const invoice of xeroInvoices) if (!invoiceByJob.has(String(invoice.job_id))) invoiceByJob.set(String(invoice.job_id), invoice);
   const invoicedJobIds = new Set(
     xeroInvoices
       .filter((invoice) => !["DRAFT", "VOIDED", "DELETED"].includes(String(invoice.status || "").toUpperCase()))
@@ -163,6 +165,7 @@ export async function GET(request: Request) {
       latestQuote: latestQuoteByJob.get(String(job.id)) || undefined,
       quoteDisplaySent: Boolean(job.quote_sent_at) || ["quote_sent","awaiting_customer","confirmed","deposit_requested","deposit_paid","materials_ordered","fabrication","installation_scheduled","in_progress","awaiting_final_payment","completed"].includes(String(job.status)),
       hasInvoice: invoicedJobIds.has(String(job.id)),
+      latestInvoice: invoiceByJob.get(String(job.id)) || undefined,
       paymentMethod: job.payment_method ?? undefined,
       nextAction: collectionRequired ? `Collect outstanding ${new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(balanceOutstanding)} or write off` : job.next_action ?? undefined,
       nextActionAt: collectionRequired ? undefined : job.next_action_at ?? undefined,
