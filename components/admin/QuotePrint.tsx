@@ -14,7 +14,8 @@ export default function QuotePrint({ reference, quoteId }: { reference: string; 
   const [sentMessage, setSentMessage] = useState("");
   const [pdfBusy, setPdfBusy] = useState(false);
   const [crmConfig,setCrmConfig]=useState(DEFAULT_CRM_CONFIG);
-  useEffect(()=>{fetch("/api/admin/settings",{cache:"no-store"}).then(async r=>{if(r.ok){const b=await r.json();if(b.settings)setCrmConfig(b.settings);}}).catch(()=>{});},[]);
+  const [connectedGmail,setConnectedGmail]=useState<string|null>(null);
+  useEffect(()=>{fetch("/api/admin/settings",{cache:"no-store"}).then(async r=>{if(r.ok){const b=await r.json();if(b.settings)setCrmConfig(b.settings);}}).catch(()=>{});fetch("/api/integrations/google/status",{cache:"no-store"}).then(async r=>{if(r.ok){const b=await r.json();if(b.connected&&b.email)setConnectedGmail(String(b.email));}}).catch(()=>{});},[]);
   useEffect(() => {
     fetch(`/api/admin/jobs/${encodeURIComponent(reference)}`, { cache: "no-store" }).then(async (res) => {
       if (res.status === 401) { window.location.href = "/admin/login"; return; }
@@ -40,7 +41,7 @@ export default function QuotePrint({ reference, quoteId }: { reference: string; 
   const pageClass=isClassic?"font-serif":isMj?"":"";
   const headerClass=isClassic?"border-b border-black pb-5":isMj?"border-b-4 border-[var(--brand)] pb-5":"border-b-2 border-[var(--brand)] pb-5";
   const panelClass=isClassic?"border-y border-black/20 py-5":isMj?"rounded-xl bg-[#f5f5f2] p-5":"border border-[var(--brand)]/30 p-5";
-  const mailHref = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(c.email || "")}&su=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(message)}`;
+  const mailHref = `https://mail.google.com/mail/?${connectedGmail?`authuser=${encodeURIComponent(connectedGmail)}&`:""}view=cm&fs=1&to=${encodeURIComponent(c.email || "")}&su=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(message)}`;
 
   async function copyWhatsApp() {
     await navigator.clipboard.writeText(message);
