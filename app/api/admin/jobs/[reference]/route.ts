@@ -204,7 +204,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     if (body.type === "quote") {
-      const quotePatch = { status: body.status || "draft", scope_text: String(body.scope_text || "").trim(), exclusions: String(body.exclusions || "").trim() || null, amount: Number(body.amount || 0), deposit_amount: body.deposit_amount !== null && body.deposit_amount !== undefined && body.deposit_amount !== "" ? Number(body.deposit_amount) : null, lead_time: String(body.lead_time || "").trim() || null, valid_until: body.valid_until || null };
+      const quotePatch = { status: body.status || "draft", scope_text: String(body.scope_text || "").trim(), exclusions: String(body.exclusions || "").trim() || null, amount: Number(body.amount || 0), vat_rate: Number(body.vat_rate || 0), deposit_amount: body.deposit_amount !== null && body.deposit_amount !== undefined && body.deposit_amount !== "" ? Number(body.deposit_amount) : null, lead_time: String(body.lead_time || "").trim() || null, valid_until: body.valid_until || null };
       let item:any;
       let version:number;
       if (body.quote_id) {
@@ -226,7 +226,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         item = created[0];
         await audit(session.token, session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user", job.id, "created", "quote", item?.id, { version, amount: body.amount });
       }
-      await supabaseRequest(`/rest/v1/mj_jobs?id=eq.${job.id}`, { method: "PATCH", body: JSON.stringify({ quoted_amount: Number(body.amount || 0), vat_rate: Number(body.vat_rate || 0), status: "quote_preparing", next_action: "Send quote", updated_at: now }) }, session.token);
+      await jsonOrError(await supabaseRequest(`/rest/v1/mj_jobs?id=eq.${job.id}`, { method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify({ quoted_amount: Number(body.amount || 0), status: "quote_preparing", next_action: "Send quote", updated_at: now }) }, session.token));
       return NextResponse.json({ item });
     }
 
