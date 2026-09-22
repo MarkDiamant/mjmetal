@@ -4,7 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ALL_STATUSES, STATUS_META } from "@/lib/crm/constants";
 import type { JobStatus, Manager } from "@/lib/crm/types";
-import { DEFAULT_CRM_CONFIG, type CrmConfig } from "@/lib/crm/config";
+import { DEFAULT_CRM_CONFIG, type CrmConfig } from "@/lib/demo-config";
 import DiamantCredit from "@/components/demo/DiamantCredit";
 
 function money(value?: number | string) { return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(Number(value || 0)); }
