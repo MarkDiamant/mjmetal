@@ -1,5 +1,5 @@
 "use client";
-import {useEffect} from "react";
+import {useLayoutEffect} from "react";
 
 const rewrite=(value:string)=>{
   if(value.startsWith("/api/admin")) return "/api/demo"+value.slice("/api/admin".length);
@@ -8,7 +8,7 @@ const rewrite=(value:string)=>{
 };
 
 export default function BmsDemoGuard(){
-  useEffect(()=>{
+  useLayoutEffect(()=>{
     const originalFetch=window.fetch.bind(window);
     window.fetch=((input:RequestInfo|URL,init?:RequestInit)=>{
       if(typeof input==="string") return originalFetch(rewrite(input),init);
