@@ -1,3 +1,7 @@
+import { readFileSync } from "fs";
+import { join } from "path";
+import { inflateSync, deflateSync } from "zlib";
+
 function ascii(value: unknown) {
   return String(value ?? "")
     .replace(/[–—]/g, "-")
@@ -68,6 +72,25 @@ export type QuotePdfInput = {
   accentColour?: string;
 };
 
+function logoImage() {
+  try {
+    const png=readFileSync(join(process.cwd(),"public","images","logo.png"));
+    if(png.toString("ascii",1,4)!=="PNG") return null;
+    let pos=8,width=0,height=0,bit=0,type=0; const chunks:Buffer[]=[];
+    while(pos<png.length){const len=png.readUInt32BE(pos);const kind=png.toString("ascii",pos+4,pos+8);const data=png.subarray(pos+8,pos+8+len);pos+=12+len;
+      if(kind==="IHDR"){width=data.readUInt32BE(0);height=data.readUInt32BE(4);bit=data[8];type=data[9];}
+      if(kind==="IDAT")chunks.push(data); if(kind==="IEND")break;
+    }
+    if(bit!==8||![2,6].includes(type)||!width||!height)return null;
+    const bpp=type===6?4:3,row=width*bpp,raw=inflateSync(Buffer.concat(chunks)),rgb=Buffer.alloc(width*height*3);
+    let prev=Buffer.alloc(row),off=0,out=0;
+    const paeth=(a:number,b:number,c:number)=>{const p=a+b-c,pa=Math.abs(p-a),pb=Math.abs(p-b),pc=Math.abs(p-c);return pa<=pb&&pa<=pc?a:pb<=pc?b:c;};
+    for(let y=0;y<height;y++){const filter=raw[off++],cur=Buffer.alloc(row);for(let x=0;x<row;x++){const v=raw[off++],left=x>=bpp?cur[x-bpp]:0,up=prev[x]||0,ul=x>=bpp?prev[x-bpp]:0;cur[x]=(v+(filter===0?0:filter===1?left:filter===2?up:filter===3?Math.floor((left+up)/2):paeth(left,up,ul)))&255;}
+      for(let x=0;x<width;x++){const i=x*bpp,alpha=type===6?cur[i+3]/255:1;rgb[out++]=Math.round(cur[i]*alpha+255*(1-alpha));rgb[out++]=Math.round(cur[i+1]*alpha+255*(1-alpha));rgb[out++]=Math.round(cur[i+2]*alpha+255*(1-alpha));}prev=cur;}
+    return {width,height,data:deflateSync(rgb)};
+  } catch { return null; }
+}
+
 export function buildQuotePdf(input: QuotePdfInput): Buffer {
   const template=input.template==="mj-signature"||input.template==="classic"?input.template:"clean";
   const hex=String(input.accentColour||"#e66a24").replace("#",""); const rgb=/^[0-9a-fA-F]{6}$/.test(hex)?[0,2,4].map(i=>parseInt(hex.slice(i,i+2),16)/255):[0.90,0.36,0.10]; const accent=template==="classic"?"0 0 0":template==="mj-signature"?rgb.map(x=>x.toFixed(3)).join(" "):"0.18 0.18 0.18";
@@ -91,9 +114,15 @@ export function buildQuotePdf(input: QuotePdfInput): Buffer {
   const heading = (text: string) => { gap(4); line(text, 12, true, 50, 18); };
   const paragraph = (text: string, maxLines = 40) => { const lines=wrap(text,88); for (const l of lines.slice(0,maxLines)) line(l || " ", 10, false, 50, 14); if(lines.length>maxLines) line("Continued in project documentation.",9,false,50,13); };
 
-  page.commands.push(`BT /F2 ${template==="classic"?18:22} Tf ${accent} rg 50 800 Td (${esc((input.companyName || "Business").toUpperCase())}) Tj ET`);
-  page.commands.push(`BT /F2 ${template==="classic"?16:18} Tf 0 0 0 rg ${template==="mj-signature"?285:420} 800 Td (${esc(template==="mj-signature"?"PROFESSIONAL QUOTATION & PROJECT PROPOSAL":"QUOTATION")}) Tj ET`);
-  if(template==="mj-signature") page.commands.push(`BT /F2 10 Tf ${accent} rg 50 782 Td (${esc("Built Strong. Built to Last.")}) Tj ET`);
+  const logo=template==="mj-signature"?logoImage():null;
+  if(logo){
+    const maxW=150,maxH=58,scale=Math.min(maxW/logo.width,maxH/logo.height),w=logo.width*scale,h=logo.height*scale;
+    page.commands.push(`q ${w.toFixed(1)} 0 0 ${h.toFixed(1)} 50 ${(792-h).toFixed(1)} cm /Im1 Do Q`);
+  } else {
+    page.commands.push(`BT /F2 ${template==="classic"?18:22} Tf ${accent} rg 50 800 Td (${esc((input.companyName || "Business").toUpperCase())}) Tj ET`);
+  }
+  page.commands.push(`BT /F2 ${template==="mj-signature"?12:template==="classic"?16:18} Tf 0 0 0 rg ${template==="mj-signature"?300:420} 800 Td (${esc(template==="mj-signature"?"QUOTATION & PROJECT PROPOSAL":"QUOTATION")}) Tj ET`);
+  if(template==="mj-signature") page.commands.push(`BT /F2 9 Tf ${accent} rg 300 782 Td (${esc("Built Strong. Built to Last.")}) Tj ET`);
   page.y = 768;
   rule();
   line(`${input.reference} / V${input.version}`, 12, true);
@@ -159,32 +188,25 @@ export function buildQuotePdf(input: QuotePdfInput): Buffer {
   if (input.sortCode || input.accountNumber) line(`Sort code ${input.sortCode || ""}  Account ${input.accountNumber || ""}`, 8);
   line(input.vatRegistered && Number(input.vatRate||0)>0 ? `${input.vatNumber ? `VAT ${input.vatNumber} - ` : ""}VAT ${Number(input.vatRate)}%` : "VAT not charged", 8);
 
-  const objects: string[] = [];
+  const objects: (string|Buffer)[] = [];
   objects[1] = "<< /Type /Catalog /Pages 2 0 R >>";
   objects[3] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>";
   objects[4] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>";
-
+  const logoObj=logo?5:0;
+  if(logo) objects[5]=Buffer.concat([Buffer.from(`<< /Type /XObject /Subtype /Image /Width ${logo.width} /Height ${logo.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode /Length ${logo.data.length} >>\nstream\n`,"ascii"),logo.data,Buffer.from("\nendstream","ascii")]);
   const pageRefs: number[] = [];
-  let next = 5;
+  let next = logo?6:5;
   for (const p of pages) {
     const contentNum = next++;
     const pageNum = next++;
     const stream = p.commands.join("\n");
     objects[contentNum] = `<< /Length ${Buffer.byteLength(stream, "ascii")} >>\nstream\n${stream}\nendstream`;
-    objects[pageNum] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${contentNum} 0 R >>`;
+    objects[pageNum] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R >>${logoObj?" /XObject << /Im1 5 0 R >>":""} >> /Contents ${contentNum} 0 R >>`;
     pageRefs.push(pageNum);
   }
   objects[2] = `<< /Type /Pages /Kids [${pageRefs.map((n) => `${n} 0 R`).join(" ")}] /Count ${pageRefs.length} >>`;
 
-  let pdf = "%PDF-1.4\n%CRMQuote\n";
-  const offsets: number[] = [0];
-  for (let i = 1; i < objects.length; i++) {
-    offsets[i] = Buffer.byteLength(pdf, "ascii");
-    pdf += `${i} 0 obj\n${objects[i]}\nendobj\n`;
-  }
-  const xref = Buffer.byteLength(pdf, "ascii");
-  pdf += `xref\n0 ${objects.length}\n0000000000 65535 f \n`;
-  for (let i = 1; i < objects.length; i++) pdf += `${String(offsets[i]).padStart(10, "0")} 00000 n \n`;
-  pdf += `trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
-  return Buffer.from(pdf, "ascii");
+  const parts:Buffer[]=[Buffer.from("%PDF-1.4\n%CRMQuote\n","ascii")]; const offsets:number[]=[0]; let length=parts[0].length;
+  for(let i=1;i<objects.length;i++){offsets[i]=length;const head=Buffer.from(`${i} 0 obj\n`,"ascii"),body=Buffer.isBuffer(objects[i])?objects[i] as Buffer:Buffer.from(String(objects[i]),"ascii"),tail=Buffer.from("\nendobj\n","ascii");parts.push(head,body,tail);length+=head.length+body.length+tail.length;}
+  const xref=length;let trailer=`xref\n0 ${objects.length}\n0000000000 65535 f \n`;for(let i=1;i<objects.length;i++)trailer+=`${String(offsets[i]).padStart(10,"0")} 00000 n \n`;trailer+=`trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;parts.push(Buffer.from(trailer,"ascii"));return Buffer.concat(parts);
 }
