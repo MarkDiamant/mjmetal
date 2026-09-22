@@ -59,7 +59,6 @@ export default function IntegrationsPage() {
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           {[
-            ["Google / Gmail","Send quotes, invoices and CRM emails from your business Gmail account.","Email"],
             ["Microsoft 365 / Outlook","Send CRM emails from your Microsoft business mailbox.","Email"],
             ["Google Calendar","Sync site visits, appointments and scheduled work with your calendar.","Calendar"],
             ["Microsoft Outlook Calendar","Sync CRM appointments and scheduled work with Outlook.","Calendar"],
