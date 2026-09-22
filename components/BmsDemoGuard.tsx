@@ -35,6 +35,11 @@ export default function BmsDemoGuard(){
         event.preventDefault();
         const next="/demo"+url.pathname.slice("/admin".length)+url.search+url.hash;
         window.location.assign(next);
+        return;
+      }
+      if(url.pathname.startsWith("/api/integrations")){
+        event.preventDefault();
+        window.location.assign("/api/demo/integrations"+url.pathname.slice("/api/integrations".length)+url.search+url.hash);
       }
     };
     document.addEventListener("click",click,true);
