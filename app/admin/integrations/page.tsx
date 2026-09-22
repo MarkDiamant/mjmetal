@@ -10,7 +10,8 @@ export default function IntegrationsPage() {
   const [error, setError] = useState("");
   const [crmConfig,setCrmConfig]=useState<CrmConfig>(DEFAULT_CRM_CONFIG);
   const [organisations,setOrganisations]=useState<Array<{tenantId:string;tenantName?:string}>>([]);
-  const [choosing,setChoosing]=useState(false);\n  const [googleConnected,setGoogleConnected]=useState(false),[googleEmail,setGoogleEmail]=useState<string|null>(null),[googleLoading,setGoogleLoading]=useState(true);
+  const [choosing,setChoosing]=useState(false);
+  const [googleConnected,setGoogleConnected]=useState(false),[googleEmail,setGoogleEmail]=useState<string|null>(null),[googleLoading,setGoogleLoading]=useState(true);
 
   async function load() {
     setLoading(true);
