@@ -70,7 +70,7 @@ ${crmConfig.businessName}`;
     setSentMessage(`Sent to ${body.sentTo}`);
   }
 
-  return <><main className="min-h-screen bg-[#ecece8] py-6 text-[#171717] print:bg-white print:py-0" style={{"--brand":crmConfig.accentColour} as React.CSSProperties}>
+  return <main className="min-h-screen bg-[#ecece8] py-6 text-[#171717] print:bg-white print:py-0" style={{"--brand":crmConfig.accentColour} as React.CSSProperties}>
     <style>{`@media print { @page { size: A4; margin: 0; } .quote-page { width: 210mm; min-height: 297mm; box-shadow: none !important; break-after: page; page-break-after: always; } .quote-page:last-child { break-after: auto; page-break-after: auto; } }`}</style>
     <div className="mx-auto mb-4 flex max-w-[900px] flex-wrap justify-end gap-2 px-4 print:hidden">
       {sentMessage && <span className="self-center rounded-lg bg-green-50 px-3 py-2 text-sm font-bold text-green-700">{sentMessage}</span>}
