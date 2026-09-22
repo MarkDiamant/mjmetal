@@ -146,7 +146,7 @@ export function buildQuotePdf(input: QuotePdfInput): Buffer {
   if (input.website) line(input.website, 8);
   if (input.bankName) line(`Payment: ${input.bankName}`, 8);
   if (input.sortCode || input.accountNumber) line(`Sort code ${input.sortCode || ""}  Account ${input.accountNumber || ""}`, 8);
-  line(input.vatRegistered ? (input.vatNumber ? `VAT ${input.vatNumber}` : "VAT registered") : "VAT not charged", 8);
+  line(input.vatRegistered && Number(input.vatRate||0)>0 ? `${input.vatNumber ? `VAT ${input.vatNumber} - ` : ""}VAT ${Number(input.vatRate)}%` : "VAT not charged", 8);
 
   const objects: string[] = [];
   objects[1] = "<< /Type /Catalog /Pages 2 0 R >>";
