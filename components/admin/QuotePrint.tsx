@@ -15,7 +15,8 @@ export default function QuotePrint({ reference, quoteId }: { reference: string; 
   const [pdfBusy, setPdfBusy] = useState(false);
   const [crmConfig,setCrmConfig]=useState(DEFAULT_CRM_CONFIG);
   const [connectedGmail,setConnectedGmail]=useState<string|null>(null);
-  const [drafting,setDrafting]=useState(false);\n  const [draftNotice,setDraftNotice]=useState<{email:string}|null>(null);
+  const [drafting,setDrafting]=useState(false);
+  const [draftNotice,setDraftNotice]=useState<{email:string}|null>(null);
   useEffect(()=>{fetch("/api/admin/settings",{cache:"no-store"}).then(async r=>{if(r.ok){const b=await r.json();if(b.settings)setCrmConfig(b.settings);}}).catch(()=>{});fetch("/api/integrations/google/status",{cache:"no-store"}).then(async r=>{if(r.ok){const b=await r.json();if(b.connected&&b.email)setConnectedGmail(String(b.email));}}).catch(()=>{});},[]);
   useEffect(() => {
     fetch(`/api/admin/jobs/${encodeURIComponent(reference)}`, { cache: "no-store" }).then(async (res) => {
