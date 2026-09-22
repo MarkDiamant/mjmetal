@@ -161,6 +161,7 @@ export async function GET(request: Request) {
       quotedAmount: quoted,
       quoteSentAt: job.quote_sent_at ?? undefined,
       latestQuote: latestQuoteByJob.get(String(job.id)) || undefined,
+      hasInvoice: invoicedJobIds.has(String(job.id)),
       paymentMethod: job.payment_method ?? undefined,
       nextAction: collectionRequired ? `Collect outstanding ${new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(balanceOutstanding)} or write off` : job.next_action ?? undefined,
       nextActionAt: collectionRequired ? undefined : job.next_action_at ?? undefined,
