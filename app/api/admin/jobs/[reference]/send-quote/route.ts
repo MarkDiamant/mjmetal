@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { requirePermission, supabaseRequest } from "@/lib/crm/supabase-server";
 import { buildQuotePdf } from "@/lib/crm/simple-pdf";
-import { DEFAULT_CRM_CONFIG, normaliseCrmConfig } from "@/lib/crm/config";\nimport { getValidGoogleConnection, sendGmail } from "@/lib/crm/gmail";
+import { DEFAULT_CRM_CONFIG, normaliseCrmConfig } from "@/lib/crm/config";
+import { getValidGoogleConnection, sendGmail } from "@/lib/crm/gmail";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 async function crmSettings(token:string){const p="_crm/settings.json".split("/").map(encodeURIComponent).join("/");const r=await supabaseRequest(`/storage/v1/object/mj-job-files/${p}`,{method:"GET"},token);return r.ok?normaliseCrmConfig(await r.json().catch(()=>null)):DEFAULT_CRM_CONFIG;}
@@ -39,8 +40,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ ref
 
   const name = [customer.first_name, customer.last_name].filter(Boolean).join(" ") || "Customer";
   const site = [job.site_address_line_1 || customer.address_line_1, job.site_address_line_2 || customer.address_line_2, job.site_city || customer.city, job.site_postcode || customer.postcode].filter(Boolean).join(", ");
-  const scopeHtml = esc(quote.scope_text).replaceAll("\n", "<br>");
-  const exclusionsHtml = quote.exclusions ? esc(quote.exclusions).replaceAll("\n", "<br>") : "";
+  const scopeHtml = esc(quote.scope_text).replaceAll("
+", "<br>");
+  const exclusionsHtml = quote.exclusions ? esc(quote.exclusions).replaceAll("
+", "<br>") : "";
   const finish = Array.isArray(job.finishes) ? job.finishes.join(" + ") : "";
   if (!quote.scope_text?.trim() || Number(quote.amount||0)<=0) return NextResponse.json({ error: "Add the quote scope and final price before sending." }, { status: 400 });
 
