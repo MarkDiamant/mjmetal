@@ -1,6 +1,6 @@
 "use client";
 import { FormEvent, useEffect, useState } from "react";
-import { DEFAULT_CRM_CONFIG, type CrmConfig, type CrmModuleKey } from "@/lib/crm/config";
+import { DEFAULT_CRM_CONFIG, type CrmConfig, type CrmModuleKey } from "@/lib/demo-config";
 
 const moduleLabels: Record<CrmModuleKey,string> = {
   photos:"Photos & files", workforce:"Workforce / assigned people", commission:"Commission",
