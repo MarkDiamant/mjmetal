@@ -14,10 +14,10 @@ export default function NotFound() {
       </p>
 
       <Link
-        href="/"
+        href="/admin"
         className="mt-8 rounded bg-orange-600 px-6 py-3 font-semibold text-white hover:bg-orange-700"
       >
-        Back to Home
+        Back to Admin
       </Link>
     </main>
   );
