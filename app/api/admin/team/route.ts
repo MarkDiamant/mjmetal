@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requirePermission, supabaseRequest } from "@/lib/crm/supabase-server";
 
 async function workforceEditor() {
-  const session = await requirePermission("view_workforce");
+  const session = await requirePermission("manage_workforce");
   if (!session) return null;
-  if (!session.permissions.includes("edit_jobs")) return null;
   return session;
 }
 
