@@ -36,7 +36,7 @@ export default function QuotePrint({ reference, quoteId }: { reference: string; 
   const mailSubject = `${crmConfig.businessName} quotation ${j.reference}`;
   const template=crmConfig.quoteTemplate;
   const isClassic=template==="classic";
-  const isMj=template==="mj-signature"&&crmConfig.tenantKey==="mj-metal";
+  const isMj=template==="mj-signature";
   const pageClass=isClassic?"font-serif":isMj?"":"";
   const headerClass=isClassic?"border-b border-black pb-5":isMj?"border-b-4 border-[var(--brand)] pb-5":"border-b-2 border-[var(--brand)] pb-5";
   const panelClass=isClassic?"border-y border-black/20 py-5":isMj?"rounded-xl bg-[#f5f5f2] p-5":"border border-[var(--brand)]/30 p-5";
