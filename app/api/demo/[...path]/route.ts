@@ -35,7 +35,7 @@ export async function GET(req:NextRequest,{params}:{params:Promise<{path?:string
  if(p==="job-types")return ok({options:settings.workTypes.map((name,i)=>({name,count:Math.max(1,8-i)}))});
  if(p==="settings")return ok({settings,tenant:{slug:"demo",business_name:settings.businessName,status:"active"}});
  if(p==="customers")return ok({customers:jobs.map(j=>({id:j.customerId,first_name:j.firstName,last_name:j.lastName,name:j.customerName,email:j.email,phone:j.phone,postcode:j.postcode,address_line_1:j.customerAddressLine1,city:j.customerCity}))});
- if(p==="users")return ok({users:[{id:"u1",email:"alex@example-demo.co.uk",name:"Alex Demo",role:"Owner",status:"active"},{id:"u2",email:"sam@example-demo.co.uk",name:"Sam Taylor",role:"Manager",status:"active"},{id:"u3",email:"accounts@example-demo.co.uk",name:"Accounts Demo",role:"Accounts",status:"active"}],plan:settings.plan});
+ if(p==="users")return ok({users:[{id:"u1",email:"alex@example-demo.co.uk",name:"Alex Demo",role:"admin",status:"active",protectedOwner:true,permissions},{id:"u2",email:"sam@example-demo.co.uk",name:"Sam Taylor",role:"manager",status:"active",protectedOwner:false,permissions},{id:"u3",email:"accounts@example-demo.co.uk",name:"Accounts Demo",role:"office",status:"active",protectedOwner:false,permissions}],seatCount:3,seatLimit:5,pricingConnected:false,plan:settings.plan});
  if(p==="billing-access")return ok({blocked:false,businessName:settings.businessName,billing:settings.billing});
  if(p.startsWith("jobs/"))return ok(detail(decodeURIComponent(p.split("/")[1]||"DS042")));
  if(p==="integrations/google/status")return ok({connected:false,email:null,status:"demo"});
