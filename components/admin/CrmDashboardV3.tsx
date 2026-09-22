@@ -82,7 +82,6 @@ export default function CrmDashboardV3() {
   useEffect(()=>{const timer=window.setInterval(async()=>{if(savingRef)return;if(!editingRef){void load();return;}const res=await fetch("/api/admin/jobs",{cache:"no-store"});if(!res.ok)return;const body=await res.json().catch(()=>({}));const latest=(body.jobs||[]).find((x:any)=>x.reference===editingRef);if(latest&&editUpdatedAt&&latest.updatedAt&&latest.updatedAt!==editUpdatedAt)setRemoteChanged(true);},3000);return()=>window.clearInterval(timer);},[load,editingRef,savingRef,editUpdatedAt]);
   useEffect(()=>{const saved=window.sessionStorage.getItem("mj-crm-sort") as SortMode|null;if(saved)setSortMode(saved);},[]);
   useEffect(()=>{window.sessionStorage.setItem("mj-crm-sort",sortMode);},[sortMode]);
-  useEffect(()=>{if(loading)return;const params=new URLSearchParams(window.location.search);if(params.get("quick")==="1"){setQuickAddOpen(true);setQuickAddSearch("");setQuickAddCustomerId("");setQuickAddNewCustomer(false);setQuickAddTypes([]);fetch("/api/admin/customers",{cache:"no-store"}).then(async res=>{if(res.status===401){router.replace("/admin/login");return;}if(res.ok){const body=await res.json().catch(()=>({}));setQuickAddCustomers(body.customers||[]);}});window.history.replaceState({},"","/admin");}},[loading,router]);
 
   const typeOptions = useMemo(()=>{
     const items=[...jobTypeOptions];
