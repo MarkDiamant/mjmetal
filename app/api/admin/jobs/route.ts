@@ -21,7 +21,7 @@ export async function GET(request: Request) {
   const canCosts=session.permissions.includes("view_costs_profit");
   const canPricing=session.permissions.includes("view_pricing");
   const canCustomer=session.permissions.includes("view_customer_details");
-  const [jobsResponse, paymentsResponse, assignmentsResponse, peopleResponse, costsResponse, xeroInvoicesResponse, auditResponse] = await Promise.all([
+  const [jobsResponse, paymentsResponse, assignmentsResponse, peopleResponse, costsResponse, xeroInvoicesResponse, auditResponse, quotesResponse] = await Promise.all([
     supabaseRequest(`/rest/v1/mj_jobs?${archiveFilter}&select=*,mj_customers(*)&order=sequence_number.asc`, { method: "GET" }, session.token),
     canPayments?supabaseRequest("/rest/v1/mj_payments?select=id,job_id,direction,payment_type,amount,payment_method,counterparty,paid_at,due_at,notes,created_at&order=created_at.desc", { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
     canWorkforce?supabaseRequest(`/rest/v1/mj_job_subcontractors?select=${canCosts?"id,job_id,subcontractor_id,scope,agreed_cost,deposit_amount,paid_amount,status,scheduled_at,completed_at,materials_included,assignment_role":"id,job_id,subcontractor_id,scope,status,scheduled_at,completed_at,materials_included,assignment_role"}&order=created_at.asc`, { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
@@ -29,6 +29,7 @@ export async function GET(request: Request) {
     canCosts?supabaseRequest("/rest/v1/mj_job_costs?select=id,job_id,category,supplier,estimated_amount,actual_amount,paid_amount,paid_at,due_at,notes,created_at&order=created_at.asc", { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
     canPayments?supabaseRequest("/rest/v1/mj_xero_invoices?select=job_id,status", { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
     supabaseRequest("/rest/v1/mj_audit_events?select=job_id,actor,created_at&order=created_at.desc&limit=500", { method: "GET" }, session.token),
+    canPricing?supabaseRequest("/rest/v1/mj_quotes?select=id,job_id,version,status,created_at&order=version.desc", { method: "GET" }, session.token):Promise.resolve(new Response("[]",{status:200})),
   ]);
 
   if (!jobsResponse.ok) return NextResponse.json({ error: "Unable to load jobs" }, { status: 500 });
@@ -39,6 +40,9 @@ export async function GET(request: Request) {
   const costs = costsResponse.ok ? await costsResponse.json() as Array<Record<string, any>> : [];
   const xeroInvoices = xeroInvoicesResponse.ok ? await xeroInvoicesResponse.json() as Array<Record<string, any>> : [];
   const auditEvents = auditResponse.ok ? await auditResponse.json() as Array<Record<string, any>> : [];
+  const quotes = quotesResponse.ok ? await quotesResponse.json() as Array<Record<string, any>> : [];
+  const latestQuoteByJob = new Map<string,Record<string,any>>();
+  for (const quote of quotes) if (!latestQuoteByJob.has(String(quote.job_id))) latestQuoteByJob.set(String(quote.job_id), quote);
   const lastActorByJob = new Map<string,string>();
   for (const event of auditEvents) if (!lastActorByJob.has(String(event.job_id))) lastActorByJob.set(String(event.job_id), event.actor==="MD"?"Mark":event.actor==="JB"?"Jonathan":String(event.actor||""));
   const personById = new Map(people.map((s) => [s.id, s]));
@@ -156,6 +160,7 @@ export async function GET(request: Request) {
       preliminaryEstimateSentAt: job.preliminary_estimate_sent_at ?? undefined,
       quotedAmount: quoted,
       quoteSentAt: job.quote_sent_at ?? undefined,
+      latestQuote: latestQuoteByJob.get(String(job.id)) || undefined,
       paymentMethod: job.payment_method ?? undefined,
       nextAction: collectionRequired ? `Collect outstanding ${new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(balanceOutstanding)} or write off` : job.next_action ?? undefined,
       nextActionAt: collectionRequired ? undefined : job.next_action_at ?? undefined,
