@@ -107,12 +107,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ ref
         <h3>Scope of works</h3><p>${scopeHtml}</p>
         ${exclusionsHtml ? `<h3>Notes / exclusions</h3><p>${exclusionsHtml}</p>` : ""}
         <div style="background:#f5f5f2;padding:18px;border-radius:12px;margin:24px 0"><div style="font-size:13px;color:#666">Total quotation</div><div style="font-size:28px;font-weight:700">${money(quote.amount)}</div>${quote.deposit_amount ? `<div><strong>Deposit:</strong> ${money(quote.deposit_amount)}</div>` : ""}${quote.lead_time ? `<div><strong>Estimated lead time:</strong> ${esc(quote.lead_time)}</div>` : ""}${quote.valid_until ? `<div><strong>Valid until:</strong> ${new Date(`${quote.valid_until}T12:00:00`).toLocaleDateString("en-GB")}</div>` : ""}</div>
-        <p>If you would like to proceed or have any questions, simply reply to this email.</p><p>Kind regards,<br><strong>${esc(config.businessName)}</strong><br>${esc(config.businessDetails.email)}<br>${esc(config.businessDetails.officeAddress)}<br>${esc(config.businessDetails.website)}</p>
+        <p>If you would like to proceed or have any questions, simply reply to this email.</p><p>Kind regards,</p><div style="font-family:Arial,sans-serif;line-height:1.35"><strong>${esc(config.businessDetails.emailSignatureName||config.businessName)}</strong><br><span>📱 ${esc(config.businessDetails.phone)}</span><br><a href="mailto:${esc(config.businessDetails.email)}">${esc(config.businessDetails.email)}</a><br><a href="https://${esc(config.businessDetails.website)}">${esc(config.businessDetails.website)}</a><br><br><img src="${new URL(request.url).origin}/images/logo.png" alt="${esc(config.businessName)}" width="110" style="display:block;width:110px;height:auto;border:0"><br><span>${esc(config.businessName)}</span><br><span>${esc(config.businessDetails.emailSignatureTagline||"")}</span></div>
       </div>`;
   const subject=`${config.businessName} quotation ${job.reference}`;
   let sentVia="resend", sentFrom="";
   try{
-    const actorEmail=String(session.accessUser?.email||"").toLowerCase(),origin=new URL(request.url).origin;
+    const actorEmail=String(session.accessUser?.email||session.user?.email||"").toLowerCase(),origin=new URL(request.url).origin;
     if(actorEmail){
       const {ts,sig}=signedTenantHandoff("mjmetal",origin,actorEmail);
       const central=await fetch("https://diamantsolutions.co.uk/api/business-software/tenants/mjmetal/gmail/send",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({origin,actorEmail,ts,sig,fromName:config.businessName,to:customer.email,replyTo:config.businessDetails.email,subject,html:emailHtml,attachment:{filename:fileName,mimeType:"application/pdf",contentBase64:pdf.toString("base64")}}),cache:"no-store"});
