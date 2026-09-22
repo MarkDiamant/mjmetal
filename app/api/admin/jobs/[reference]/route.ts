@@ -97,10 +97,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     if (body.customer && Object.keys(body.customer).length) {
       if(!session.permissions.includes("view_customer_details")) return NextResponse.json({error:"You do not have permission to edit customer details"},{status:403});
-      await jsonOrError(await supabaseRequest(`/rest/v1/mj_customers?id=eq.${job.customer_id}`, {
+      const updatedCustomer = await jsonOrError(await supabaseRequest(`/rest/v1/mj_customers?id=eq.${job.customer_id}`, {
         method: "PATCH", headers: { Prefer: "return=representation" },
         body: JSON.stringify({ ...body.customer, updated_at: new Date().toISOString() }),
       }, session.token));
+      if (!updatedCustomer?.[0]) throw new Error("Customer details were not saved");
       await audit(session.token, session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user", job.id, "updated", "customer", job.customer_id, body.customer);
     }
 
