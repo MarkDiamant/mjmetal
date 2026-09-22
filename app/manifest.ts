@@ -2,20 +2,16 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Business CRM",
-    short_name: "CRM",
-    description:
-      "Private business job management system.",
+    name: "M&J Metal Business Software",
+    short_name: "M&J",
+    description: "M&J Metal business management software.",
     start_url: "/admin",
+    scope: "/admin",
     display: "standalone",
     background_color: "#ffffff",
     theme_color: "#ffffff",
     icons: [
-      {
-        src: "/favicon.svg?v=4",
-        sizes: "any",
-        type: "image/svg+xml",
-      },
+      { src: "/images/logo.png?v=4", sizes: "any", type: "image/png" },
     ],
   };
 }
