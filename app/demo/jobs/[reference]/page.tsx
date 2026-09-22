@@ -1,9 +1,1 @@
-import JobDetail from "@/components/demo/JobDetail";
-
-export default async function JobPage({ params }: { params: Promise<{ reference: string }> }) {
-  const { reference } = await params;
-  const ref = reference.toUpperCase();
-  return <>
-    <JobDetail reference={ref} />
-  </>;
-}
+export {default} from "@/app/admin/jobs/[reference]/page";

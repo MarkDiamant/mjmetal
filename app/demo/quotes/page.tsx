@@ -1,2 +1,1 @@
-import BusinessDirectory from "@/components/demo/BusinessDirectory";
-export default function Page(){return <BusinessDirectory view="quotes"/>;}
+export {default} from "@/app/admin/quotes/page";
