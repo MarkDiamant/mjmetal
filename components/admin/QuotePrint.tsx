@@ -41,7 +41,6 @@ export default function QuotePrint({ reference, quoteId }: { reference: string; 
   const pageClass=isClassic?"font-serif":isMj?"":"";
   const headerClass=isClassic?"border-b border-black pb-5":isMj?"border-b-4 border-[var(--brand)] pb-5":"border-b-2 border-[var(--brand)] pb-5";
   const panelClass=isClassic?"border-y border-black/20 py-5":isMj?"rounded-xl bg-[#f5f5f2] p-5":"border border-[var(--brand)]/30 p-5";
-  const mailHref = `https://mail.google.com/mail/?${connectedGmail?`authuser=${encodeURIComponent(connectedGmail)}&`:""}view=cm&fs=1&to=${encodeURIComponent(c.email || "")}&su=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(message)}`;
 
   async function copyWhatsApp() {
     await navigator.clipboard.writeText(message);
