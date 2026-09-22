@@ -1,7 +1,7 @@
 {
-  "name": "M&J Metal CRM & Job Management",
-  "short_name": "M&J CRM",
-  "description": "M&J Metal CRM and job management system",
+  "name": "M&J Metal Business Management Software",
+  "short_name": "M&J Software",
+  "description": "M&J Metal business management software",
   "start_url": "/admin",
   "scope": "/admin",
   "display": "standalone",
