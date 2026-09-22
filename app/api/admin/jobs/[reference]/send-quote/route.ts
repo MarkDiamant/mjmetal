@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { requirePermission, supabaseRequest } from "@/lib/crm/supabase-server";
 import { buildQuotePdf } from "@/lib/crm/simple-pdf";
-import { DEFAULT_CRM_CONFIG, normaliseCrmConfig } from "@/lib/crm/config";
+import { DEFAULT_CRM_CONFIG, normaliseCrmConfig } from "@/lib/crm/config";\nimport { getValidGoogleConnection, sendGmail } from "@/lib/crm/gmail";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 async function crmSettings(token:string){const p="_crm/settings.json".split("/").map(encodeURIComponent).join("/");const r=await supabaseRequest(`/storage/v1/object/mj-job-files/${p}`,{method:"GET"},token);return r.ok?normaliseCrmConfig(await r.json().catch(()=>null)):DEFAULT_CRM_CONFIG;}
@@ -96,17 +96,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ref
   }
   await supabaseRequest(`/rest/v1/mj_quotes?id=eq.${encodeURIComponent(quote.id)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ pdf_path: storagePath }) }, session.token);
 
-  const verifiedSender=process.env.CRM_VERIFIED_FROM_EMAIL?.trim();
-  if(!verifiedSender&&config.tenantKey!=="mj-metal") return NextResponse.json({error:"Outgoing email is not configured for this business yet."},{status:503});
-  const senderEmail=verifiedSender||"info@mjmetal.co.uk";
-  const fromAddress=`${config.businessName} <${senderEmail}>`;
-  const { error } = await resend.emails.send({
-    from: fromAddress,
-    to: [customer.email],
-    replyTo: config.businessDetails.email,
-    subject: `${config.businessName} quotation ${job.reference}`,
-    attachments: [{ filename: fileName, content: pdf }],
-    html: `
+  const emailHtml=`
       <div style="font-family:Arial,sans-serif;max-width:680px;margin:auto;color:#171717;line-height:1.6">
         <h2 style="margin-bottom:4px">${esc(config.businessName)}</h2>
         <hr style="border:none;border-top:4px solid ${esc(config.accentColour)};margin:24px 0">
@@ -116,17 +106,28 @@ export async function POST(request: Request, { params }: { params: Promise<{ ref
         ${exclusionsHtml ? `<h3>Notes / exclusions</h3><p>${exclusionsHtml}</p>` : ""}
         <div style="background:#f5f5f2;padding:18px;border-radius:12px;margin:24px 0"><div style="font-size:13px;color:#666">Total quotation</div><div style="font-size:28px;font-weight:700">${money(quote.amount)}</div>${quote.deposit_amount ? `<div><strong>Deposit:</strong> ${money(quote.deposit_amount)}</div>` : ""}${quote.lead_time ? `<div><strong>Estimated lead time:</strong> ${esc(quote.lead_time)}</div>` : ""}${quote.valid_until ? `<div><strong>Valid until:</strong> ${new Date(`${quote.valid_until}T12:00:00`).toLocaleDateString("en-GB")}</div>` : ""}</div>
         <p>If you would like to proceed or have any questions, simply reply to this email.</p><p>Kind regards,<br><strong>${esc(config.businessName)}</strong><br>${esc(config.businessDetails.email)}<br>${esc(config.businessDetails.officeAddress)}<br>${esc(config.businessDetails.website)}</p>
-      </div>`,
-  });
-  if (error) return NextResponse.json({ error: error.message || "Unable to send quote" }, { status: 500 });
+      </div>`;
+  const subject=`${config.businessName} quotation ${job.reference}`;
+  let sentVia="resend", sentFrom="";
+  const google=await getValidGoogleConnection(session.token).catch(()=>null);
+  if(google){
+    await sendGmail(google.accessToken,{fromName:config.businessName,fromEmail:google.email,to:customer.email,replyTo:google.email,subject,html:emailHtml,attachment:{filename:fileName,content:pdf,mimeType:"application/pdf"}});
+    sentVia="gmail";sentFrom=google.email;
+  }else{
+    const verifiedSender=process.env.CRM_VERIFIED_FROM_EMAIL?.trim();
+    if(!verifiedSender&&config.tenantKey!=="mj-metal") return NextResponse.json({error:"Connect Google / Gmail in Integrations before sending email."},{status:503});
+    const senderEmail=verifiedSender||"info@mjmetal.co.uk"; sentFrom=senderEmail;
+    const { error } = await resend.emails.send({from:`${config.businessName} <${senderEmail}>`,to:[customer.email],replyTo:config.businessDetails.email,subject,attachments:[{filename:fileName,content:pdf}],html:emailHtml});
+    if(error)return NextResponse.json({error:error.message||"Unable to send quote"},{status:500});
+  }
 
   const sentAt = new Date().toISOString();
   await Promise.all([
     supabaseRequest(`/rest/v1/mj_quotes?id=eq.${encodeURIComponent(quote.id)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ status: "sent", sent_at: sentAt, pdf_path: storagePath }) }, session.token),
     supabaseRequest(`/rest/v1/mj_jobs?id=eq.${encodeURIComponent(job.id)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ status: "quote_sent", quote_sent_at: sentAt, next_action: "Follow up quote", updated_at: sentAt }) }, session.token),
     supabaseRequest("/rest/v1/mj_activities", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ job_id: job.id, activity_type: "email", actor: session.admin?.initials || session.accessUser?.name || session.accessUser?.email || "CRM user", summary: `Quotation V${quote.version} emailed with PDF attachment`, details: customer.email, occurred_at: sentAt }) }, session.token),
-    supabaseRequest("/rest/v1/mj_integration_events", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ job_id: job.id, source: "resend", event_type: "quote_sent", payload: { quote_id: quote.id, version: quote.version, to: customer.email, pdf_path: storagePath }, occurred_at: sentAt, processed_at: sentAt }) }, session.token),
+    supabaseRequest("/rest/v1/mj_integration_events", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ job_id: job.id, source: sentVia, event_type: "quote_sent", payload: { quote_id: quote.id, version: quote.version, to: customer.email, from: sentFrom, pdf_path: storagePath }, occurred_at: sentAt, processed_at: sentAt }) }, session.token),
   ]);
 
-  return NextResponse.json({ ok: true, sentTo: customer.email, sentAt, pdfPath: storagePath });
+  return NextResponse.json({ ok: true, sentTo: customer.email, sentFrom, sentVia, sentAt, pdfPath: storagePath });
 }
