@@ -48,7 +48,7 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
       email: config.businessDetails.email,
       website: config.businessDetails.website,
       vatRegistered: config.businessDetails.vatRegistered,
-      vatRate: Number(job.vat_rate || 0),
+      vatRate: Number(quote.vat_rate || 0),
       vatNumber: config.businessDetails.vatNumber,
       template: config.quoteTemplate,
       accentColour: config.accentColour,
