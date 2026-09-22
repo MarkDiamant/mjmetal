@@ -68,7 +68,8 @@ export default function CrmDashboardV3() {
   const [editingRef,setEditingRef]=useState<string|null>(null), [draft,setDraft]=useState<QuickDraft|null>(null), [savingRef,setSavingRef]=useState<string|null>(null), [customType,setCustomType]=useState("");
   const [editUpdatedAt,setEditUpdatedAt]=useState<string|null>(null), [remoteChanged,setRemoteChanged]=useState(false);
   const [assigningRef,setAssigningRef]=useState<string|null>(null), [removingAssignment,setRemovingAssignment]=useState<string|null>(null);
-  const [quickFull,setQuickFull]=useState<any>(null), [quoteOpen,setQuoteOpen]=useState(false), [quoteBusy,setQuoteBusy]=useState(false), [invoiceBusy,setInvoiceBusy]=useState(false), [fileBusy,setFileBusy]=useState(false);\n  const [quoteScope,setQuoteScope]=useState(""), [quoteExclusions,setQuoteExclusions]=useState("");
+  const [quickFull,setQuickFull]=useState<any>(null), [quoteOpen,setQuoteOpen]=useState(false), [quoteBusy,setQuoteBusy]=useState(false), [invoiceBusy,setInvoiceBusy]=useState(false), [fileBusy,setFileBusy]=useState(false);
+  const [quoteScope,setQuoteScope]=useState(""), [quoteExclusions,setQuoteExclusions]=useState("");
 
   const load = useCallback(async()=>{
     const [jr,dr,tr,sr]=await Promise.all([fetch("/api/admin/jobs",{cache:"no-store"}),fetch("/api/admin/dashboard",{cache:"no-store"}),fetch("/api/admin/job-types",{cache:"no-store"}),fetch("/api/admin/settings",{cache:"no-store"})]);
