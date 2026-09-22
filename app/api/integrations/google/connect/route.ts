@@ -8,7 +8,7 @@ export async function GET(request:Request){
   const origin=tenantOrigin(request.url);
   if(!session)return NextResponse.redirect(`${origin}/admin/login`);
   try{
-    const email=String(session.accessUser?.email||"").toLowerCase();
+    const email=String(session.accessUser?.email||session.user?.email||"").toLowerCase();
     if(!email)throw new Error("Signed-in user email unavailable");
     const {ts,sig}=signedTenantHandoff("mjmetal",origin,email);
     const url=new URL("https://diamantsolutions.co.uk/api/business-software/oauth/google/connect");
