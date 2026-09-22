@@ -5,6 +5,12 @@ export async function POST(_request: Request, { params }: { params: Promise<{ re
   const session = await requirePermission("view_pricing");
   if(session&&!session.permissions.includes("edit_jobs")) return NextResponse.json({error:"You do not have permission to draft quote wording"},{status:403});
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const settingsPath = "_crm/settings.json".split("/").map(encodeURIComponent).join("/");
+  const settingsResponse = await supabaseRequest(`/storage/v1/object/mj-job-files/${settingsPath}`, { method: "GET" }, session.token);
+  const settings = settingsResponse.ok ? await settingsResponse.json().catch(() => null) : null;
+  const aiEntitled = settings?.billing?.mode === "free" || settings?.plan?.aiIncluded === true;
+  if (!aiEntitled) return NextResponse.json({ error: "AI Assistant is not included in this Business Software subscription." }, { status: 403 });
+  if (settings?.ai?.enabled === false || settings?.ai?.textAssist === false) return NextResponse.json({ error: "AI text assistance is not enabled for this business." }, { status: 403 });
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "AI quote drafting is not configured yet. Add OPENAI_API_KEY in Vercel." }, { status: 503 });
   const { reference } = await params;
