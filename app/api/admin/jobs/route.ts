@@ -59,7 +59,9 @@ export async function GET(request: Request) {
     const person = personById.get(assignment.subcontractor_id) || {};
     const agreed = canCosts ? Number(assignment.agreed_cost || 0) : 0;
     const paid = canCosts ? Number(assignment.paid_amount || 0) : 0;
-    const deposit = canCosts ? Number(assignment.deposit_amount ?? (agreed * 0.5)) : 0;
+    // Older assignments can contain deposit_amount equal to the full agreed cost. Treat that legacy value as unset so the normal 50% rule applies.
+    const storedDeposit = canCosts && assignment.deposit_amount != null ? Number(assignment.deposit_amount) : null;
+    const deposit = canCosts ? (storedDeposit != null && storedDeposit >= 0 && storedDeposit < agreed ? storedDeposit : agreed * 0.5) : 0;
     assignmentsByJob.get(assignment.job_id)!.push({
       ...assignment,
       personName: person.name || "Person",
