@@ -67,7 +67,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         body: JSON.stringify({ expiresIn: 3600 }),
       }, session.token);
       const signedBody = signed.ok ? await signed.json() : null;
-      return { ...file, signed_url: signedBody?.signedURL || signedBody?.signedUrl || null };
+      const rawUrl = signedBody?.signedURL || signedBody?.signedUrl || null;
+      const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
+      const signedUrl = rawUrl && rawUrl.startsWith("/") && base ? `${base}/storage/v1${rawUrl.startsWith("/object/") ? "" : "/object"}${rawUrl}` : rawUrl;
+      return { ...file, signed_url: signedUrl };
     }));
 
     return NextResponse.json({
