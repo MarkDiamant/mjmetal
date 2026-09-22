@@ -8,6 +8,7 @@ export type CrmConfig = {
   workforceTitle: string;
   workforceSingular: string;
   workforceRoles: string[];
+  managers: Array<{value:string;label:string}>;
   workTypes: string[];
   finishOptions: string[];
   enquirySources: string[];
@@ -30,6 +31,7 @@ export const M_AND_J_TENANT_CONFIG: CrmConfig = {
   workforceTitle: "Fabricators / installers / subcontractors",
   workforceSingular: "team member",
   workforceRoles: ["Installer", "Engineer", "Technician", "Contractor", "Subcontractor", "Surveyor", "Project manager", "Fabricator", "Other"],
+  managers: [{value:"MD",label:"Mark"},{value:"JB",label:"Jonathan"}],
   workTypes: ["Driveway Gates","Commercial Gates","Gate Automation","Side Passage Gates","Bar Grille Doors","Security Window Grilles","Retractable Security Gates","Railings","Staircases","Fire Escapes","Bespoke Fabrication","Other"],
   finishOptions: ["Primed & painted","Spray painted","Powder coated","Galvanised","Zinc primer","Stainless steel","Brushed stainless","Polished stainless","Raw steel","Other"],
   enquirySources: ["WhatsApp","Email","Website","Phone","Referral","Existing Customer","We reached out","Other"],
@@ -62,6 +64,7 @@ export const SHARED_BUSINESS_SOFTWARE_DEFAULTS: CrmConfig = {
   workforceTitle: "Team",
   workforceSingular: "team member",
   workforceRoles: ["Engineer","Technician","Contractor","Subcontractor","Surveyor","Project manager","Electrician","Plumber","Carpenter","Builder","Cleaner","Driver","Consultant","Salesperson","Other"],
+  managers: [{value:"M1",label:"Manager 1"}],
   workTypes: ["Installation","Repair","Maintenance","Service","Survey","Consultation","Project","Other"],
   finishOptions: ["Standard","Other"],
   invoiceTemplate: "clean",
@@ -95,6 +98,7 @@ export function normaliseCrmConfig(value: Partial<CrmConfig> | null | undefined)
     finishOptions: Array.isArray(value?.finishOptions) && value!.finishOptions!.length ? value!.finishOptions! : DEFAULT_CRM_CONFIG.finishOptions,
     enquirySources: Array.isArray(value?.enquirySources) && value!.enquirySources!.length ? value!.enquirySources! : DEFAULT_CRM_CONFIG.enquirySources,
     fileCategories: Array.isArray(value?.fileCategories) && value!.fileCategories!.length ? value!.fileCategories! : DEFAULT_CRM_CONFIG.fileCategories,
+    managers: Array.isArray(value?.managers) && value!.managers!.length ? value!.managers! : DEFAULT_CRM_CONFIG.managers,
     workforceRoles: Array.isArray(value?.workforceRoles) && value!.workforceRoles!.length ? value!.workforceRoles! : DEFAULT_CRM_CONFIG.workforceRoles,
   };
 }
