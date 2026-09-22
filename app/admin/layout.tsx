@@ -7,7 +7,7 @@ import BillingAccessGate from "@/components/admin/BillingAccessGate";
 export const metadata: Metadata = {
   title: "Business Management Software",
   manifest: "/manifest.webmanifest",
-  applicationName: "M&J Metal",
+  applicationName: "M&J Metal Business Software",
   appleWebApp: { capable: true, title: "M&J", statusBarStyle: "default" },
   robots: {index:false,follow:false,nocache:true,googleBot:{index:false,follow:false,noimageindex:true}},
 };
