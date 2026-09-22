@@ -75,7 +75,7 @@ export default function QuotePrint({ reference, quoteId }: { reference: string; 
     <article className={`quote-page ${pageClass} mx-auto flex min-h-[1120px] max-w-[900px] flex-col bg-white px-10 py-9 shadow-xl sm:px-14`}>
       <header className={`flex items-start justify-between gap-8 ${headerClass}`}>
         <div><img src={crmConfig.logoUrl} alt={crmConfig.businessName} className="h-24 w-auto object-contain" />{isMj&&<p className="mt-2 text-xs font-black text-[var(--brand)]">Built Strong. Built to Last.</p>}</div>
-        <div className="text-right"><h1 className="text-3xl font-black uppercase tracking-tight">{isMj?"Professional Quotation & Project Proposal":"Quotation"}</h1><p className="mt-1 text-lg font-black text-[var(--brand)]">{j.reference} / V{quote.version}</p><p className="mt-1 text-xs text-black/55">Issued {new Date(quote.created_at).toLocaleDateString("en-GB")}{quote.valid_until ? ` · Valid until ${new Date(`${quote.valid_until}T12:00:00`).toLocaleDateString("en-GB")}` : ""}</p></div>
+        <div className="text-right"><h1 className="text-3xl font-black uppercase tracking-tight">{isMj ? "Professional Quotation & Project Proposal" : "Quotation"}</h1><p className="mt-1 text-lg font-black text-[var(--brand)]">{j.reference} / V{quote.version}</p><p className="mt-1 text-xs text-black/55">Issued {new Date(quote.created_at).toLocaleDateString("en-GB")}{quote.valid_until ? ` · Valid until ${new Date(`${quote.valid_until}T12:00:00`).toLocaleDateString("en-GB")}` : ""}</p></div>
       </header>
 
       <section className="mt-6 grid gap-6 sm:grid-cols-2">
