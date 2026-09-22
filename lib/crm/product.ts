@@ -32,3 +32,12 @@ export async function resolveCentralTenant(params:{slug?:string;host?:string}):P
     return body?.tenant||null;
   }catch{return null;}
 }
+
+export const M_AND_J_SOFTWARE_HOST="mjmetal.diamantsolutions.co.uk";
+export function isLegacySoftwareHost(host:string){
+  const h=String(host||"").split(":")[0].toLowerCase();
+  return h==="mjmetal.co.uk"||h==="www.mjmetal.co.uk";
+}
+export function canonicalSoftwareUrl(path="/admin"){
+  return `https://${M_AND_J_SOFTWARE_HOST}${path.startsWith("/")?path:"/"+path}`;
+}
