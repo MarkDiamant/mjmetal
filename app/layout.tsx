@@ -17,6 +17,8 @@ export const metadata: Metadata = {
   icons: { icon: [{ url: "/favicon.svg?v=4", type: "image/svg+xml" }], shortcut: "/favicon.svg?v=4", apple: "/images/logo.png?v=4" },
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}><body className="min-h-full flex flex-col">{children}<script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify({"@context":"https://schema.org","@type":"LocalBusiness",name:"M&J Metal Ltd",url:"https://mjmetal.co.uk",telephone:"+447784468113",email:"info@mjmetal.co.uk",identifier:"17330239",address:{"@type":"PostalAddress",streetAddress:"Office 6, 1st Floor, Sutherland House, 70–78 West Hendon Broadway",addressLocality:"London",postalCode:"NW9 7BT",addressCountry:"GB"}})}}/></body></html>;
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const host=(await headers()).get("host")?.split(":")[0].toLowerCase()||"";
+  const publicWebsite=host==="mjmetal.co.uk"||host==="www.mjmetal.co.uk";
+  return <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}><body className="min-h-full flex flex-col">{children}{publicWebsite&&<script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify({"@context":"https://schema.org","@type":"LocalBusiness",name:"M&J Metal Ltd",url:"https://mjmetal.co.uk",telephone:"+447784468113",email:"info@mjmetal.co.uk",identifier:"17330239",address:{"@type":"PostalAddress",streetAddress:"Office 6, 1st Floor, Sutherland House, 70–78 West Hendon Broadway",addressLocality:"London",postalCode:"NW9 7BT",addressCountry:"GB"}})}}/>}</body></html>;
 }
