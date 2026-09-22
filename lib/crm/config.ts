@@ -55,6 +55,23 @@ export const M_AND_J_TENANT_CONFIG: CrmConfig = {
   },
 };
 
+export const SHARED_BUSINESS_SOFTWARE_DEFAULTS: CrmConfig = {
+  ...M_AND_J_TENANT_CONFIG,
+  businessName: "Your Business",
+  logoUrl: "/favicon.svg",
+  workforceTitle: "Team",
+  workforceSingular: "team member",
+  workforceRoles: ["Engineer","Technician","Contractor","Subcontractor","Surveyor","Project manager","Electrician","Plumber","Carpenter","Builder","Cleaner","Driver","Consultant","Salesperson","Other"],
+  workTypes: ["Installation","Repair","Maintenance","Service","Survey","Consultation","Project","Other"],
+  finishOptions: ["Standard","Other"],
+  invoiceTemplate: "clean",
+  tenantKey: "new-tenant",
+  billing: { ...M_AND_J_TENANT_CONFIG.billing, mode:"paid" },
+  businessDetails: { ...M_AND_J_TENANT_CONFIG.businessDetails, phone:"", email:"", website:"", companyNumber:"", officeAddress:"", registeredAddress:"", bankName:"", accountNumber:"", sortCode:"", vatRegistered:false, vatNumber:"" },
+};
+
+// This live deployment is tenant #1. New tenants start from the shared defaults
+// and persist their own tenant configuration.
 export const DEFAULT_CRM_CONFIG = M_AND_J_TENANT_CONFIG;
 
 export function normaliseCrmConfig(value: Partial<CrmConfig> | null | undefined): CrmConfig {
