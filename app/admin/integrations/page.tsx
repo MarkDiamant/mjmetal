@@ -69,7 +69,6 @@ export default function IntegrationsPage() {
             ["Microsoft OneDrive","Link job documents and business files where useful.","Files"],
           ].map(([name,description,category])=><section key={name} className="rounded-2xl border border-black/10 bg-white p-5"><div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.12em] text-black/35">{category}</p><h2 className="mt-1 text-lg font-black">{name}</h2></div><span className="rounded-full bg-black/5 px-2.5 py-1 text-xs font-bold text-black/45">Planned</span></div><p className="mt-2 text-sm leading-6 text-black/55">{description}</p></section>)}
         </div>
-        <section className="mt-5 rounded-2xl border border-black/10 bg-white p-6"><h2 className="text-lg font-black">Email connections</h2><p className="mt-2 text-sm leading-6 text-black/55">Connect your business email to send quotes, invoices and messages directly from your usual email address.</p></section>
       </div>
     </main>
   );
