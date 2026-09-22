@@ -39,7 +39,7 @@ export default function QuotePrint({ reference, quoteId }: { reference: string; 
   const pageClass=isClassic?"font-serif":isMj?"":"";
   const headerClass=isClassic?"border-b border-black pb-5":isMj?"border-b-4 border-[var(--brand)] pb-5":"border-b-2 border-[var(--brand)] pb-5";
   const panelClass=isClassic?"border-y border-black/20 py-5":isMj?"rounded-xl bg-[#f5f5f2] p-5":"border border-[var(--brand)]/30 p-5";
-  const mailHref = `mailto:${encodeURIComponent(c.email || "")}?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(message)}`;
+  const mailHref = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(c.email || "")}&su=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(message)}`;
 
   async function copyWhatsApp() {
     await navigator.clipboard.writeText(message);
@@ -67,9 +67,9 @@ export default function QuotePrint({ reference, quoteId }: { reference: string; 
       {sentMessage && <span className="self-center rounded-lg bg-green-50 px-3 py-2 text-sm font-bold text-green-700">{sentMessage}</span>}
       <button onClick={() => document.getElementById("save-quote-pdf")?.click()} className="rounded-xl bg-[var(--brand)] px-4 py-2.5 text-sm font-black text-white">Save PDF</button>
       <button onClick={() => void sendQuote()} disabled={sending} className="rounded-xl bg-[#141414] px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">{sending ? "Sending..." : "Send quote by email"}</button>
-      <a href={mailHref} className="rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-bold">Open email draft</a>
+      <a href={mailHref} target="_blank" rel="noopener noreferrer" className="rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-bold">Open email draft</a>
       <button onClick={() => void copyWhatsApp()} className="rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-bold">Copy WhatsApp message</button>
-      <a href="/admin" className="rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-bold">Back to admin</a>
+      <a href={`/admin/jobs/${reference}`} className="rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-bold">Back to job</a><a href="/admin" className="rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-bold">Back to admin</a>
     </div>
 
     <article className={`quote-page ${pageClass} mx-auto flex min-h-[1120px] max-w-[900px] flex-col bg-white px-10 py-9 shadow-xl sm:px-14 ${isMj&&photos.length===0?"hidden":""}`}>
