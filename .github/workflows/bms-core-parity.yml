@@ -34,7 +34,7 @@ jobs:
           failed=0
           for rel in "${files[@]}"; do
             if [[ "$rel" == lib/* ]]; then local_path="lib/crm/${rel#lib/}"; else local_path="$rel"; fi
-            curl -fsSL "$base/$rel" -o /tmp/master-file
+            curl -fsSL "$base/$rel?run=${GITHUB_RUN_ID}" -o /tmp/master-file
             if ! cmp -s /tmp/master-file "$local_path"; then
               echo "::error file=$local_path::Shared BMS core differs from Diamant Solutions master ($rel). Make shared changes in diamant-solutions first, then sync M&J."
               failed=1
