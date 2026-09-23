@@ -55,7 +55,6 @@ export async function requireAdminToken() {
   const payload = decodeJwtPayload(token);
   if (!payload?.sub) return null;
   if (payload.exp && payload.exp * 1000 <= Date.now()) return null;
-  if (!payload.email || !(await activeBusinessSession(payload.email.toLowerCase()))) return null;
 
   const adminResponse = await supabaseRequest(
     `/rest/v1/mj_admin_users?user_id=eq.${encodeURIComponent(payload.sub)}&select=display_name,initials&limit=1`,
