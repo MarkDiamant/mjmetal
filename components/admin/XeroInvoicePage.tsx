@@ -13,6 +13,7 @@ export default function XeroInvoicePage({ reference }: { reference: string }) {
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [sharing,setSharing]=useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [crmConfig,setCrmConfig]=useState(DEFAULT_CRM_CONFIG);
@@ -48,6 +49,38 @@ export default function XeroInvoicePage({ reference }: { reference: string }) {
     await load(); setBusy(false);
   }
 
+  async function shareInvoice(invoice:any,action:"draft"|"send"|"whatsapp"){
+    if(sharing)return;
+    if(action==="send"&&String(invoice.status).toUpperCase()==="DRAFT"){setError("Approve the invoice in Xero and sync its status before sending.");return;}
+    setSharing(action);setError("");setMessage("");
+    try{
+      const base=`/api/admin/jobs/${encodeURIComponent(reference)}/invoice-share`;
+      if(action==="whatsapp"){
+        const response=await fetch(`${base}?invoiceId=${encodeURIComponent(invoice.id)}`,{cache:"no-store"});
+        if(!response.ok){const b=await response.json().catch(()=>({}));throw new Error(b.error||"Could not retrieve invoice PDF");}
+        const blob=await response.blob(),file=new File([blob],`${invoice.invoice_number||reference}-Invoice.pdf`,{type:"application/pdf"});
+        const raw=String(jobData?.customer?.mobile||jobData?.customer?.phone||"").trim();const digits=raw.replace(/[^\\d+]/g,"");
+        let number=digits.startsWith("+")?digits.slice(1):digits.startsWith("00")?digits.slice(2):digits.startsWith("0")?"44"+digits.slice(1):digits;
+        if(!/^\\d{8,15}$/.test(number))number="";
+        const text=`Hello ${jobData?.customer?.first_name||""}, please find attached invoice ${invoice.invoice_number||reference} from ${crmConfig.businessName}. If you have any questions, please let us know.`;
+        if(navigator.share&&navigator.canShare?.({files:[file]})){
+          const choice=window.confirm(number?`Share PDF using your phone's share menu? Choose WhatsApp and select ${raw}. Cancel to open WhatsApp with this number and message, then attach the downloaded PDF.`:"Share PDF using your phone's share menu? Choose WhatsApp and select a contact. Cancel to open WhatsApp with the message and attach the downloaded PDF.");
+          if(choice){try{await navigator.share({files:[file],text,title:`Invoice ${invoice.invoice_number||reference}`});return;}catch(e){if((e as DOMException)?.name==="AbortError")return;}}
+        }
+        const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=file.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+        await navigator.clipboard.writeText(text).catch(()=>{});
+        const target=`https://wa.me/${number}?text=${encodeURIComponent(text)}`;
+        const opened=window.open(target,"_blank","noopener,noreferrer");if(!opened)window.location.assign(target);
+        setMessage("Invoice PDF downloaded. Attach it in WhatsApp, review the recipient and press Send.");
+      }else{
+        const response=await fetch(base,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({invoiceId:invoice.id,action})});
+        const result=await response.json().catch(()=>({}));if(!response.ok)throw new Error(result.error||"Invoice email failed");
+        setMessage(action==="draft"?"Invoice email draft created in connected Gmail with PDF attached. Open Gmail to review it.":`Invoice emailed with PDF to ${result.to}.`);
+      }
+    }catch(e){setError(e instanceof Error?e.message:"Could not share invoice");}
+    finally{setSharing("");}
+  }
+
   if (loading && !jobData) return <main className="min-h-screen bg-[#f5f5f2] p-10 text-center">Loading Xero...</main>;
   const job = jobData?.job || {};
   const customer = jobData?.customer || {};
@@ -71,6 +104,7 @@ export default function XeroInvoicePage({ reference }: { reference: string }) {
 
       <section className="invoice-controls mt-6 rounded-2xl border border-black/10 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
         <div className="grid gap-4 sm:grid-cols-3"><div><p className="text-xs font-bold uppercase text-black/45">Customer</p><p className="mt-1 font-black">{name}</p></div><div><p className="text-xs font-bold uppercase text-black/45">Final quote</p><p className="mt-1 text-xl font-black">{money(amount)}</p><p className="mt-1 text-xs text-black/45">{crmConfig.businessDetails.vatRegistered?"VAT charged according to business settings":"VAT not charged"}</p></div><div><p className="text-xs font-bold uppercase text-black/45">CRM reference</p><p className="mt-1 font-black text-[var(--invoice-accent)]">{reference}</p></div></div>
+        {invoices.length>0&&<div className="mt-6 rounded-xl border border-black/10 bg-[#f7f7f4] p-4"><p className="mb-3 text-sm font-black">Send or share invoice</p><div className="flex flex-wrap gap-2"><button disabled={!!sharing} onClick={()=>void shareInvoice(invoices[0],"draft")} className="rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-bold disabled:opacity-50">Create Gmail draft</button><button disabled={!!sharing||String(invoices[0].status).toUpperCase()==="DRAFT"} onClick={()=>void shareInvoice(invoices[0],"send")} className="rounded-xl bg-[var(--invoice-accent)] px-4 py-2.5 text-sm font-bold text-white disabled:opacity-40">Email invoice directly</button><button disabled={!!sharing} onClick={()=>void shareInvoice(invoices[0],"whatsapp")} className="rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-bold disabled:opacity-50">Share via WhatsApp</button></div><p className="mt-2 text-xs text-black/55">Uses the PDF supplied by Xero. Approve draft invoices in Xero before direct emailing. WhatsApp always requires you to review and send.</p></div>}
         <div className="mt-6 flex flex-wrap gap-3">
           {invoices.length === 0 ? <button disabled={busy || amount <= 0} onClick={() => void action("create")} className="rounded-xl bg-[var(--invoice-accent)] px-5 py-3 text-sm font-black text-white disabled:opacity-50">Create Xero invoice draft</button> : <button disabled={busy} onClick={() => void action("sync")} className="rounded-xl bg-[var(--invoice-accent)] px-5 py-3 text-sm font-black text-white disabled:opacity-50">Sync status from Xero</button>}
         </div>
