@@ -122,9 +122,9 @@ function DashboardEnhancer() {
       if (!card) {
         card = document.createElement("div");
         card.dataset.lostJobValue = "1";
-        card.className = "rounded-xl bg-red-50 p-3";
+        card.className = "rounded-xl border border-red-100 bg-red-50 px-3 py-2";
         card.innerHTML =
-          '<p class="text-[10px] font-black uppercase tracking-[0.08em] text-black/40">Lost job value</p><p data-lost-job-value-amount class="mt-1 text-xl font-black text-red-700"></p>';
+          '<p class="text-[9px] font-black uppercase tracking-[0.07em] text-black/40">Lost job value</p><p data-lost-job-value-amount class="mt-0.5 text-base font-black text-red-700"></p>';
         grid.appendChild(card);
       }
 
