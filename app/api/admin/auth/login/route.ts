@@ -39,10 +39,10 @@ export async function POST(request: Request) {
 
     const actorEmail=String(session.user.email||email).toLowerCase(),origin=new URL(request.url).origin;
     const {ts,sig}=signedTenantHandoff("mjmetal",origin,actorEmail);
-    const central=await fetch("https://diamantsolutions.co.uk/api/business-software/tenants/mjmetal/session",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"issue",origin,email:actorEmail,ts,sig}),cache:"no-store"});
+    const central=await fetch("https://diamantsolutions.co.uk/api/business-software/tenant",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({slug:"mjmetal"}),cache:"no-store"});
     const centralBody=await central.json().catch(()=>({}));
-    if(!central.ok||!centralBody.sessionToken)return NextResponse.json({error:"Unable to start secure business session"},{status:503});
-    await setSessionCookies(session.access_token, session.refresh_token, session.expires_in,centralBody.sessionToken);
+    if(!central.ok||centralBody?.tenant?.slug!=="mjmetal")return NextResponse.json({error:"Unable to start secure business session"},{status:503});
+    await setSessionCookies(session.access_token, session.refresh_token, session.expires_in);
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: "Unable to sign in" }, { status: 500 });
