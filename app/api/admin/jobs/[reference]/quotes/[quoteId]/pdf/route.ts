@@ -129,3 +129,24 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: error instanceof Error ? error.message : "Could not generate PDF" }, { status: 500 });
   }
 }
+
+// Return only the PDF belonging to this authenticated job and quote. Never expose a public storage URL.
+export async function GET(_request:NextRequest,{params}:{params:Promise<{reference:string;quoteId:string}>}){
+ const session=await requirePermission("view_pricing");
+ if(!session)return NextResponse.json({error:"Unauthorized"},{status:401});
+ try{
+  const {reference,quoteId}=await params;
+  const jr=await supabaseRequest(`/rest/v1/mj_jobs?reference=eq.${encodeURIComponent(reference)}&select=id,reference&limit=1`,{},session.token);
+  if(!jr.ok)return NextResponse.json({error:"Could not load job"},{status:502});
+  const job=(await jr.json())[0];if(!job)return NextResponse.json({error:"Job not found"},{status:404});
+  const qr=await supabaseRequest(`/rest/v1/mj_quotes?id=eq.${encodeURIComponent(quoteId)}&job_id=eq.${encodeURIComponent(job.id)}&select=pdf_path&limit=1`,{},session.token);
+  if(!qr.ok)return NextResponse.json({error:"Could not load quotation"},{status:502});
+  const quote=(await qr.json())[0];if(!quote)return NextResponse.json({error:"Quote not found"},{status:404});
+  const path=String(quote.pdf_path||"");
+  if(!path||!path.startsWith(`${job.id}/quotes/`)||!path.toLowerCase().endsWith(".pdf"))return NextResponse.json({error:"Save the quotation PDF before sharing it."},{status:409});
+  const stored=await supabaseRequest(`/storage/v1/object/mj-job-files/${path.split("/").map(encodeURIComponent).join("/")}`,{},session.token);
+  if(!stored.ok)return NextResponse.json({error:"Could not load quotation PDF"},{status:502});
+  const bytes=await stored.arrayBuffer();
+  return new NextResponse(bytes,{headers:{"Content-Type":"application/pdf","Content-Disposition":`attachment; filename="${job.reference.replace(/[^a-zA-Z0-9_-]/g,"")}-Quote.pdf"`,"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff"}});
+ }catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Could not load PDF"},{status:500});}
+}
