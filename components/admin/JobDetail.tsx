@@ -31,6 +31,7 @@ export default function JobDetail({reference}:{reference:string}){
   const [error,setError]=useState("");
   const [message,setMessage]=useState("");
   const [crmConfig,setCrmConfig]=useState<CrmConfig>(DEFAULT_CRM_CONFIG);
+  const [selectedStatus,setSelectedStatus]=useState("");
 
   const fetchFull=useCallback(async()=>{setFullLoading(true);const res=await fetch(`/api/admin/jobs/${encodeURIComponent(reference)}`,{cache:"no-store"});if(res.status===401){window.location.href="/admin/login";return;}const body=await res.json();if(res.ok){setData(body);setSelectedStatus(String(body?.job?.status||""));}else setError(body.error||"Could not load job");setFullLoading(false);},[reference]);
   const load=useCallback(async()=>{setLoading(true);setError("");const res=await fetch(`/api/admin/jobs/${encodeURIComponent(reference)}?mode=core`,{cache:"no-store"});if(res.status===401){window.location.href="/admin/login";return;}const body=await res.json();if(!res.ok)setError(body.error||"Could not load job");else{setData(body);setSelectedStatus(String(body?.job?.status||""));void fetchFull();}setLoading(false);},[reference,fetchFull]);
