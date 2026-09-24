@@ -39,9 +39,6 @@ export default function QuotePdfActions({ reference, quoteId }: { reference: str
       const images=[] as {data:Uint8Array;width:number;height:number}[];
       for(const page of pages){const canvas=await window.html2canvas(page,{scale:2,useCORS:true,backgroundColor:"#ffffff",logging:false});images.push({data:await jpegBytes(canvas),width:canvas.width,height:canvas.height});}
       const pdf=pdfFromPages(images),blob=new Blob([pdf],{type:"application/pdf"});
-
-      const response=await fetch(`/api/admin/jobs/${encodeURIComponent(reference)}/quotes/${encodeURIComponent(quoteId)}/pdf`,{method:"POST",headers:{"Content-Type":"application/pdf"},body:blob});
-      const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.error||"Could not save PDF");
       const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`${reference}-Quote.pdf`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 
     }catch(e){alert(e instanceof Error?e.message:"Could not create PDF");}
