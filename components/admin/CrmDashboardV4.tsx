@@ -196,7 +196,7 @@ function DashboardEnhancer() {
         const link = document.createElement("a");
         link.dataset.expandedActivity = "1";
         link.href = (activity.job?.reference||activity.mj_jobs?.reference)
-          ? `/admin/jobs/${encodeURIComponent(activity.mj_jobs.reference)}`
+          ? `/admin/jobs/${encodeURIComponent(activity.job?.reference||activity.mj_jobs?.reference||"")}`
           : "/admin";
         link.className = "block border-b border-black/8 px-3 py-3 last:border-b-0 hover:bg-[#fffaf6]";
 
