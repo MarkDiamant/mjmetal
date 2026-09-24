@@ -58,14 +58,13 @@ const NEXT_ACTION_OPTIONS = [
 
 export default function CrmDashboardV3() {
   const router = useRouter();
-  const initial=(()=>{if(typeof window==="undefined")return null;try{return JSON.parse(sessionStorage.getItem("bms-dashboard-data")||"null")}catch{return null}})();
-  const [jobs,setJobs]=useState<any[]>(initial?.jobs||[]), [people,setPeople]=useState<any[]>(initial?.people||[]), [activities,setActivities]=useState<any[]>(initial?.activities||[]);
+  const [jobs,setJobs]=useState<any[]>([]), [people,setPeople]=useState<any[]>([]), [activities,setActivities]=useState<any[]>([]);
   const [crmConfig,setCrmConfig]=useState<CrmConfig>(DEFAULT_CRM_CONFIG);
   const [jobTypeOptions,setJobTypeOptions]=useState<JobTypeOption[]>([]);
   const [jobTypeSort,setJobTypeSort]=useState<"popular"|"az">("popular");
   const [workTypesOpen,setWorkTypesOpen]=useState(false);
   const [sortMode,setSortMode]=useState<SortMode>("number_desc");
-  const [admin,setAdmin]=useState<any>(initial?.admin||null), [permissions,setPermissions]=useState<string[]>(initial?.permissions||[]), [loading,setLoading]=useState(!initial), [error,setError]=useState(""), [flash,setFlash]=useState("");
+  const [admin,setAdmin]=useState<any>(null), [permissions,setPermissions]=useState<string[]>([]), [loading,setLoading]=useState(true), [error,setError]=useState(""), [flash,setFlash]=useState("");
   const [query,setQuery]=useState(""), [status,setStatus]=useState<JobStatus|"all">("all"), [manager,setManager]=useState<Manager|"all">("all"), [type,setType]=useState("all");
   const [pageSize,setPageSize]=useState(25), [page,setPage]=useState(1);
   const [editingRef,setEditingRef]=useState<string|null>(null), [draft,setDraft]=useState<QuickDraft|null>(null), [savingRef,setSavingRef]=useState<string|null>(null), [customType,setCustomType]=useState("");
@@ -81,7 +80,7 @@ export default function CrmDashboardV3() {
     if(!jr.ok){setError(jb.error||"Unable to load CRM");setLoading(false);return;}
     if(sr.ok){const sb=await sr.json().catch(()=>({}));if(sb.settings)setCrmConfig(sb.settings);}setJobs(jb.jobs||[]);setPeople(jb.people||[]);setActivities(db.activities||[]);setAdmin(jb.admin||db.admin||null);setPermissions(jb.permissions||[]);setJobTypeOptions(tb.options||[]);try{sessionStorage.setItem("bms-dashboard-data",JSON.stringify({jobs:jb.jobs||[],people:jb.people||[],activities:db.activities||[],admin:jb.admin||db.admin||null,permissions:jb.permissions||[]}))}catch{}setLoading(false);
   },[router]);
-  useEffect(()=>{void load();},[load]);
+  useEffect(()=>{try{const cached=JSON.parse(sessionStorage.getItem("bms-dashboard-data")||"null");if(cached){setJobs(cached.jobs||[]);setPeople(cached.people||[]);setActivities(cached.activities||[]);setAdmin(cached.admin||null);setPermissions(cached.permissions||[]);setLoading(false);}}catch{}void load();},[load]);
   useEffect(()=>{const timer=window.setInterval(async()=>{if(savingRef)return;if(!editingRef){void load();return;}const res=await fetch("/api/admin/jobs",{cache:"no-store"});if(!res.ok)return;const body=await res.json().catch(()=>({}));const latest=(body.jobs||[]).find((x:any)=>x.reference===editingRef);if(latest&&editUpdatedAt&&latest.updatedAt&&latest.updatedAt!==editUpdatedAt&&Date.now()-new Date(latest.updatedAt).getTime()>5000){setRemoteChanged(true);setRemoteChangedBy(latest.lastChangedBy||null);}},3000);return()=>window.clearInterval(timer);},[load,editingRef,savingRef,editUpdatedAt]);
   useEffect(()=>{const saved=window.sessionStorage.getItem("mj-crm-sort") as SortMode|null;if(saved)setSortMode(saved);},[]);
   useEffect(()=>{window.sessionStorage.setItem("mj-crm-sort",sortMode);},[sortMode]);
