@@ -220,10 +220,7 @@ export default function CrmDashboardV3() {
     }
     const refreshed=await loadQuickFull(j.reference);if(refreshed?.job?.updated_at)setEditUpdatedAt(refreshed.job.updated_at);
     const latest=await fetch("/api/admin/jobs",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null);
-    if(latest){
-      setActivities(prev=>{const server=latest.activities||[];return server.length?server:prev;});
-      setPeople(latest.people||[]);setJobTypeOptions(latest.jobTypeOptions||[]);
-    }
+    if(latest){setPeople(latest.people||[]);setJobTypeOptions(latest.jobTypeOptions||[]);}
     setSavingRef(null);setRemoteChanged(false);setRemoteChangedBy(null);setFlash(`✓ ${j.reference} saved`);setTimeout(()=>setFlash(""),2600);
   }
   async function postAction(reference:string,payload:Record<string,unknown>){setSavingRef(reference);const res=await fetch(`/api/admin/jobs/${encodeURIComponent(reference)}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});const body=await res.json().catch(()=>({}));setSavingRef(null);if(!res.ok){setFlash(body.error||"Could not save");return false;}await load();setFlash(`${reference} updated`);setTimeout(()=>setFlash(""),1800);return true;}
