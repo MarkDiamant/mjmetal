@@ -8,7 +8,7 @@ import { DEFAULT_CRM_CONFIG, type CrmConfig } from "@/lib/crm/config";
 import DiamantCredit from "@/components/admin/DiamantCredit";
 
 function money(value?: number | string) { return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(Number(value || 0)); }
-function when(value?: string) { return value ? new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value)) : "Not set"; }
+function when(value?: string) { return value ? new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", hour:"2-digit", minute:"2-digit" }).format(new Date(value)) : "Not set"; }
 function localInput(value?: string) { if (!value) return ""; const d = new Date(value); const p=(n:number)=>String(n).padStart(2,"0"); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; }
 function iso(value?: string) { return value ? new Date(value).toISOString() : null; }
 function suggestedDue(days=3) { const d=new Date(); d.setDate(d.getDate()+days); d.setHours(9,0,0,0); return localInput(d.toISOString()); }
@@ -220,7 +220,7 @@ export default function CrmDashboardV3() {
     }
     const refreshed=await loadQuickFull(j.reference);if(refreshed?.job?.updated_at)setEditUpdatedAt(refreshed.job.updated_at);
     const latest=await fetch("/api/admin/jobs",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null);
-    if(latest){setPeople(latest.people||[]);setJobTypeOptions(latest.jobTypeOptions||[]);}
+    if(latest){setJobs(latest.jobs||[]);setPeople(latest.people||[]);setActivities(latest.activities||[]);setJobTypeOptions(latest.jobTypeOptions||[]);try{sessionStorage.setItem("bms-dashboard-data",JSON.stringify({jobs:latest.jobs||[],people:latest.people||[],activities:latest.activities||[],admin:latest.admin||admin,permissions:latest.permissions||permissions}))}catch{}}
     setSavingRef(null);setRemoteChanged(false);setRemoteChangedBy(null);setFlash(`✓ ${j.reference} saved`);setTimeout(()=>setFlash(""),2600);
   }
   async function postAction(reference:string,payload:Record<string,unknown>){setSavingRef(reference);const res=await fetch(`/api/admin/jobs/${encodeURIComponent(reference)}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});const body=await res.json().catch(()=>({}));setSavingRef(null);if(!res.ok){setFlash(body.error||"Could not save");return false;}await load();setFlash(`${reference} updated`);setTimeout(()=>setFlash(""),1800);return true;}
