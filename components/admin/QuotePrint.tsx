@@ -54,30 +54,16 @@ ${crmConfig.businessName}`;
   async function shareWhatsApp() {
     if(whatsAppBusy)return;
     setWhatsAppBusy(true);
-    try {
-      const response=await fetch(`/api/admin/jobs/${encodeURIComponent(reference)}/quotes/${encodeURIComponent(quote.id)}/pdf`,{cache:"no-store"});
-      if(!response.ok){const body=await response.json().catch(()=>({}));throw new Error(body.error||"Could not load quote PDF");}
-      const blob=await response.blob();
-      const file=new File([blob],`${j.reference}-Quote.pdf`,{type:"application/pdf"});
+    try{
+      document.getElementById("save-quote-pdf")?.click();
       const raw=String(c.mobile||c.mobile_phone||c.phone||"").trim();
-      // UK numbers use +44; international numbers must include their country code.
       const digits=raw.replace(/[^\\d+]/g,"");
       let number=digits.startsWith("+")?digits.slice(1):digits.startsWith("00")?digits.slice(2):digits.startsWith("0")?"44"+digits.slice(1):digits;
       if(!/^\\d{8,15}$/.test(number))number="";
       const whatsappUrl=`https://wa.me/${number}?text=${encodeURIComponent(message)}`;
-      // Native sharing can pass the PDF and message, but cannot reliably preselect a WhatsApp recipient.
-      if(navigator.share && navigator.canShare?.({files:[file]})){
-        const choice=window.confirm(number
-          ?`Share the PDF using your phone's share menu? Choose WhatsApp and select ${raw} as the recipient. Press Cancel to open WhatsApp with the customer's number and prepared message instead (attach the downloaded PDF manually).`
-          :"Share the PDF using your phone's share menu? Choose WhatsApp and select a contact. Press Cancel to open WhatsApp with the prepared message instead (attach the downloaded PDF manually).");
-        if(choice){try{await navigator.share({files:[file],text:message,title:`Quotation ${j.reference}`});return;}catch(error){if((error as DOMException)?.name==="AbortError")return;}}
-      }
-      // Browser WhatsApp links support recipient and text, not file attachments.
-      const url=URL.createObjectURL(blob),link=document.createElement("a");link.href=url;link.download=file.name;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
-      const copied=await navigator.clipboard.writeText(message).then(()=>true).catch(()=>false);
-      const opened=window.open(whatsappUrl,"_blank","noopener,noreferrer");
-      if(!opened)window.location.assign(whatsappUrl);
-      alert(`Quotation PDF downloaded. ${copied?"The message was also copied. ":""}Attach the PDF in WhatsApp, check the recipient and press Send.`);
+      await navigator.clipboard.writeText(message).catch(()=>{});
+      setTimeout(()=>{const opened=window.open(whatsappUrl,"_blank","noopener,noreferrer");if(!opened)window.location.assign(whatsappUrl);},350);
+      alert("The quotation PDF is downloading. Attach it in WhatsApp, check the recipient and press Send.");
     }catch(error){alert(error instanceof Error?error.message:"Could not prepare WhatsApp share");}
     finally{setWhatsAppBusy(false);}
   }
