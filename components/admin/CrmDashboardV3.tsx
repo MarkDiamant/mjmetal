@@ -187,7 +187,7 @@ export default function CrmDashboardV3() {
     if(!draft&&Object.keys(overrides).length===0)return;
     if(remoteChanged){setFlash("This job was updated by someone else. Load their changes before saving.");return;}
     const savedDraft=draft?{...draft}:null;
-    const previousStatus=String(j.status||"");\n    const previousNext=String(j.nextAction||"");
+    const previousStatus=String(j.status||"");
     setSavingRef(j.reference);
     const customer:Record<string,unknown>={},job:Record<string,unknown>={...overrides};
     if(savedDraft){
@@ -214,18 +214,9 @@ export default function CrmDashboardV3() {
     const savedUpdated=body?.job?.updated_at||new Date().toISOString();
     setJobs(prev=>prev.map(x=>x.reference===j.reference?{...x,status:savedStatus,nextAction:savedNext,nextActionAt:savedNextAt,updatedAt:savedUpdated}:x));
     if(savedDraft)setDraft(d=>d?{...d,status:savedStatus as JobStatus}:d);
-    const actor=admin?.name||admin?.initials||admin?.email||"BMS user";
-    const nextChanged=String(savedNext||"")!==previousNext;
-    if(savedStatus&&savedStatus!==previousStatus){
-      const activity={id:`local-${Date.now()}`,activity_type:"status",actor,summary:actor+" changed status to "+statusLabel(savedStatus),details:"Previous status: "+statusLabel(previousStatus),occurred_at:new Date().toISOString(),job:{reference:j.reference}};
-      setActivities(prev=>[activity,...prev]);
-    }else if(nextChanged){
-      const activity={id:`local-${Date.now()}`,activity_type:"note",actor,summary:actor+" changed next action"+(savedNext?" to "+String(savedNext):""),details:null,occurred_at:new Date().toISOString(),job:{reference:j.reference}};
-      setActivities(prev=>[activity,...prev]);
-    }
     const refreshed=await loadQuickFull(j.reference);if(refreshed?.job?.updated_at)setEditUpdatedAt(refreshed.job.updated_at);
     const latest=await fetch("/api/admin/jobs",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null);
-    if(latest){setJobs(prev=>(latest.jobs||[]).map((x:any)=>x.reference===j.reference?{...x,status:savedStatus,nextAction:savedNext,nextActionAt:savedNextAt,updatedAt:savedUpdated}:x));setPeople(latest.people||[]);setActivities(prev=>{const server=latest.activities||[],local=prev.filter((a:any)=>String(a.id||"").startsWith("local-"));return [...local,...server.filter((a:any)=>!local.some((l:any)=>l.summary===a.summary&&(l.job?.reference||l.mj_jobs?.reference)===(a.job?.reference||a.mj_jobs?.reference)))]});setJobTypeOptions(latest.jobTypeOptions||[]);try{sessionStorage.setItem("bms-dashboard-data",JSON.stringify({jobs:latest.jobs||[],people:latest.people||[],activities:latest.activities||[],admin:latest.admin||admin,permissions:latest.permissions||permissions}))}catch{}}
+    if(latest){setJobs((latest.jobs||[]).map((x:any)=>x.reference===j.reference?{...x,status:savedStatus,nextAction:savedNext,nextActionAt:savedNextAt,updatedAt:savedUpdated}:x));setPeople(latest.people||[]);setActivities(latest.activities||[]);setJobTypeOptions(latest.jobTypeOptions||[]);try{sessionStorage.setItem("bms-dashboard-data",JSON.stringify({jobs:latest.jobs||[],people:latest.people||[],activities:latest.activities||[],admin:latest.admin||admin,permissions:latest.permissions||permissions}))}catch{}}
     setSavingRef(null);setRemoteChanged(false);setRemoteChangedBy(null);setFlash(`✓ ${j.reference} saved`);setTimeout(()=>setFlash(""),2600);
   }
   async function postAction(reference:string,payload:Record<string,unknown>){setSavingRef(reference);const res=await fetch(`/api/admin/jobs/${encodeURIComponent(reference)}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});const body=await res.json().catch(()=>({}));setSavingRef(null);if(!res.ok){setFlash(body.error||"Could not save");return false;}await load();setFlash(`${reference} updated`);setTimeout(()=>setFlash(""),1800);return true;}
