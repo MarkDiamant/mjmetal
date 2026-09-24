@@ -48,7 +48,6 @@ type DashboardActivity = {
   summary?: string;
   details?: string | null;
   mj_jobs?: { reference?: string } | null;
-  job?: { reference?: string } | null;
 };
 
 type SubPayment = {
@@ -64,6 +63,9 @@ function DashboardEnhancer() {
   useEffect(() => {
     let cancelled = false;
     let running = false;
+    let dashboardActivities: DashboardActivity[] = [];
+    let lastDashboardFetch = 0;
+    let activityExpanded = false;
 
     const applyRowHighlights = (jobs: JobSummary[]) => {
       const rowButtons = Array.from(
@@ -95,6 +97,118 @@ function DashboardEnhancer() {
           row.style.removeProperty("background-color");
           delete card.dataset.workflowHighlight;
         }
+      }
+    };
+
+    const applyMoneyOverview = (jobs: JobSummary[]) => {
+      const heading = Array.from(document.querySelectorAll<HTMLHeadingElement>("h2")).find(
+        (node) => node.textContent?.trim() === "Money overview",
+      );
+      const section = heading?.closest<HTMLElement>("section");
+      if (!section) return;
+
+      const grid = section.querySelector<HTMLElement>(".mt-3.grid");
+      if (!grid) return;
+
+      const lostValue = jobs
+        .filter((job) => ["declined", "cancelled"].includes(String(job.status || "")))
+        .reduce(
+          (sum, job) =>
+            sum + Number(job.agreedAmount ?? job.quotedAmount ?? job.preliminaryEstimate ?? 0),
+          0,
+        );
+
+      let card = grid.querySelector<HTMLElement>("[data-lost-job-value]");
+      if (!card) {
+        card = document.createElement("div");
+        card.dataset.lostJobValue = "1";
+        card.className = "flex min-h-[72px] flex-col items-center justify-center rounded-xl border border-black/8 bg-[#f7f7f4] px-3 py-2.5 text-center";
+        card.innerHTML =
+          '<p class="text-[9px] font-black uppercase tracking-[0.07em] text-black/40">Lost job value</p><p data-lost-job-value-amount class="mt-0.5 text-lg font-black text-red-700"></p>';
+        grid.appendChild(card);
+      }
+
+      const amount = card.querySelector<HTMLElement>("[data-lost-job-value-amount]");
+      if (amount) amount.textContent = money(lostValue);
+    };
+
+    const applyActivityTimes = (activities: DashboardActivity[]) => {
+      const heading = Array.from(document.querySelectorAll<HTMLHeadingElement>("h2")).find(
+        (node) => node.textContent?.trim() === "Recent activity",
+      );
+      const section = heading?.closest<HTMLElement>("section");
+      if (!section) return;
+
+      const links = Array.from(section.querySelectorAll<HTMLAnchorElement>("a.block"))
+        .filter((link) => !link.dataset.expandedActivity);
+      const visible = activities.slice(0, links.length);
+      links.forEach((link, index) => {
+        const activity = visible[index];
+        if (!activity) return;
+        const meta = link.querySelector<HTMLElement>("span.text-xs");
+        if (!meta) return;
+        const reference = activity.mj_jobs?.reference || "CRM";
+        const text = `${reference} · ${dateTimeLabel(activity.occurred_at)}`;
+        if (meta.textContent !== text) meta.textContent = text;
+      });
+
+      const extra = activities.slice(links.length);
+      let toggle = section.querySelector<HTMLButtonElement>("[data-activity-toggle]");
+      let history = section.querySelector<HTMLElement>("[data-activity-history]");
+
+      if (!extra.length) {
+        toggle?.remove();
+        history?.remove();
+        return;
+      }
+
+      if (!toggle) {
+        toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.dataset.activityToggle = "1";
+        toggle.className = "mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-black/10 bg-white px-3 py-2 text-xs font-black hover:bg-black/[0.03]";
+        toggle.onclick = () => {
+          activityExpanded = !activityExpanded;
+          const panel = section.querySelector<HTMLElement>("[data-activity-history]");
+          if (panel) panel.style.display = activityExpanded ? "block" : "none";
+          if (toggle) toggle.textContent = activityExpanded ? "Show less ↑" : `Show more (${extra.length}) ↓`;
+        };
+        section.appendChild(toggle);
+      }
+      toggle.textContent = activityExpanded ? "Show less ↑" : `Show more (${extra.length}) ↓`;
+
+      if (!history) {
+        history = document.createElement("div");
+        history.dataset.activityHistory = "1";
+        history.className = "mt-2 max-h-[430px] overflow-y-auto rounded-xl border border-black/10 bg-white";
+        section.appendChild(history);
+      }
+      history.style.display = activityExpanded ? "block" : "none";
+
+      const signature = extra.map((item) => `${item.id || ""}:${item.occurred_at || ""}`).join("|");
+      if (history.dataset.signature === signature) return;
+      history.dataset.signature = signature;
+      history.replaceChildren();
+
+      for (const activity of extra) {
+        const reference = activity.mj_jobs?.reference || "CRM";
+        const link = document.createElement("a");
+        link.dataset.expandedActivity = "1";
+        link.href = activity.mj_jobs?.reference
+          ? `/admin/jobs/${encodeURIComponent(activity.mj_jobs.reference)}`
+          : "/admin";
+        link.className = "block border-b border-black/8 px-3 py-3 last:border-b-0 hover:bg-[#fffaf6]";
+
+        const summary = document.createElement("b");
+        summary.className = "block text-xs leading-5";
+        summary.textContent = activity.summary || "CRM activity";
+
+        const meta = document.createElement("span");
+        meta.className = "mt-0.5 block text-xs text-black/45";
+        meta.textContent = `${reference} · ${dateTimeLabel(activity.occurred_at)}`;
+
+        link.append(summary, meta);
+        history.appendChild(link);
       }
     };
 
@@ -272,7 +386,19 @@ function DashboardEnhancer() {
         const body = await response.json();
         const jobs = (body.jobs || []) as JobSummary[];
         applyRowHighlights(jobs);
+        applyMoneyOverview(jobs);
         applyDueLines(jobs);
+
+        const now = Date.now();
+        if (!dashboardActivities.length || now - lastDashboardFetch > 5000) {
+          const dashboardResponse = await fetch("/api/admin/dashboard", { cache: "no-store" });
+          if (dashboardResponse.ok && !cancelled) {
+            const dashboardBody = await dashboardResponse.json();
+            dashboardActivities = (dashboardBody.activities || []) as DashboardActivity[];
+            lastDashboardFetch = now;
+          }
+        }
+        applyActivityTimes(dashboardActivities);
 
         const headings = Array.from(document.querySelectorAll<HTMLHeadingElement>("h2"));
         for (const heading of headings) {
