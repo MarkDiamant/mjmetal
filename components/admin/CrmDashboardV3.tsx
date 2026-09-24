@@ -200,7 +200,7 @@ export default function CrmDashboardV3() {
       if(closed(savedDraft.status)){job.next_action=null;job.next_action_at=null;job.next_action_assignee=null;}else{job.next_action=savedDraft.nextAction||null;job.next_action_at=iso(savedDraft.nextActionAt);job.next_action_assignee=savedDraft.nextActionAssignee||null;}
       if(j.isPlaceholder&&(savedDraft.firstName||savedDraft.lastName||savedDraft.siteAddressLine1||savedDraft.jobTypes.length||savedDraft.preliminaryEstimate||savedDraft.quotedAmount))job.internal_notes=null;
     }
-    if(savedDraft){setJobs(prev=>prev.map(x=>x.reference===j.reference?{...x,status:savedDraft.status,nextAction:closed(savedDraft.status)?null:savedDraft.nextAction,nextActionAt:closed(savedDraft.status)?null:iso(savedDraft.nextActionAt),updatedAt:new Date().toISOString()}:x));}\n    const res=await fetch(`/api/admin/jobs/${encodeURIComponent(j.reference)}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({customer,job})});
+    if(savedDraft){setJobs(prev=>prev.map(x=>x.reference===j.reference?{...x,status:savedDraft.status,nextAction:closed(savedDraft.status)?null:savedDraft.nextAction,nextActionAt:closed(savedDraft.status)?undefined:(iso(savedDraft.nextActionAt)||undefined),updatedAt:new Date().toISOString()}:x));}\n    const res=await fetch(`/api/admin/jobs/${encodeURIComponent(j.reference)}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({customer,job})});
     const body=await res.json().catch(()=>({}));
     if(!res.ok){setSavingRef(null);setFlash(body.error||`Could not save ${j.reference}`);return;}
     if(savedDraft&&crmConfig.modules.costs&&permissions.includes("view_costs_profit")){
