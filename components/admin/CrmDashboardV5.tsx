@@ -6,7 +6,7 @@ import CrmDashboardV4 from "@/components/admin/CrmDashboardV4";
 function MobileQuickEditFix() {
   useEffect(() => {
     const style = document.createElement("style");
-    style.dataset.mjMobileQuickEditFix = "1";
+    style.dataset.bmsMobileQuickEditFix = "1";
     style.textContent = `
       @media (max-width: 767px) {
         body { overflow-x: hidden; }
