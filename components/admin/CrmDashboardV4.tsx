@@ -48,6 +48,7 @@ type DashboardActivity = {
   summary?: string;
   details?: string | null;
   mj_jobs?: { reference?: string } | null;
+  job?: { reference?: string } | null;
 };
 
 type SubPayment = {
@@ -147,7 +148,7 @@ function DashboardEnhancer() {
         if (!activity) return;
         const meta = link.querySelector<HTMLElement>("span.text-xs");
         if (!meta) return;
-        const reference = activity.mj_jobs?.reference || "CRM";
+        const reference = (activity.job?.reference||activity.mj_jobs?.reference) || "CRM";
         const text = `${reference} · ${dateTimeLabel(activity.occurred_at)}`;
         if (meta.textContent !== text) meta.textContent = text;
       });
@@ -191,10 +192,10 @@ function DashboardEnhancer() {
       history.replaceChildren();
 
       for (const activity of extra) {
-        const reference = activity.mj_jobs?.reference || "CRM";
+        const reference = (activity.job?.reference||activity.mj_jobs?.reference) || "CRM";
         const link = document.createElement("a");
         link.dataset.expandedActivity = "1";
-        link.href = activity.mj_jobs?.reference
+        link.href = (activity.job?.reference||activity.mj_jobs?.reference)
           ? `/admin/jobs/${encodeURIComponent(activity.mj_jobs.reference)}`
           : "/admin";
         link.className = "block border-b border-black/8 px-3 py-3 last:border-b-0 hover:bg-[#fffaf6]";
