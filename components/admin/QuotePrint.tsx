@@ -18,7 +18,7 @@ export default function QuotePrint({ reference, quoteId }: { reference: string; 
   const [drafting,setDrafting]=useState(false);
   const [whatsAppBusy,setWhatsAppBusy]=useState(false);
   const [draftNotice,setDraftNotice]=useState<{email:string}|null>(null);
-  useEffect(()=>{fetch("/api/admin/settings",{cache:"no-store"}).then(async r=>{if(r.ok){const b=await r.json();if(b.settings)setCrmConfig(b.settings);}}).catch(()=>{});},[]);
+  useEffect(()=>{fetch("/api/admin/settings",{cache:"no-store"}).then(async r=>{if(r.ok){const b=await r.json();if(b.settings)setCrmConfig(b.settings);}}).catch(()=>{});fetch("/api/admin/integrations/google/status",{cache:"no-store"}).then(async r=>{if(r.ok){const b=await r.json();if(b.connected&&b.email)setConnectedGmail(String(b.email));}}).catch(()=>{});},[]);
   useEffect(() => {
     fetch(`/api/admin/jobs/${encodeURIComponent(reference)}`, { cache: "no-store" }).then(async (res) => {
       if (res.status === 401) { window.location.href = "/admin/login"; return; }
