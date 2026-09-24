@@ -98,38 +98,6 @@ function DashboardEnhancer() {
       }
     };
 
-    const applyMoneyOverview = (jobs: JobSummary[]) => {
-      const heading = Array.from(document.querySelectorAll<HTMLHeadingElement>("h2")).find(
-        (node) => node.textContent?.trim() === "Money overview",
-      );
-      const section = heading?.closest<HTMLElement>("section");
-      if (!section) return;
-
-      const grid = section.querySelector<HTMLElement>(".mt-3.grid");
-      if (!grid) return;
-
-      const lostValue = jobs
-        .filter((job) => ["declined", "cancelled"].includes(String(job.status || "")))
-        .reduce(
-          (sum, job) =>
-            sum + Number(job.agreedAmount ?? job.quotedAmount ?? job.preliminaryEstimate ?? 0),
-          0,
-        );
-
-      let card = grid.querySelector<HTMLElement>("[data-lost-job-value]");
-      if (!card) {
-        card = document.createElement("div");
-        card.dataset.lostJobValue = "1";
-        card.className = "flex min-h-[72px] flex-col items-center justify-center rounded-xl border border-black/8 bg-[#f7f7f4] px-3 py-2.5 text-center";
-        card.innerHTML =
-          '<p class="text-[9px] font-black uppercase tracking-[0.07em] text-black/40">Lost job value</p><p data-lost-job-value-amount class="mt-0.5 text-lg font-black text-red-700"></p>';
-        grid.appendChild(card);
-      }
-
-      const amount = card.querySelector<HTMLElement>("[data-lost-job-value-amount]");
-      if (amount) amount.textContent = money(lostValue);
-    };
-
     const applyDueLines = (jobs: JobSummary[]) => {
       const rowButtons = Array.from(
         document.querySelectorAll<HTMLButtonElement>("button.grid.w-full"),
@@ -304,7 +272,6 @@ function DashboardEnhancer() {
         const body = await response.json();
         const jobs = (body.jobs || []) as JobSummary[];
         applyRowHighlights(jobs);
-        applyMoneyOverview(jobs);
         applyDueLines(jobs);
 
         const headings = Array.from(document.querySelectorAll<HTMLHeadingElement>("h2"));
