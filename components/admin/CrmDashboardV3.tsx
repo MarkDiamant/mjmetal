@@ -74,11 +74,11 @@ export default function CrmDashboardV3() {
   const [quoteScope,setQuoteScope]=useState(""), [quoteExclusions,setQuoteExclusions]=useState("");
 
   const load = useCallback(async()=>{
-    const [jr,dr,tr,sr]=await Promise.all([fetch("/api/admin/jobs",{cache:"no-store"}),fetch("/api/admin/dashboard",{cache:"no-store"}),fetch("/api/admin/job-types",{cache:"no-store"}),fetch("/api/admin/settings",{cache:"no-store"})]);
+    const jr=await fetch("/api/admin/jobs",{cache:"no-store"});
     if(jr.status===401){router.replace("/admin/login");return;}
-    const jb=await jr.json().catch(()=>({})), db=await dr.json().catch(()=>({})), tb=await tr.json().catch(()=>({}));
+    const jb=await jr.json().catch(()=>({}));
     if(!jr.ok){setError(jb.error||"Unable to load CRM");setLoading(false);return;}
-    if(sr.ok){const sb=await sr.json().catch(()=>({}));if(sb.settings)setCrmConfig(sb.settings);}setJobs(jb.jobs||[]);setPeople(jb.people||[]);setActivities(db.activities||[]);setAdmin(jb.admin||db.admin||null);setPermissions(jb.permissions||[]);setJobTypeOptions(tb.options||[]);try{sessionStorage.setItem("bms-dashboard-data",JSON.stringify({jobs:jb.jobs||[],people:jb.people||[],activities:db.activities||[],admin:jb.admin||db.admin||null,permissions:jb.permissions||[]}))}catch{}setLoading(false);
+    if(jb.settings)setCrmConfig(jb.settings);setJobs(jb.jobs||[]);setPeople(jb.people||[]);setActivities(jb.activities||[]);setAdmin(jb.admin||null);setPermissions(jb.permissions||[]);setJobTypeOptions(jb.jobTypeOptions||[]);try{sessionStorage.setItem("bms-dashboard-data",JSON.stringify({jobs:jb.jobs||[],people:jb.people||[],activities:jb.activities||[],admin:jb.admin||null,permissions:jb.permissions||[]}))}catch{}setLoading(false);
   },[router]);
   useEffect(()=>{try{const cached=JSON.parse(sessionStorage.getItem("bms-dashboard-data")||"null");if(cached){setJobs(cached.jobs||[]);setPeople(cached.people||[]);setActivities(cached.activities||[]);setAdmin(cached.admin||null);setPermissions(cached.permissions||[]);setLoading(false);}}catch{}void load();},[load]);
   useEffect(()=>{const timer=window.setInterval(async()=>{if(savingRef)return;if(!editingRef){void load();return;}const res=await fetch("/api/admin/jobs",{cache:"no-store"});if(!res.ok)return;const body=await res.json().catch(()=>({}));const latest=(body.jobs||[]).find((x:any)=>x.reference===editingRef);if(latest&&editUpdatedAt&&latest.updatedAt&&latest.updatedAt!==editUpdatedAt&&Date.now()-new Date(latest.updatedAt).getTime()>5000){setRemoteChanged(true);setRemoteChangedBy(latest.lastChangedBy||null);}},3000);return()=>window.clearInterval(timer);},[load,editingRef,savingRef,editUpdatedAt]);
