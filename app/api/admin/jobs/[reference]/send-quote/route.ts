@@ -21,7 +21,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ref
 
   const { reference } = await params;
   const config = await crmSettings(session.token);
-  const body = await request.json().catch(() => ({})) as { quoteId?: string };
+  const body = await request.json().catch(() => ({})) as { quoteId?: string; pdfBase64?: string; pdfName?: string };
   if (!body.quoteId) return NextResponse.json({ error: "Quote is required" }, { status: 400 });
 
   const jobsResponse = await supabaseRequest(`/rest/v1/mj_jobs?reference=eq.${encodeURIComponent(reference.toUpperCase())}&select=*,mj_customers(*)&limit=1`, { method: "GET" }, session.token);
@@ -47,10 +47,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ ref
 
   let pdf:Buffer|null=null;
   let storagePath=String(quote.pdf_path||"").trim();
-  if(storagePath){
+  if(body.pdfBase64){
+    pdf=Buffer.from(body.pdfBase64,"base64");
+    if(pdf.subarray(0,5).toString()!=="%PDF-")return NextResponse.json({error:"Invalid quotation PDF"},{status:400});
+    storagePath=`${job.id}/quotes/${job.reference}-V${quote.version}-quotation.pdf`;
+    const encodedPath=storagePath.split("/").map(encodeURIComponent).join("/");
+    const upload=await supabaseRequest(`/storage/v1/object/mj-job-files/${encodedPath}`,{method:"POST",headers:{"Content-Type":"application/pdf","x-upsert":"true"},body:new Blob([new Uint8Array(pdf)],{type:"application/pdf"})},session.token);
+    if(!upload.ok)return NextResponse.json({error:"Could not store quotation PDF"},{status:500});
+  }else if(storagePath){
     const storedPath=storagePath.split("/").map(encodeURIComponent).join("/");
     const stored=await supabaseRequest(`/storage/v1/object/mj-job-files/${storedPath}`,{method:"GET"},session.token);
-    if(stored.ok) pdf=Buffer.from(await stored.arrayBuffer());
+    if(stored.ok)pdf=Buffer.from(await stored.arrayBuffer());
   }
   if(!pdf){
     pdf=buildQuotePdf({
