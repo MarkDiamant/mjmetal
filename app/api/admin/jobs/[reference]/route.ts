@@ -214,6 +214,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       if (body.quote_id) {
         const existingQuote = await jsonOrError(await supabaseRequest(`/rest/v1/mj_quotes?id=eq.${encodeURIComponent(body.quote_id)}&job_id=eq.${job.id}&select=*&limit=1`, {}, session.token));
         if (!existingQuote[0]) return NextResponse.json({ error: "Quote not found" }, { status: 404 });
+        if (existingQuote[0].status !== "draft" && quotePatch.status === "draft") return NextResponse.json({ error: "This quotation is no longer a draft. Create a new version instead of overwriting an issued quotation." }, { status: 409 });
         version = Number(existingQuote[0].version || 1);
         const updated = await jsonOrError(await supabaseRequest(`/rest/v1/mj_quotes?id=eq.${encodeURIComponent(body.quote_id)}&job_id=eq.${job.id}`, {
           method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify(quotePatch),
