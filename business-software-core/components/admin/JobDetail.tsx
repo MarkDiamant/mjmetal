@@ -1,5 +1,5 @@
 "use client";
-import {bmsMoney,bmsLocalInput,bmsQuoteScope} from "@/business-software-core/lib/presentation";
+import {bmsMoney,bmsLocalInput,bmsQuoteScope} from "../../lib/presentation";
 
 import {quoteAmountFromText} from "@/business-software-core/lib/quote-format";
 
