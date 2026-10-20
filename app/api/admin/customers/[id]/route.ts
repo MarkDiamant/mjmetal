@@ -1,3 +1,5 @@
+import {createTenantResourceAdapter} from "@/business-software-core/lib/tenant-resource-adapter";
+import {createCustomerUpdateHandler} from "@/business-software-core/server/customer-update-handler";
 import { NextResponse } from "next/server";
 import { requirePermission, supabaseRequest } from "@/lib/crm/supabase-server";
 
@@ -31,3 +33,5 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: error instanceof Error ? error.message : "Could not load customer history" }, { status: 500 });
   }
 }
+
+export const PATCH=createCustomerUpdateHandler({requirePermission,supabaseRequest:createTenantResourceAdapter(supabaseRequest,{jobs:"mj_jobs",customers:"mj_customers",quotes:"mj_quotes",filesBucket:"mj-job-files"})});
