@@ -56,7 +56,7 @@ export async function POST(request:Request){
    const previousLines=previousScope.split("\n").map(x=>x.trim()).filter(Boolean);
    const explicitlyRemoving=/\b(remove|delete|omit|drop|take out|replace all|start over|from scratch)\b/i.test(question);
    if(existing&&previousLines.length>clean.length&&!explicitlyRemoving)return NextResponse.json({error:`Ruby returned only ${clean.length} items, but the existing quote contains ${previousLines.length}. Nothing was overwritten. Please ask Ruby to retry the edit.`},{status:422});
-   if(existing&&/\\b(price|prices|amount|cost|charge)\\b|£/i.test(question)&&!explicitlyRemoving){
+   if(existing&&/\b(price|prices|amount|cost|charge)\b|£/i.test(question)&&!explicitlyRemoving){
      const nextLines=scope.split("\n").map(x=>x.trim()).filter(Boolean);
      const unchanged=previousLines.filter(line=>{const label=line.split(":")[0].trim().toLowerCase();return label.length>2&&!question.toLowerCase().includes(label);});
      if(unchanged.some(line=>!nextLines.includes(line)))return NextResponse.json({error:"Ruby changed an unrelated priced line. The existing quote was preserved. Please specify the item to change."},{status:422});
