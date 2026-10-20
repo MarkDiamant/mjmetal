@@ -1,4 +1,6 @@
 "use client";
+import {bmsMoney,bmsLocalInput,bmsQuoteScope} from "@/business-software-core/lib/presentation";
+
 import {quoteAmountFromText} from "@/business-software-core/lib/quote-format";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
@@ -8,9 +10,9 @@ import type { JobStatus, Manager } from "@/lib/crm/types";
 import { DEFAULT_CRM_CONFIG, type CrmConfig } from "@/lib/crm/config";
 import DiamantCredit from "@/components/admin/DiamantCredit";
 
-function money(value?: number | string) { return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(Number(value || 0)); }
-function when(value?: string) { return value ? new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value)) : "Not set"; }
-function localInput(value?: string) { if (!value) return ""; const d = new Date(value); const p=(n:number)=>String(n).padStart(2,"0"); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; }
+const money=(value?:number|string)=>bmsMoney(value,0);
+function when(value?:string){return value?new Intl.DateTimeFormat("en-GB",{day:"2-digit",month:"short",year:"numeric"}).format(new Date(value)):"Not set";}
+const localInput=bmsLocalInput;
 function iso(value?: string) { return value ? new Date(value).toISOString() : null; }
 function suggestedDue(days=3) { const d=new Date(); d.setDate(d.getDate()+days); d.setHours(9,0,0,0); return localInput(d.toISOString()); }
 function finishDatePick(e:React.ChangeEvent<HTMLInputElement>, set:(value:string)=>void){set(e.target.value); requestAnimationFrame(()=>e.target.blur());}
