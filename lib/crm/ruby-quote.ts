@@ -1,1 +1,1 @@
-export * from "@/business-software-core/lib/ruby-quote";
+export * from "@markdiamant/business-software-core/lib/ruby-quote";
