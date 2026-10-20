@@ -24,6 +24,11 @@ function wrap(value: string, max = 88) {
     const words = paragraph.trim().split(/\s+/);
     let line = "";
     for (const word of words) {
+      if (word.length > max) {
+        if (line) { lines.push(line); line = ""; }
+        for (let i = 0; i < word.length; i += max) lines.push(word.slice(i, i + max));
+        continue;
+      }
       if (!line) line = word;
       else if (`${line} ${word}`.length <= max) line += ` ${word}`;
       else { lines.push(line); line = word; }
