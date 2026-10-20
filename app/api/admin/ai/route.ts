@@ -53,8 +53,8 @@ export async function POST(request:Request){
    const scope=clean.map((x:any)=>x.description.replace(/:\s*$/,"")+(x.quantity===1?": "+money(x.unitPrice):": "+x.quantity+" × "+money(x.unitPrice)+" = "+money(x.quantity*x.unitPrice))).join("\n");
    const total=clean.reduce((n:number,x:any)=>n+x.quantity*x.unitPrice,0);
    // Never silently drop an existing work area during an incremental Ruby edit.
-   const previousLines=previousScope.split("\\n").map(x=>x.trim()).filter(Boolean);
-   const explicitlyRemoving=/\\b(remove|delete|omit|drop|take out|replace all|start over|from scratch)\\b/i.test(question);
+   const previousLines=previousScope.split("\n").map(x=>x.trim()).filter(Boolean);
+   const explicitlyRemoving=/\b(remove|delete|omit|drop|take out|replace all|start over|from scratch)\b/i.test(question);
    if(existing&&previousLines.length>clean.length&&!explicitlyRemoving)return NextResponse.json({error:`Ruby returned only ${clean.length} items, but the existing quote contains ${previousLines.length}. Nothing was overwritten. Please ask Ruby to retry the edit.`},{status:422});
    const patch={scope_text:scope,amount:total,status:"draft"};
    const saveResponse=existing?await supabaseRequest(`/rest/v1/mj_quotes?id=eq.${existing.id}&job_id=eq.${job.id}`,{method:"PATCH",headers:{Prefer:"return=representation"},body:JSON.stringify(patch)},session.token):await supabaseRequest("/rest/v1/mj_quotes",{method:"POST",headers:{Prefer:"return=representation"},body:JSON.stringify({...patch,job_id:job.id,version:1,vat_rate:0,created_by:session.admin?.initials||"Ruby"})},session.token);
