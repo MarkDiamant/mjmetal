@@ -25,25 +25,25 @@ export async function POST(request:Request){
  const customers=customersRes.ok?await customersRes.json().catch(()=>[]):[];
  const context={business:settings?.businessName||"Business",today:new Date().toISOString().slice(0,10),jobs,customers};
  if(wantsQuote){
-   const referenceMatch=question.match(/\\b[A-Z]{1,6}[- ]?\\d{2,8}\\b/i);
+   const referenceMatch=question.match(/\b[A-Z]{1,6}[- ]?\d{2,8}\b/i);
    if(!referenceMatch)return NextResponse.json({answer:"Which job reference should I create or update the quote for? Please give me the reference, and I will save it as a draft."});
-   const reference=referenceMatch[0].replace(/\\s+/g,"").toUpperCase();
+   const reference=referenceMatch[0].replace(/\s+/g,"").toUpperCase();
    const jobResponse=await supabaseRequest(`/rest/v1/mj_jobs?reference=eq.${encodeURIComponent(reference)}&select=id,reference,job_type,dimensions,customer_requirements,quoted_amount&limit=1`,{},session.token);
    const jobRows=jobResponse.ok?await jobResponse.json().catch(()=>[]):[];
    const job=jobRows[0];
    if(!job)return NextResponse.json({answer:`I couldn't find job ${reference}. Please check the reference. No quote was created.`});
-   const aiInput=`Extract the items for a quotation from the user's instruction. Return ONLY JSON {"items":[{"description":"Side gate: Supply and install ...","quantity":1,"unit_price":0}],"notes":""}. Each separately requested item must be a separate item. Preserve exact dimensions, materials, finishes and other supplied details. The description must be customer-facing, natural, and use a colon after any item label. Only use a numeric price when the user explicitly specifies it for that item. Otherwise use 0, never guess or distribute a stated total across items. Quantity defaults to 1 if unspecified. Do not include prices inside descriptions. No markdown, no invented details.\\nJOB: ${JSON.stringify(job)}\\nREQUEST: ${question}`;
+   const aiInput=`Extract the items for a quotation from the user's instruction. Return ONLY JSON {"items":[{"description":"Side gate: Supply and install ...","quantity":1,"unit_price":0}],"notes":""}. Each separately requested item must be a separate item. Preserve exact dimensions, materials, finishes and other supplied details. The description must be customer-facing, natural, and use a colon after any item label. Only use a numeric price when the user explicitly specifies it for that item. Otherwise use 0, never guess or distribute a stated total across items. Quantity defaults to 1 if unspecified. Do not include prices inside descriptions. No markdown, no invented details.\nJOB: ${JSON.stringify(job)}\nREQUEST: ${question}`;
    const aiResponse=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${apiKey}`,"Content-Type":"application/json"},body:JSON.stringify({model:"gpt-5.6-luna",input:aiInput,reasoning:{effort:"low"},max_output_tokens:2500})});
    const aiResult=await aiResponse.json().catch(()=>null);
    if(!aiResponse.ok)return NextResponse.json({error:aiResult?.error?.message||"Ruby could not prepare the quote"},{status:502});
    const raw=aiResult?.output_text||(aiResult?.output||[]).flatMap((x:any)=>x?.content||[]).map((x:any)=>x?.text||"").join("").trim();
-   let parsed:any;try{parsed=JSON.parse(raw.replace(/^```(?:json)?\\s*/,"").replace(/\\s*```$/,""));}catch{return NextResponse.json({error:"Ruby did not return a valid structured quote. Nothing was saved."},{status:502});}
+   let parsed:any;try{parsed=JSON.parse(raw.replace(/^```(?:json)?\s*/,"").replace(/\s*```$/,""));}catch{return NextResponse.json({error:"Ruby did not return a valid structured quote. Nothing was saved."},{status:502});}
    const items=Array.isArray(parsed?.items)?parsed.items:[];
    if(!items.length||items.length>50)return NextResponse.json({error:"No valid quote items were returned. Nothing was saved."},{status:422});
    const clean=items.map((item:any)=>({description:String(item.description||"").trim().slice(0,2000),quantity:Number(item.quantity)||1,unitPrice:item.unit_price===null||item.unit_price===undefined?0:Number(item.unit_price)}));
    if(clean.some((x:any)=>!x.description||!Number.isFinite(x.quantity)||x.quantity<=0||!Number.isFinite(x.unitPrice)||x.unitPrice<0))return NextResponse.json({error:"Invalid quote items. Nothing was saved."},{status:422});
    const money=(n:number)=>"£"+n.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2});
-   const scope=clean.map((x:any)=>x.description.replace(/:\\s*$/,"")+(x.quantity===1?": "+money(x.unitPrice):": "+x.quantity+" × "+money(x.unitPrice)+" = "+money(x.quantity*x.unitPrice))).join("\\n");
+   const scope=clean.map((x:any)=>x.description.replace(/:\s*$/,"")+(x.quantity===1?": "+money(x.unitPrice):": "+x.quantity+" × "+money(x.unitPrice)+" = "+money(x.quantity*x.unitPrice))).join("\n");
    const total=clean.reduce((n:number,x:any)=>n+x.quantity*x.unitPrice,0);
    const existingResponse=await supabaseRequest(`/rest/v1/mj_quotes?job_id=eq.${job.id}&select=id,version,status&order=version.desc&limit=1`,{},session.token);
    const existing=existingResponse.ok?(await existingResponse.json().catch(()=>[]))[0]:null;
