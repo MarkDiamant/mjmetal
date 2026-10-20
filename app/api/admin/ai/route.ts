@@ -1,5 +1,6 @@
 import {NextResponse} from "next/server";
 import {requirePermission,supabaseRequest} from "@/lib/crm/supabase-server";
+import {validateRubyQuoteUpdate} from "@/lib/crm/ruby-quote";
 
 export async function POST(request:Request){
  const session=await requirePermission("view_history");
@@ -61,6 +62,7 @@ export async function POST(request:Request){
      const unchanged=previousLines.filter(line=>{const label=line.split(":")[0].trim().toLowerCase();return label.length>2&&!question.toLowerCase().includes(label);});
      if(unchanged.some(line=>!nextLines.includes(line)))return NextResponse.json({error:"Ruby changed an unrelated priced line. The existing quote was preserved. Please specify the item to change."},{status:422});
    }
+   try{validateRubyQuoteUpdate(previousScope,scope,question);}catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Ruby quote validation failed"},{status:422});}
    const patch={scope_text:scope,amount:total,status:"draft"};
    const saveResponse=existing?await supabaseRequest(`/rest/v1/mj_quotes?id=eq.${existing.id}&job_id=eq.${job.id}`,{method:"PATCH",headers:{Prefer:"return=representation"},body:JSON.stringify(patch)},session.token):await supabaseRequest("/rest/v1/mj_quotes",{method:"POST",headers:{Prefer:"return=representation"},body:JSON.stringify({...patch,job_id:job.id,version:1,vat_rate:0,created_by:session.admin?.initials||"Ruby"})},session.token);
    const saved=saveResponse.ok?await saveResponse.json().catch(()=>[]):[];
