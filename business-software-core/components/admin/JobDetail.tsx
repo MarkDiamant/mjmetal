@@ -1,7 +1,7 @@
 "use client";
 import {bmsMoney,bmsLocalInput,bmsQuoteScope} from "../../lib/presentation";
 
-import {quoteAmountFromText} from "@/business-software-core/lib/quote-format";
+import {quoteAmountFromText} from "../../lib/quote-format";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { ALL_STATUSES } from "@/lib/crm/constants";
