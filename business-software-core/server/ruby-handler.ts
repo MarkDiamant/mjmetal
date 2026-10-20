@@ -2,6 +2,7 @@ import {NextResponse} from "next/server";
 
 import {validateRubyQuoteUpdate,parseRubyQuoteLines} from "../lib/ruby-quote";
 import {normaliseQuoteDescription,formatQuoteLines,totalQuoteLines} from "../lib/quote-format";
+import {contextualJobReference,isCustomerNameCorrection} from "../lib/ruby-context";
 
 export function createRubyHandler({requirePermission,supabaseRequest}:{requirePermission:any;supabaseRequest:any}){
 return async function POST(request:Request){
@@ -18,6 +19,28 @@ return async function POST(request:Request){
  const apiKey=process.env.OPENAI_API_KEY;
  if(!apiKey)return NextResponse.json({error:"AI Assistant is not configured yet."},{status:503});
 
+ const history=Array.isArray(body.history)?body.history.slice(-12).filter((x:any)=>x&&["user","assistant"].includes(x.role)&&typeof x.content==="string").map((x:any)=>({role:x.role,content:x.content.slice(0,2000)})):[];
+ // Customer corrections are actions, not read-only questions. Resolve pronouns from the recent conversation.
+ if(isCustomerNameCorrection(question)&&/\\b(customer|client|name|rename|correct)\\b/i.test(question)){
+  if(!session.permissions.includes("edit_jobs")||!session.permissions.includes("view_customer_details"))return NextResponse.json({error:"You do not have permission to update customer names."},{status:403});
+  const reference=contextualJobReference(question,history);
+  if(!reference)return NextResponse.json({answer:"I can correct that customer name, but I cannot identify a unique job from this conversation. Please give me the job reference."});
+  const jobResponse=await supabaseRequest(`/rest/v1/bms_jobs?reference=eq.${encodeURIComponent(reference)}&select=id,reference,customer_id&limit=1`,{},session.token);
+  if(!jobResponse.ok)return NextResponse.json({error:"Could not look up the referenced job. Nothing changed."},{status:502});
+  const job=(await jobResponse.json().catch(()=>[]))[0];if(!job?.customer_id)return NextResponse.json({answer:`I couldn't find a customer attached to ${reference}. Nothing changed.`});
+  const customerResponse=await supabaseRequest(`/rest/v1/bms_customers?id=eq.${encodeURIComponent(job.customer_id)}&select=id,first_name,last_name&limit=1`,{},session.token);
+  if(!customerResponse.ok)return NextResponse.json({error:"Could not load customer details. Nothing changed."},{status:502});
+  const customer=(await customerResponse.json().catch(()=>[]))[0];if(!customer)return NextResponse.json({error:"Customer record was not found. Nothing changed."},{status:404});
+  const schema={type:"object",properties:{first_name:{type:"string"},last_name:{type:"string"},is_correction:{type:"boolean"}},required:["first_name","last_name","is_correction"],additionalProperties:false};
+  const input=`Extract ONLY the corrected customer first and last name requested by the user. Ignore letter-by-letter spelling as separate words, but use it to spell the name correctly. Do not use a company name. If the correction is unclear set is_correction false. Current customer: ${customer.first_name} ${customer.last_name}. User: ${question}`;
+  const ai=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${apiKey}`,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.BMS_AI_MODEL||"gpt-6-sol",input,reasoning:{effort:"low"},max_output_tokens:250,text:{format:{type:"json_schema",name:"customer_name_correction",strict:true,schema}}})});
+  const result=await ai.json().catch(()=>null);if(!ai.ok)return NextResponse.json({error:result?.error?.message||"Ruby could not interpret the correction. Nothing changed."},{status:502});
+  const raw=result?.output_text||(result?.output||[]).flatMap((x:any)=>x?.content||[]).map((x:any)=>x?.text||"").join("").trim();let parsed:any;try{parsed=JSON.parse(raw);}catch{return NextResponse.json({error:"Ruby could not read the corrected name. Nothing changed."},{status:502});}
+  const first=String(parsed.first_name||"").trim(),last=String(parsed.last_name||"").trim();if(!parsed.is_correction||!first||!last||first.length>100||last.length>100)return NextResponse.json({answer:"I couldn't reliably identify the corrected first and last name. Nothing changed. Please spell out the full name."});
+  const update=await supabaseRequest(`/rest/v1/bms_customers?id=eq.${encodeURIComponent(customer.id)}`,{method:"PATCH",headers:{Prefer:"return=representation"},body:JSON.stringify({first_name:first,last_name:last,updated_at:new Date().toISOString()})},session.token);
+  const updated=await update.json().catch(()=>null);if(!update.ok||!Array.isArray(updated)||updated.length!==1)return NextResponse.json({error:updated?.message||"The customer name could not be saved. Nothing was confirmed."},{status:502});
+  return NextResponse.json({answer:`Updated the customer on ${reference} from ${customer.first_name} ${customer.last_name||""} to ${first} ${last}. The change has been saved.`,reference,customer_id:customer.id});
+ }
  const wantsQuote=/\b(create|make|prepare|draft|write|save|update|edit|change|amend|revise)\b[\s\S]{0,120}\b(quote|quotation)\b|\b(quote|quotation)\b[\s\S]{0,120}\b(create|make|prepare|draft|write|save|update|edit|change|amend|revise)\b|\b(change|update|amend|set|correct)\b[\s\S]{0,90}\b(price|prices|quote item|line item)\b[\s\S]{0,120}\b[A-Z]{1,6}[- ]?\d{2,8}\b/i.test(question);
  if(wantsQuote&&!session.permissions.includes("edit_jobs")||wantsQuote&&!session.permissions.includes("view_pricing"))return NextResponse.json({error:"You do not have permission to create or edit quotes."},{status:403});
  const [jobsRes,customersRes]=await Promise.all([
