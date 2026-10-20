@@ -53,15 +53,6 @@ export async function POST(request:Request){
    const money=(n:number)=>"£"+n.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2});
    const scope=clean.map((x:any)=>x.description.replace(/:\s*$/,"")+(x.quantity===1?": "+money(x.unitPrice):": "+x.quantity+" × "+money(x.unitPrice)+" = "+money(x.quantity*x.unitPrice))).join("\n");
    const total=clean.reduce((n:number,x:any)=>n+x.quantity*x.unitPrice,0);
-   // Never silently drop an existing work area during an incremental Ruby edit.
-   const previousLines=previousScope.split("\n").map(x=>x.trim()).filter(Boolean);
-   const explicitlyRemoving=/\b(remove|delete|omit|drop|take out|replace all|start over|from scratch)\b/i.test(question);
-   if(existing&&previousLines.length>clean.length&&!explicitlyRemoving)return NextResponse.json({error:`Ruby returned only ${clean.length} items, but the existing quote contains ${previousLines.length}. Nothing was overwritten. Please ask Ruby to retry the edit.`},{status:422});
-   if(existing&&/\b(price|prices|amount|cost|charge)\b|£/i.test(question)&&!explicitlyRemoving){
-     const nextLines=scope.split("\n").map(x=>x.trim()).filter(Boolean);
-     const unchanged=previousLines.filter(line=>{const label=line.split(":")[0].trim().toLowerCase();return label.length>2&&!question.toLowerCase().includes(label);});
-     if(unchanged.some(line=>!nextLines.includes(line)))return NextResponse.json({error:"Ruby changed an unrelated priced line. The existing quote was preserved. Please specify the item to change."},{status:422});
-   }
    try{validateRubyQuoteUpdate(previousScope,scope,question);}catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Ruby quote validation failed"},{status:422});}
    const patch={scope_text:scope,amount:total,status:"draft"};
    const saveResponse=existing?await supabaseRequest(`/rest/v1/mj_quotes?id=eq.${existing.id}&job_id=eq.${job.id}`,{method:"PATCH",headers:{Prefer:"return=representation"},body:JSON.stringify(patch)},session.token):await supabaseRequest("/rest/v1/mj_quotes",{method:"POST",headers:{Prefer:"return=representation"},body:JSON.stringify({...patch,job_id:job.id,version:1,vat_rate:0,created_by:session.admin?.initials||"Ruby"})},session.token);
