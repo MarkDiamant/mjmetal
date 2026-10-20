@@ -1,4 +1,6 @@
 "use client";
+import {bmsMoney,bmsLocalInput,bmsQuoteScope} from "@/business-software-core/lib/presentation";
+
 import {quoteAmountFromText} from "@/business-software-core/lib/quote-format";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
@@ -9,8 +11,8 @@ const tabs = ["Overview", "Activity", "Quote", "Costs & Payments", "Files", "Peo
 type Tab = (typeof tabs)[number];
 type Bundle = any;
 
-function money(value: number | string | null | undefined) { return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(Number(value || 0)); }
-function localInput(value?: string | null) { if (!value) return ""; const d=new Date(value); const p=(n:number)=>String(n).padStart(2,"0"); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; }
+const money=bmsMoney;
+const localInput=bmsLocalInput;
 function iso(value: FormDataEntryValue | null) { const s=String(value||"").trim(); return s?new Date(s).toISOString():null; }
 function text(fd:FormData,key:string){const v=String(fd.get(key)||"").trim();return v||null;}
 function num(fd:FormData,key:string){const v=String(fd.get(key)||"").trim();return v?Number(v):null;}
