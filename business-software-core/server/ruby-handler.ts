@@ -1,6 +1,7 @@
 import {NextResponse} from "next/server";
 
 import {validateRubyQuoteUpdate,parseRubyQuoteLines} from "../lib/ruby-quote";
+import {normaliseQuoteDescription,formatQuoteLines,totalQuoteLines} from "../lib/quote-format";
 
 export function createRubyHandler({requirePermission,supabaseRequest}:{requirePermission:any;supabaseRequest:any}){
 return async function POST(request:Request){
@@ -52,8 +53,8 @@ return async function POST(request:Request){
    const clean=uniqueItems.map((item:any)=>{let description=String(item.description||"").trim().slice(0,2000);const match=description.match(/^([^:\n]{2,100}):\s*([\s\S]+)$/);if(match){const label=match[1].trim();let detail=match[2].trim();if(detail.toLowerCase().startsWith(label.toLowerCase()))detail=detail.slice(label.length).replace(/^[\s:.,-]+/,"").trim();description=label+": "+detail;}return {description,quantity:item.quantity===undefined||item.quantity===null?1:Number(item.quantity),unitPrice:item.unit_price===null||item.unit_price===undefined?0:Number(item.unit_price)};});
    if(clean.some((x:any)=>!x.description||!Number.isFinite(x.quantity)||x.quantity<=0||!Number.isFinite(x.unitPrice)||x.unitPrice<0))return NextResponse.json({error:"Invalid quote items. Nothing was saved."},{status:422});
    const money=(n:number)=>"£"+n.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2});
-   const scope=clean.map((x:any)=>x.description.replace(/:\s*$/,"")+(x.quantity===1?": "+money(x.unitPrice):": "+x.quantity+" × "+money(x.unitPrice)+" = "+money(x.quantity*x.unitPrice))).join("\n");
-   const total=clean.reduce((n:number,x:any)=>n+x.quantity*x.unitPrice,0);
+   const scope=formatQuoteLines(clean.map((x:any)=>({...x,description:normaliseQuoteDescription(x.description)})));
+   const total=totalQuoteLines(clean);
    try{validateRubyQuoteUpdate(previousScope,scope,question);}catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Ruby quote validation failed"},{status:422});}
    const patch={scope_text:scope,amount:total,status:"draft"};
    const saveResponse=existing?await supabaseRequest(`/rest/v1/bms_quotes?id=eq.${existing.id}&job_id=eq.${job.id}`,{method:"PATCH",headers:{Prefer:"return=representation"},body:JSON.stringify(patch)},session.token):await supabaseRequest("/rest/v1/bms_quotes",{method:"POST",headers:{Prefer:"return=representation"},body:JSON.stringify({...patch,job_id:job.id,version:1,vat_rate:0,created_by:session.admin?.initials||"Ruby"})},session.token);
