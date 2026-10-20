@@ -40,7 +40,7 @@ export async function POST(request:Request){
    let parsed:any;try{parsed=JSON.parse(raw.replace(/^```(?:json)?\s*/,"").replace(/\s*```$/,""));}catch{return NextResponse.json({error:"Ruby did not return a valid structured quote. Nothing was saved."},{status:502});}
    const items=Array.isArray(parsed?.items)?parsed.items:[];
    if(!items.length||items.length>50)return NextResponse.json({error:"No valid quote items were returned. Nothing was saved."},{status:422});
-   const clean=items.map((item:any)=>({description:String(item.description||"").trim().slice(0,2000),quantity:Number(item.quantity)||1,unitPrice:item.unit_price===null||item.unit_price===undefined?0:Number(item.unit_price)}));
+   const clean=items.map((item:any)=>({description:String(item.description||"").trim().slice(0,2000),quantity:item.quantity===undefined||item.quantity===null?1:Number(item.quantity),unitPrice:item.unit_price===null||item.unit_price===undefined?0:Number(item.unit_price)}));
    if(clean.some((x:any)=>!x.description||!Number.isFinite(x.quantity)||x.quantity<=0||!Number.isFinite(x.unitPrice)||x.unitPrice<0))return NextResponse.json({error:"Invalid quote items. Nothing was saved."},{status:422});
    const money=(n:number)=>"£"+n.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2});
    const scope=clean.map((x:any)=>x.description.replace(/:\s*$/,"")+(x.quantity===1?": "+money(x.unitPrice):": "+x.quantity+" × "+money(x.unitPrice)+" = "+money(x.quantity*x.unitPrice))).join("\n");
