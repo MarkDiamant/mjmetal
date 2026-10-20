@@ -29,7 +29,7 @@ export async function POST(request:Request){
    const referenceMatch=question.match(/\b[A-Z]{1,6}[- ]?\d{2,8}\b/i);
    if(!referenceMatch)return NextResponse.json({answer:"Which job reference should I create or update the quote for? Please give me the reference, and I will save it as a draft."});
    const reference=referenceMatch[0].replace(/\s+/g,"").toUpperCase();
-   const jobResponse=await supabaseRequest(`/rest/v1/mj_jobs?reference=eq.${encodeURIComponent(reference)}&select=id,reference,job_type,dimensions,customer_requirements,quoted_amount&limit=1`,{},session.token);
+   const jobResponse=await supabaseRequest(`/rest/v1/mj_jobs?reference=eq.${encodeURIComponent(reference)}&select=id,reference,job_type,job_types,dimensions,material,finishes,colour,customer_requirements,quoted_amount,site_address_line_1,site_city&limit=1`,{},session.token);
    const jobRows=jobResponse.ok?await jobResponse.json().catch(()=>[]):[];
    const job=jobRows[0];
    if(!job)return NextResponse.json({answer:`I couldn't find job ${reference}. Please check the reference. No quote was created.`});
