@@ -1,5 +1,5 @@
-import {createTenantResourceAdapter} from "@/business-software-core/lib/tenant-resource-adapter";
-import {createCustomerUpdateHandler} from "@/business-software-core/server/customer-update-handler";
+import {createTenantResourceAdapter} from "@markdiamant/business-software-core/lib/tenant-resource-adapter";
+import {createCustomerUpdateHandler} from "@markdiamant/business-software-core/server/customer-update-handler";
 import { NextResponse } from "next/server";
 import { requirePermission, supabaseRequest } from "@/lib/crm/supabase-server";
 
