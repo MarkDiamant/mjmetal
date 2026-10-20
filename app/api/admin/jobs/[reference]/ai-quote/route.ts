@@ -29,7 +29,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ref
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "gpt-5.6-luna", input: prompt, reasoning: { effort: "low" }, max_output_tokens: 2600 }),
+    body: JSON.stringify({ model: process.env.BMS_AI_MODEL||"gpt-6-sol", input: prompt, reasoning: { effort: "low" }, max_output_tokens: 2600 }),
   });
   const body = await response.json().catch(() => null);
   if (!response.ok) return NextResponse.json({ error: body?.error?.message || "AI drafting failed" }, { status: 502 });
