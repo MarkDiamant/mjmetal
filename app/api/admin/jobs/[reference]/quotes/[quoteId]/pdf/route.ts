@@ -41,8 +41,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const finish = Array.isArray(job.finishes) ? job.finishes.join(" + ") : "";
     if (!quote.scope_text?.trim() || Number(quote.amount||0)<=0) return NextResponse.json({ error: "Add the quote scope and final price before generating the PDF." }, { status: 400 });
 
-    const uploadedPdf = request.headers.get("content-type")?.includes("application/pdf") ? Buffer.from(await request.arrayBuffer()) : null;
-    const pdf = uploadedPdf || buildQuotePdf({
+    // Always generate the authoritative PDF server-side. Browser-supplied PDFs may have compressed or overlapping text.
+    const pdf = buildQuotePdf({
       companyName: config.businessName,
       companyNumber: config.businessDetails.companyNumber,
       phone: config.businessDetails.phone,
