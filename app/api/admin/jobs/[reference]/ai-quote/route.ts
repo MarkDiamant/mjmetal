@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requirePermission, supabaseRequest } from "@/lib/crm/supabase-server";
 
-export async function POST(_request: Request, { params }: { params: Promise<{ reference: string }> }) {
+export async function POST(request: Request, { params }: { params: Promise<{ reference: string }> }) {
   const session = await requirePermission("view_pricing");
   if(session&&!session.permissions.includes("edit_jobs")) return NextResponse.json({error:"You do not have permission to draft quote wording"},{status:403});
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -14,6 +14,8 @@ export async function POST(_request: Request, { params }: { params: Promise<{ re
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "AI quote drafting is not configured yet. Add OPENAI_API_KEY in Vercel." }, { status: 503 });
   const { reference } = await params;
+  const inputBody=await request.json().catch(()=>({}));
+  const currentScope=String(inputBody?.scope_text||"").slice(0,20000);
 
   const jobResponse = await supabaseRequest(`/rest/v1/mj_jobs?reference=eq.${encodeURIComponent(reference)}&select=*,mj_customers(*)&limit=1`, {}, session.token);
   if (!jobResponse.ok) return NextResponse.json({ error: "Could not load job" }, { status: 500 });
@@ -22,7 +24,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ re
   if (!job) return NextResponse.json({ error: "Job not found" }, { status: 404 });
   const customer = job.mj_customers || {};
 
-  const prompt = `Rewrite the FULL customer-facing quotation scope of works in professional UK English. Preserve EVERY separate work item, measurement, location, quantity, material, finish, and relevant requirement from the job record. Do not collapse multiple work items into one sentence or omit later items. Use a numbered list with one distinct item per work area, each with a short bold item heading (using **heading**) followed by clear full-sentence detail. Preserve existing prices exactly where supplied; where a price is missing, use £0 as a pending internal placeholder. Return complete quotation wording, not a summary. Use UK English. Do not invent specifications, dimensions, materials, finishes, hardware, access requirements, lead times or guarantees. If information is missing, omit it rather than guessing. Pricing is never required to draft a quotation: treat each unpriced item as £0 internally and pending pricing, without asking the user for a price or inventing one. Never send a quotation without explicit approval. Keep internal pricing/subcontractor notes private. Use short paragraphs or clear bullet points suitable for a formal quotation.\n\nJob reference: ${job.reference}\nCustomer: ${[customer.first_name, customer.last_name].filter(Boolean).join(" ")}\nJob type: ${job.job_type || ""}\nDimensions: ${job.dimensions || ""}\nMaterial: ${job.material || ""}\nFinishes: ${(job.finishes || []).join(", ")}\nColour/RAL: ${job.colour || ""}\nCustomer requirements: ${job.customer_requirements || ""}\nSite address: ${[job.site_address_line_1, job.site_address_line_2, job.site_city, job.site_postcode].filter(Boolean).join(", ")}`;
+  const prompt = `Rewrite the FULL customer-facing quotation scope of works in professional UK English. Preserve EVERY separate work item, measurement, location, quantity, material, finish, and relevant requirement from the job record. Do not collapse multiple work items into one sentence or omit later items. Use a numbered list with one distinct item per work area, each with a short bold item heading (using **heading**) followed by clear full-sentence detail. Preserve existing prices exactly where supplied; where a price is missing, use £0 as a pending internal placeholder. Return complete quotation wording, not a summary. Use UK English. Do not invent specifications, dimensions, materials, finishes, hardware, access requirements, lead times or guarantees. If information is missing, omit it rather than guessing. Pricing is never required to draft a quotation: treat each unpriced item as £0 internally and pending pricing, without asking the user for a price or inventing one. Never send a quotation without explicit approval. Keep internal pricing/subcontractor notes private. Use short paragraphs or clear bullet points suitable for a formal quotation.\n\nCURRENT QUOTE SCOPE TO TIDY (preserve every existing item, its measurements, quantity and prices):\n${currentScope}\n\nJob reference: ${job.reference}\nCustomer: ${[customer.first_name, customer.last_name].filter(Boolean).join(" ")}\nJob type: ${job.job_type || ""}\nDimensions: ${job.dimensions || ""}\nMaterial: ${job.material || ""}\nFinishes: ${(job.finishes || []).join(", ")}\nColour/RAL: ${job.colour || ""}\nCustomer requirements: ${job.customer_requirements || ""}\nSite address: ${[job.site_address_line_1, job.site_address_line_2, job.site_city, job.site_postcode].filter(Boolean).join(", ")}`;
 
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
