@@ -1,13 +1,12 @@
 "use client";
+import {bmsMoney,bmsLocalInput,bmsQuoteScope} from "@/business-software-core/lib/presentation";
+
 
 import { useEffect, useMemo, useState } from "react";
 import { DEFAULT_CRM_CONFIG } from "@/lib/crm/config";
 
-function money(value: number | string | null | undefined) {
-  return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(Number(value || 0));
-}
-
-function renderQuoteScope(value:string){return String(value||"").split("\n").map((line,i)=>{const parts=line.split(/(\*\*[^*\n]+\*\*)/g);const colon=line.indexOf(":");return <div key={i}>{parts.length>1?parts.map((part,j)=>part.startsWith("**")&&part.endsWith("**")?<strong key={j}>{part.slice(2,-2)}</strong>:part):colon>0&&colon<100?<><strong>{line.slice(0,colon)}</strong>{line.slice(colon)}</>:line||"\u00a0"}</div>;});}
+const money=bmsMoney;
+const renderQuoteScope=bmsQuoteScope;
 
 export default function QuotePrint({ reference, quoteId }: { reference: string; quoteId: string }) {
   const [data, setData] = useState<any>(null);
