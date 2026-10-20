@@ -51,9 +51,8 @@ return async function POST(request:Request){
  const customers=customersRes.ok?await customersRes.json().catch(()=>[]):[];
  const context={business:settings?.businessName||"Business",today:new Date().toISOString().slice(0,10),jobs,customers};
  if(wantsQuote){
-   const referenceMatch=question.match(/\b[A-Z]{1,6}[- ]?\d{2,8}\b/i);
-   if(!referenceMatch)return NextResponse.json({answer:"Which job reference should I create or update the quote for? Please give me the reference, and I will save it as a draft."});
-   const reference=referenceMatch[0].replace(/\s+/g,"").toUpperCase();
+   const reference=contextualJobReference(question,history);
+   if(!reference)return NextResponse.json({answer:"Which job should I create or update the quote for? I could not identify one clearly from this conversation."});
    const jobResponse=await supabaseRequest(`/rest/v1/bms_jobs?reference=eq.${encodeURIComponent(reference)}&select=id,reference,job_type,job_types,dimensions,material,finishes,colour,customer_requirements,quoted_amount,site_address_line_1,site_city&limit=1`,{},session.token);
    const jobRows=jobResponse.ok?await jobResponse.json().catch(()=>[]):[];
    const job=jobRows[0];
