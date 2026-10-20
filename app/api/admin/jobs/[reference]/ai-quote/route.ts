@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requirePermission, supabaseRequest } from "@/lib/crm/supabase-server";
+import {validateRubyTidy} from "@/lib/crm/ruby-quote";
 
 export async function POST(request: Request, { params }: { params: Promise<{ reference: string }> }) {
   const session = await requirePermission("view_pricing");
@@ -36,5 +37,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ ref
 
   const text = body?.output_text || (body?.output || []).flatMap((item: any) => item?.content || []).map((part: any) => part?.text || "").join("\n").trim();
   if (!text) return NextResponse.json({ error: "AI returned no wording" }, { status: 502 });
-  return NextResponse.json({ text });
+  try{return NextResponse.json({text:validateRubyTidy(currentScope,text)});}catch(error){return NextResponse.json({error:error instanceof Error?error.message:"AI Tidy changed quotation items"},{status:422});}
 }
