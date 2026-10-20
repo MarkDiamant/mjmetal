@@ -8,3 +8,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 # BMS-first development policy
 
 The master product is `MarkDiamant/diamant-solutions/business-software-core/`, not M&J. M&J is the first tenant, and its fine-tuned workflows are the default BMS behaviour for every tenant. Implement all features and fixes in canonical BMS first, then synchronise this repository's `business-software-core/` mirror. Keep `components/admin/` and `lib/crm/` as thin compatibility re-exports. Do not fork default UI, Ruby, quotes, PDF or customer logic for M&J. Tenant-specific branding, industry copy, database mapping and isolated data are configuration only; deviations require explicit approval. Demo accounts use shared functionality and separate fictional data. Test both deployments after synchronisation, and never claim authenticated end-to-end success from a green build alone. Never modify real quotes or customers as a test without explicit permission.
+
+
+## Canonical package cutover (2026-10-20)
+M&J now consumes immutable `@markdiamant/business-software-core@1.0.0` from the canonical Diamant Solutions GitHub release. No `business-software-core/` source mirror remains. Never reintroduce a copied core folder. Update the canonical package, release a new version, then bump the tenant package pin and lockfile, validate preview and production. Production M&J data stays in its existing database; package upgrades must not migrate or delete it.
