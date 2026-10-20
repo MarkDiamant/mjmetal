@@ -1,5 +1,5 @@
 "use client";
-import {bmsMoney,bmsLocalInput,bmsQuoteScope} from "@/business-software-core/lib/presentation";
+import {bmsMoney,bmsLocalInput,bmsQuoteScope} from "../../lib/presentation";
 
 
 import { useEffect, useMemo, useState } from "react";
