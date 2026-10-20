@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { ALL_STATUSES, STATUS_META } from "@/lib/crm/constants";
 import type { JobStatus, Manager } from "@/lib/crm/types";
 import { DEFAULT_CRM_CONFIG, type CrmConfig } from "@/lib/crm/config";
-import DiamantCredit from "@/components/admin/DiamantCredit";
+import DiamantCredit from "./DiamantCredit";
 
 const money=(value?:number|string)=>bmsMoney(value,0);
 function when(value?:string){return value?new Intl.DateTimeFormat("en-GB",{day:"2-digit",month:"short",year:"numeric"}).format(new Date(value)):"Not set";}
