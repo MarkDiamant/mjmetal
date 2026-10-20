@@ -6,3 +6,15 @@ export function validateRubyQuoteUpdate(previousScope:string,nextScope:string,in
 /** Parse the user-visible saved format so Ruby sees existing prices as structured data. */
 export function parseRubyQuoteLines(scope:string){return String(scope||"").split("\n").map(line=>line.trim()).filter(Boolean).map(line=>{const multi=line.match(/^(.*?)\s*:\s*(\d+(?:\.\d+)?)\s*[×x]\s*£([\d,]+(?:\.\d{1,2})?)\s*=\s*£([\d,]+(?:\.\d{1,2})?)\s*$/);if(multi)return {description:multi[1],quantity:Number(multi[2]),unit_price:Number(multi[3].replace(/,/g,"")),original:line};const single=line.match(/^(.*?)\s*:\s*£([\d,]+(?:\.\d{1,2})?)\s*$/);if(single)return {description:single[1],quantity:1,unit_price:Number(single[2].replace(/,/g,"")),original:line};return {description:line,quantity:1,unit_price:0,original:line};});}
 export function rubyQuoteTotal(scope:string){return parseRubyQuoteLines(scope).reduce((sum,item)=>sum+item.quantity*item.unit_price,0);}
+
+/** Protect quote lines and money from an AI tidy operation before returning any edited wording. */
+export function validateRubyTidy(before:string,after:string){
+ const lines=(value:string)=>String(value||"").split("\n").map(x=>x.trim()).filter(Boolean);
+ const old=lines(before),next=lines(after);
+ if(next.length!==old.length)throw Error("Ruby changed the number of quotation lines. Original wording preserved.");
+ const priced=(line:string)=>/£[\d,]+(?:\.\d{1,2})?/.test(line);
+ for(let i=0;i<old.length;i++){
+   if(priced(old[i])&&old[i]!==next[i])throw Error("Ruby altered an existing priced quotation line. Original wording preserved.");
+ }
+ return after;
+}
