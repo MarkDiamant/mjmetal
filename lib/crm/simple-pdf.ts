@@ -95,7 +95,7 @@ export function buildQuotePdf(input: QuotePdfInput): Buffer {
   const template=input.template==="mj-signature"||input.template==="classic"?input.template:"clean";
   const hex=String(input.accentColour||"#e66a24").replace("#",""); const rgb=/^[0-9a-fA-F]{6}$/.test(hex)?[0,2,4].map(i=>parseInt(hex.slice(i,i+2),16)/255):[0.90,0.36,0.10]; const accent=template==="classic"?"0 0 0":template==="mj-signature"?rgb.map(x=>x.toFixed(3)).join(" "):"0.18 0.18 0.18";
   type Page = { commands: string[]; y: number };
-  const maxPages=2;
+  const maxPages=100;
   const pages: Page[] = [];
   const newPage = () => {
     const page: Page = { commands: [], y: 790 };
@@ -112,7 +112,7 @@ export function buildQuotePdf(input: QuotePdfInput): Buffer {
   const gap = (n = 8) => { page.y -= n; if (page.y < 65 && pages.length < maxPages) page = newPage(); };
   const rule = () => { page.commands.push(`${accent} rg 50 ${page.y} 495 ${template==="mj-signature"?3:1} re f`); page.y -= 18; };
   const heading = (text: string) => { gap(4); line(text, 12, true, 50, 18); };
-  const paragraph = (text: string, maxLines = 40) => { const lines=wrap(text,88); for (const l of lines.slice(0,maxLines)) line(l || " ", 10, false, 50, 14); if(lines.length>maxLines) line("Continued in project documentation.",9,false,50,13); };
+  const paragraph = (text: string, maxLines = 40) => { const lines=wrap(text,76); for (const l of lines) line(l || " ", 10, false, 50, 14); if(lines.length>maxLines) line("Continued in project documentation.",9,false,50,13); };
 
   const logo=template==="mj-signature"?logoImage():null;
   if(logo){
@@ -155,7 +155,7 @@ export function buildQuotePdf(input: QuotePdfInput): Buffer {
   else if (input.defaultDepositPercent) line(`Deposit: ${input.defaultDepositPercent}%`, 10, true);
   if (input.leadTime) line(`Estimated lead time: ${input.leadTime}`, 10);
 
-  if (pages.length < 2) page = newPage();
+  page = newPage();
   page.y=790;
   line(template==="mj-signature" ? "TERMS, PAYMENT & ACCEPTANCE" : "PAYMENT & KEY TERMS",14,true);
   rule();
