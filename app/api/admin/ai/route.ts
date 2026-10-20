@@ -19,7 +19,7 @@ export async function POST(request:Request){
  const wantsQuote=/\b(create|make|prepare|draft|write|save|update|edit|change|amend|revise)\b[\s\S]{0,120}\b(quote|quotation)\b|\b(quote|quotation)\b[\s\S]{0,120}\b(create|make|prepare|draft|write|save|update|edit|change|amend|revise)\b|\b(change|update|amend|set|correct)\b[\s\S]{0,90}\b(price|prices|quote item|line item)\b[\s\S]{0,120}\b[A-Z]{1,6}[- ]?\d{2,8}\b/i.test(question);
  if(wantsQuote&&!session.permissions.includes("edit_jobs")||wantsQuote&&!session.permissions.includes("view_pricing"))return NextResponse.json({error:"You do not have permission to create or edit quotes."},{status:403});
  const [jobsRes,customersRes]=await Promise.all([
-  supabaseRequest("/rest/v1/mj_jobs?select=reference,status,job_type,job_types,quoted_amount,next_action,next_action_at,scheduled_at,expected_completion_at,created_at&order=created_at.desc&limit=75",{},session.token),
+  supabaseRequest(session.permissions.includes("view_pricing")?"/rest/v1/mj_jobs?select=reference,status,job_type,job_types,quoted_amount,next_action,next_action_at,scheduled_at,expected_completion_at,created_at&order=created_at.desc&limit=75":"/rest/v1/mj_jobs?select=reference,status,job_type,job_types,next_action,next_action_at,scheduled_at,expected_completion_at,created_at&order=created_at.desc&limit=75",{},session.token),
   supabaseRequest("/rest/v1/mj_customers?select=first_name,last_name,company_name,created_at&order=created_at.desc&limit=75",{},session.token)
  ]);
  const jobs=jobsRes.ok?await jobsRes.json().catch(()=>[]):[];
