@@ -170,18 +170,30 @@ export default function Home() {
 
         <div className="mt-12 grid gap-8 md:grid-cols-4">
           {[
-            "Built to last",
-            "Bespoke design",
-            "Expert workmanship",
-            "Residential & commercial",
+            {
+              title: "Built to last",
+              text: "Strong, durable metalwork designed for everyday use and a lasting finish.",
+            },
+            {
+              title: "Bespoke design",
+              text: "Made to suit your property, your requirements and the space available.",
+            },
+            {
+              title: "Expert workmanship",
+              text: "Careful fabrication and attention to detail from start to finish.",
+            },
+            {
+              title: "Residential & commercial",
+              text: "Practical metalwork solutions for homes, businesses and commercial premises.",
+            },
           ].map((item) => (
-            <div key={item}>
+            <div key={item.title}>
               <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full border-2 border-orange-600 text-xl font-black text-orange-600">
                 ✓
               </div>
-              <h3 className="font-black uppercase">{item}</h3>
+              <h3 className="font-black uppercase">{item.title}</h3>
               <p className="mt-3 text-sm leading-6 text-neutral-600">
-                Professional metalwork made carefully around your project.
+                {item.text}
               </p>
             </div>
           ))}
